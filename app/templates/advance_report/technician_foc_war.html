@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Technician FOC & Warranty Report</h2>
+
+    <!-- Report Filters -->
+    <form id="filterForm">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="preset_filter">Preset Period:</label>
+                <select id="preset_filter" class="form-control">
+                    <option value="">Select</option>
+                    <option value="today">Today</option>
+                    <option value="this_week">This Week</option>
+                    <option value="this_month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="date_from">From:</label>
+                <input type="date" id="date_from" name="date_from" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to">To:</label>
+                <input type="date" id="date_to" name="date_to" class="form-control">
+            </div>
+            <div class="col-md-3 mt-4">
+                <button type="button" class="btn btn-primary" onclick="fetchReport()">Generate</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Report Table -->
+    <div class="mt-4">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Technician</th>
+                    <th>Open Tickets</th>
+                    <th>Closed Tickets</th>
+                    <th>Warranty Claimed</th>
+                    <th>Warranty Pending</th>
+                    <th>FOC Pending</th>
+                </tr>
+            </thead>
+            <tbody id="reportTable"></tbody>
+        </table>
+    </div>
+
+    <!-- Download Report -->
+    <button class="btn btn-success mt-3" onclick="downloadReport()">Download Report</button>
+</div>
+<!-- Schedule Report Section -->
+<div class="mt-4">
+    <h5>Schedule Report</h5>
+    <form id="scheduleReportForm">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="schedule_period">Schedule Period:</label>
+                <select id="schedule_period" name="schedule_period" class="form-control">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="email">Recipient Email:</label>
+                <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+            <div class="col-md-3 mt-4">
+                <button type="button" class="btn btn-info" onclick="scheduleReport()">Schedule</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Scheduled Reports List -->
+<div class="mt-4">
+    <h5>Scheduled Reports</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Report Type</th>
+                <th>Schedule</th>
+                <th>Email</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="scheduledReports">
+            <!-- Scheduled reports will be loaded dynamically -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function scheduleReport() {
+        let schedule = document.getElementById("schedule_period").value;
+        let email = document.getElementById("email").value;
+        let reportType = "FOC & Warranty Report";  // ✅ Ensure the correct report type
+
+        console.log("Scheduling report:", schedule, email, reportType); // ✅ Debugging
+
+        fetch('/technician_performance/schedule_report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schedule: schedule, email: email, report_type: reportType })  // ✅ Corrected data
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Schedule response:", data);  // ✅ Debugging
+            alert(data.message);
+            loadScheduledReports();
+        })
+        .catch(error => {
+            console.error("Error scheduling report:", error);
+            alert("Failed to schedule report. Check console logs.");
+        });
+    }
+
+    function loadScheduledReports() {
+        fetch('/technician_performance/get_scheduled_reports')
+            .then(response => response.json())
+            .then(data => {
+                let tableBody = document.getElementById("scheduledReports");
+                tableBody.innerHTML = "";
+                data.forEach(row => {
+                    let tr = `<tr>
+                        <td>${row.report_type}</td>
+                        <td>${row.schedule}</td>
+                        <td>${row.email}</td>
+                        <td><button class="btn btn-danger" onclick="deleteScheduledReport(${row.id})">Delete</button></td>
+                    </tr>`;
+                    tableBody.innerHTML += tr;
+                });
+            });
+    }
+
+    function deleteScheduledReport(id) {
+        fetch(`/technician_performance/delete_scheduled_report/${id}`, { method: 'DELETE' })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadScheduledReports();
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        loadScheduledReports();
+    });
+</script>
+
+<script>
+    function fetchReport() {
+        let preset = document.getElementById("preset_filter").value;
+        let fromDate = document.getElementById("date_from").value;
+        let toDate = document.getElementById("date_to").value;
+
+        fetch(`/technician_performance/fetch_foc_warranty_report?preset=${preset}&from=${fromDate}&to=${toDate}`)
+            .then(response => response.json())
+            .then(data => {
+                let tableBody = document.getElementById("reportTable");
+                tableBody.innerHTML = "";
+                data.forEach(row => {
+                    let tr = `<tr>
+                        <td>${row["Technician Name"]}</td>
+                        <td>${row["Open Tickets"]}</td>
+                        <td>${row["Closed Tickets"]}</td>
+                        <td>${row["Warranty Claimed"]}</td>
+                        <td>${row["Warranty Pending"]}</td>
+                        <td>${row["FOC Pending"]}</td>
+                    </tr>`;
+                    tableBody.innerHTML += tr;
+                });
+            });
+    }
+
+    function downloadReport() {
+        window.location.href = `/technician_performance/download_foc_warranty_report`;
+    }
+</script>
+{% endblock %}

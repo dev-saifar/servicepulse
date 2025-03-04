@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spare Request</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+        .header img {
+            width: 100px;
+            height: auto;
+        }
+        .title {
+            flex-grow: 1;
+        }
+        .content {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .machine-details {
+            width: 65%;
+            border: 1px solid black;
+            padding: 10px;
+        }
+        .pending-info {
+            width: 30%;
+            border: 1px solid black;
+            padding: 10px;
+            text-align: left;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .table th, .table td {
+            border: 1px solid black;
+            padding: 5px;
+            text-align: left;
+        }
+        .approval-box {
+            height: 80px;
+        }
+        .print-button {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body onload="loadPrintData()">
+
+    <div class="header">
+        <img src="/static/images/logo1.png" alt="Company Logo">
+        <div class="title">
+            <h2>SPARE REQUEST</h2>
+            <p>MFI MANAGED DOCUMENT SOLUTIONS LIMITED</p>
+            <p>Plot No. 43, Lumumba Avenue, Kampala, Uganda</p>
+        </div>
+        <img src="/static/images/logo2.png" alt="Company Logo">
+    </div>
+
+    <div class="content">
+        <div class="machine-details">
+            <strong>Customer Name:</strong> <span id="customer_name"></span><br>
+            <strong>Service Location:</strong> <span id="service_location"></span><br>
+            <strong>Region:</strong> <span id="region"></span><br>
+            <strong>Contract Code:</strong> <span id="contract"></span><br>
+            <strong>Contract Expiry Date:</strong> <span id="contract_expiry_date"></span><br>
+            <strong>Machine Model:</strong> <span id="asset_Description"></span><br>
+            <strong>Serial No:</strong> <span id="serial_number"></span><br>
+            <strong>Technician Name:</strong> <span id="technician"></span>
+        </div>
+        <div class="pending-info">
+            <strong>Warranty Pending:</strong> <span id="warranty_pending"></span><br><br>
+            <strong>FOC Return Pending:</strong> <span id="foc_pending"></span>
+        </div>
+    </div>
+
+    <h3>Approval Section</h3>
+    <table class="table">
+        <tr>
+            <th style="width: 50%;">First Level Approval</th>
+            <th style="width: 50%;">Second Level Approval</th>
+        </tr>
+        <tr>
+            <td class="approval-box"></td>
+            <td class="approval-box"></td>
+        </tr>
+    </table>
+
+    <h3>Requested Spare Parts</h3>
+    <table class="table" id="requested_spares_table">
+        <tr>
+            <th>Product Code</th>
+            <th>Description</th>
+            <th>Previous Reading</th>
+            <th>Current Reading</th>
+            <th>Yield</th>
+            <th>Qty.</th>
+            <th>Spare Type</th>
+            <th>Warehouse</th>
+            <th>Remarks</th>
+        </tr>
+    </table>
+
+    <h3>Spare Request History</h3>
+    <table class="table" id="spare_history_table">
+        <tr>
+            <th>Date</th>
+            <th>Product Description</th>
+            <th>Replaced Reading</th>
+            <th>Part Code</th>
+            <th>Yield</th>
+            <th>Qty.</th>
+            <th>Warehouse</th>
+            <th>Technician</th>
+            <th>Remarks</th>
+        </tr>
+    </table>
+
+    <div class="print-button">
+        <button class="button" onclick="window.print()">Print</button>
+    </div>
+
+    <script>
+        function loadPrintData() {
+            let requestData = JSON.parse(localStorage.getItem("printData"));
+
+            if (!requestData) {
+                alert("No data found! Please generate a request first.");
+                return;
+            }
+
+
+            // Fill other machine details
+            document.getElementById("customer_name").textContent = requestData.customer_name;
+            document.getElementById("service_location").textContent = requestData.service_location;
+            document.getElementById("region").textContent = requestData.region;
+            document.getElementById("contract").textContent = requestData.contract;
+            document.getElementById("contract_expiry_date").textContent = requestData.contract_expiry_date;
+            document.getElementById("asset_Description").textContent = requestData.asset_Description;
+            document.getElementById("serial_number").textContent = requestData.serial_number;
+            document.getElementById("technician").textContent = requestData.technician_name;
+            document.getElementById("warranty_pending").textContent = requestData.warranty_pending;
+            document.getElementById("foc_pending").textContent = requestData.foc_pending;
+
+            // Fill requested spare parts
+            let requestedTable = document.getElementById("requested_spares_table");
+            requestData.spare_items.forEach(item => {
+                let row = requestedTable.insertRow();
+                row.innerHTML = `<td>${item.product_code}</td>
+                                 <td>${item.description}</td>
+                                 <td>${item.previous_reading}</td>
+                                 <td>${item.current_reading}</td>
+                                 <td>${item.yield}</td>
+                                 <td>${item.qty}</td>
+                                 <td>${item.spare_type}</td>
+                                 <td>${item.warehouse}</td>
+                                 <td>${item.remarks}</td>`;
+            });
+
+            // Fill spare request history
+            let historyTable = document.getElementById("spare_history_table");
+            requestData.history.forEach(item => {
+                let row = historyTable.insertRow();
+                row.innerHTML = `<td>${item.date}</td>
+                                 <td>${item.description}</td>
+                                 <td>${item.reading}</td>
+                                 <td>${item.product_code}</td>
+                                 <td>${item.yield_achvd}</td>
+                                 <td>${item.qty}</td>
+                                 <td>${item.warehouse}</td>
+                                 <td>${item.technician_name}</td>
+                                 <td>${item.remarks}</td>`;
+            });
+        }
+    </script>
+
+</body>
+</html>

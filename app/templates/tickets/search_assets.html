@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Assets & Make Ticket</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="text-center text-primary mb-4">Search Assets</h1>
+
+        <div class="card p-4 shadow-lg mb-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Serial No:</label>
+                    <input type="text" id="serial_number" class="form-control" placeholder="Enter serial number">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Customer Name:</label>
+                    <input type="text" id="customer_name" class="form-control" placeholder="Enter customer name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Service Location:</label>
+                    <input type="text" id="service_location" class="form-control" placeholder="Enter service location">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Region:</label>
+                    <input type="text" id="region" class="form-control" placeholder="Enter region">
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-primary btn-lg px-4" onclick="searchAssets()">Search</button>
+            </div>
+        </div>
+
+        <div class="card p-3 shadow-lg">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Serial No</th>
+                            <th>Customer Name</th>
+                            <th>Service Location</th>
+                            <th>Region</th>
+                            <th>Asset Description</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assetResults">
+                        <!-- Search results will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function searchAssets() {
+            let serialNo = document.getElementById("serial_number").value;
+            let customerName = document.getElementById("customer_name").value;
+            let serviceLocation = document.getElementById("service_location").value;
+            let region = document.getElementById("region").value;
+
+            fetch("/search_assets", {
+                method: "POST",
+                body: JSON.stringify({ serial_number: serialNo, customer_name: customerName, service_location: serviceLocation, region: region }),
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                let tableBody = document.getElementById("assetResults");
+                tableBody.innerHTML = "";  // Clear previous results
+
+                data.forEach(asset => {
+                    let row = `<tr>
+                        <td>${asset.serial_number}</td>
+                        <td>${asset.customer_name}</td>
+                        <td>${asset.service_location}</td>
+                        <td>${asset.region}</td>
+                        <td>${asset.asset_description}</td>
+                        <td class="text-center">
+                            <button class="btn btn-success btn-sm" onclick="makeTicket(${asset.serial_number})">
+                                <i class="fas fa-ticket-alt"></i> Make Ticket
+                            </button>
+                        </td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            });
+        }
+
+        function makeTicket(serialNo) {
+            window.open(`/make_ticket?serial_number=${serialNo}`, '_blank');
+        }
+    </script>
+    <script src="/static/js/search.js"></script>
+</body>
+</html>
+{% endblock %}

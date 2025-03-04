@@ -1,0 +1,121 @@
+<html>
+<head>
+<title>styles.css</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #6aab73;}
+.s3 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+styles.css</font>
+</center></td></tr></table>
+<pre><span class="s0">/* Global Styles */</span>
+<span class="s1">body {</span>
+    <span class="s1">font-family: </span><span class="s2">'Poppins'</span><span class="s1">, Arial, sans-serif; </span><span class="s0">/* More modern font */</span>
+    <span class="s1">background-color: #f4f4f4;</span>
+    <span class="s1">background-image: url(</span><span class="s2">&quot;{{ url_for('static', filename='images/background.jpg') }}&quot;</span><span class="s1">);</span>
+    <span class="s1">background-size: cover;</span>
+    <span class="s1">background-position: center;</span>
+    <span class="s1">background-attachment: fixed;</span>
+    <span class="s1">margin: </span><span class="s3">0</span><span class="s1">;</span>
+    <span class="s1">padding: </span><span class="s3">0</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Navbar Styling */</span>
+<span class="s1">.navbar {</span>
+    <span class="s1">background: linear-gradient(</span><span class="s3">135</span><span class="s1">deg, #</span><span class="s3">1</span><span class="s1">e3a8a, #</span><span class="s3">007</span><span class="s1">bff); </span><span class="s0">/* Gradient for a modern touch */</span>
+    <span class="s1">padding: </span><span class="s3">15</span><span class="s1">px </span><span class="s3">0</span><span class="s1">;</span>
+    <span class="s1">color: white;</span>
+    <span class="s1">text-align: center;</span>
+    <span class="s1">font-size: </span><span class="s3">22</span><span class="s1">px;</span>
+    <span class="s1">font-weight: bold;</span>
+    <span class="s1">box-shadow: </span><span class="s3">0</span><span class="s1">px </span><span class="s3">4</span><span class="s1">px </span><span class="s3">8</span><span class="s1">px rgba(</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0.1</span><span class="s1">);</span>
+    <span class="s1">position: fixed;</span>
+    <span class="s1">width: </span><span class="s3">100</span><span class="s1">%;</span>
+    <span class="s1">top: </span><span class="s3">0</span><span class="s1">;</span>
+    <span class="s1">z-index: </span><span class="s3">1000</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Navbar Links */</span>
+<span class="s1">.navbar a {</span>
+    <span class="s1">color: white;</span>
+    <span class="s1">text-decoration: none;</span>
+    <span class="s1">font-size: </span><span class="s3">18</span><span class="s1">px;</span>
+    <span class="s1">padding: </span><span class="s3">12</span><span class="s1">px </span><span class="s3">20</span><span class="s1">px;</span>
+    <span class="s1">border-radius: </span><span class="s3">5</span><span class="s1">px;</span>
+    <span class="s1">transition: all </span><span class="s3">0</span><span class="s1">.</span><span class="s3">3</span><span class="s1">s ease-in-out;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Hover Effect */</span>
+<span class="s1">.navbar a:hover {</span>
+    <span class="s1">background-color: rgba(</span><span class="s3">255</span><span class="s1">, </span><span class="s3">255</span><span class="s1">, </span><span class="s3">255</span><span class="s1">, </span><span class="s3">0.2</span><span class="s1">);</span>
+    <span class="s1">color: #facc15;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Page Content */</span>
+<span class="s1">.container {</span>
+    <span class="s1">width: </span><span class="s3">80</span><span class="s1">%;</span>
+    <span class="s1">margin: </span><span class="s3">80</span><span class="s1">px auto; </span><span class="s0">/* Added margin for spacing below fixed navbar */</span>
+    <span class="s1">padding: </span><span class="s3">20</span><span class="s1">px;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Card Design */</span>
+<span class="s1">.card {</span>
+    <span class="s1">background: white;</span>
+    <span class="s1">padding: </span><span class="s3">20</span><span class="s1">px;</span>
+    <span class="s1">margin: </span><span class="s3">15</span><span class="s1">px </span><span class="s3">0</span><span class="s1">;</span>
+    <span class="s1">border-radius: </span><span class="s3">10</span><span class="s1">px;</span>
+    <span class="s1">box-shadow: </span><span class="s3">0</span><span class="s1">px </span><span class="s3">5</span><span class="s1">px </span><span class="s3">15</span><span class="s1">px rgba(</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0.15</span><span class="s1">);</span>
+    <span class="s1">transition: transform </span><span class="s3">0</span><span class="s1">.</span><span class="s3">2</span><span class="s1">s ease-in-out;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Card Hover Effect */</span>
+<span class="s1">.card:hover {</span>
+    <span class="s1">transform: translateY(-</span><span class="s3">5</span><span class="s1">px);</span>
+    <span class="s1">box-shadow: </span><span class="s3">0</span><span class="s1">px </span><span class="s3">8</span><span class="s1">px </span><span class="s3">20</span><span class="s1">px rgba(</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0.2</span><span class="s1">);</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Button Styling */</span>
+<span class="s1">.button {</span>
+    <span class="s1">background: #</span><span class="s3">28</span><span class="s1">a745;</span>
+    <span class="s1">color: white;</span>
+    <span class="s1">padding: </span><span class="s3">12</span><span class="s1">px </span><span class="s3">18</span><span class="s1">px;</span>
+    <span class="s1">border: none;</span>
+    <span class="s1">border-radius: </span><span class="s3">5</span><span class="s1">px;</span>
+    <span class="s1">font-size: </span><span class="s3">16</span><span class="s1">px;</span>
+    <span class="s1">font-weight: bold;</span>
+    <span class="s1">cursor: pointer;</span>
+    <span class="s1">transition: background </span><span class="s3">0</span><span class="s1">.</span><span class="s3">3</span><span class="s1">s ease-in-out, transform </span><span class="s3">0</span><span class="s1">.</span><span class="s3">2</span><span class="s1">s ease-in-out;</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Button Hover Effect */</span>
+<span class="s1">.button:hover {</span>
+    <span class="s1">background: #</span><span class="s3">218838</span><span class="s1">;</span>
+    <span class="s1">transform: scale(</span><span class="s3">1.05</span><span class="s1">);</span>
+<span class="s1">}</span>
+
+<span class="s0">/* Responsive Design */</span>
+<span class="s1">@media screen and (max-width: </span><span class="s3">768</span><span class="s1">px) {</span>
+    <span class="s1">.container {</span>
+        <span class="s1">width: </span><span class="s3">95</span><span class="s1">%;</span>
+        <span class="s1">margin: </span><span class="s3">100</span><span class="s1">px auto;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.navbar {</span>
+        <span class="s1">font-size: </span><span class="s3">18</span><span class="s1">px;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.navbar a {</span>
+        <span class="s1">font-size: </span><span class="s3">16</span><span class="s1">px;</span>
+        <span class="s1">padding: </span><span class="s3">10</span><span class="s1">px;</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+</pre>
+</body>
+</html>

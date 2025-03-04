@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Ticket Report</h1>
+    <p class="text-center text-muted">Select filters to generate, export, or schedule the ticket report</p>
+
+    <form method="POST" action="{{ url_for('advance_report.ticket_report') }}">
+        <div class="row">
+            <div class="col-md-6">
+                <label for="start_date">Start Date:</label>
+                <input type="date" name="start_date" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label for="end_date">End Date:</label>
+                <input type="date" name="end_date" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label for="period">Fixed Period:</label>
+                <select name="period" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="current_month">Current Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="weekly">Last 7 Days</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="technician_id">Technician:</label>
+                <select name="technician_id" class="form-control">
+                    <option value="">-- Select --</option>
+                    {% for technician in technicians %}
+                        <option value="{{ technician.id }}">{{ technician.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="region">Region:</label>
+                <input type="text" name="region" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label for="status">Ticket Status:</label>
+                <select name="status" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Breached">Breached</option>
+                    <option value="In Progress">In Progress</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="call_type">Call Type:</label>
+                <select name="call_type" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="CM">CM</option>
+                    <option value="PM">PM</option>
+                    <option value="MFI_CENTRAL">MFI_CENTRAL</option>
+                    <option value="MYQ">MYQ</option>
+                    <option value="OTHER">OTHER</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="customer">Customer Name:</label>
+                <input type="text" name="customer" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <label for="email">Email for Scheduled Report:</label>
+                <input type="email" name="email" class="form-control" placeholder="Enter email to receive scheduled report">
+            </div>
+            <div class="col-md-6">
+                <label for="schedule">Schedule:</label>
+                <select name="schedule" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success">📥 Export Report</button>
+            <button type="submit" class="btn btn-primary" name="schedule_report">📅 Schedule Report</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

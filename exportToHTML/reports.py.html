@@ -1,0 +1,106 @@
+<html>
+<head>
+<title>reports.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #5f826b; font-style: italic;}
+.s6 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+reports.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">current_app</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span><span class="s2">, </span><span class="s1">timedelta</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span><span class="s2">, </span><span class="s1">mail</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span>
+<span class="s0">from </span><span class="s1">flask_mail </span><span class="s0">import </span><span class="s1">Message</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">celery </span><span class="s0">import </span><span class="s1">celery  </span><span class="s3"># Import the celery instance</span>
+<span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">pdfkit</span>
+<span class="s0">import </span><span class="s1">os</span>
+
+<span class="s1">reports_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s4">'reports'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s4">'../templates/reports'</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">celery</span><span class="s2">.</span><span class="s1">task</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s4">&quot;app.modules.reports.generate_report_email&quot;</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">generate_report_email</span><span class="s2">(</span><span class="s1">report_type</span><span class="s2">, </span><span class="s1">recipient_email</span><span class="s2">):</span>
+    <span class="s5">&quot;&quot;&quot;Celery Task: Generate &amp; Send Report via Email&quot;&quot;&quot;</span>
+    <span class="s0">with </span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">app_context</span><span class="s2">():  </span><span class="s3"># Ensure we're inside an application context</span>
+        <span class="s0">if </span><span class="s1">report_type </span><span class="s2">== </span><span class="s4">&quot;daily&quot;</span><span class="s2">:</span>
+            <span class="s1">start_date </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()</span>
+            <span class="s1">subject </span><span class="s2">= </span><span class="s4">&quot;Daily Report&quot;</span>
+            <span class="s1">filename </span><span class="s2">= </span><span class="s4">&quot;daily_report.pdf&quot;</span>
+        <span class="s0">elif </span><span class="s1">report_type </span><span class="s2">== </span><span class="s4">&quot;weekly&quot;</span><span class="s2">:</span>
+            <span class="s1">start_date </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">() - </span><span class="s1">timedelta</span><span class="s2">(</span><span class="s1">days</span><span class="s2">=</span><span class="s6">7</span><span class="s2">)</span>
+            <span class="s1">subject </span><span class="s2">= </span><span class="s4">&quot;Weekly Report&quot;</span>
+            <span class="s1">filename </span><span class="s2">= </span><span class="s4">&quot;weekly_report.pdf&quot;</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s4">&quot;Invalid Report Type&quot;</span>
+
+        <span class="s3"># Fetch tickets within the date range</span>
+        <span class="s1">tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at </span><span class="s2">&gt;= </span><span class="s1">start_date</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+        <span class="s0">if not </span><span class="s1">tickets</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s4">f&quot;No tickets found for </span><span class="s0">{</span><span class="s1">report_type</span><span class="s0">} </span><span class="s4">report.&quot;</span>
+
+        <span class="s3"># Convert ticket data into DataFrame</span>
+        <span class="s1">data </span><span class="s2">= [{</span><span class="s4">&quot;ID&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">id</span><span class="s2">, </span><span class="s4">&quot;Title&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">title</span><span class="s2">, </span><span class="s4">&quot;Status&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+                 <span class="s4">&quot;Technician&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">technician</span><span class="s2">.</span><span class="s1">name </span><span class="s0">if </span><span class="s1">t</span><span class="s2">.</span><span class="s1">technician </span><span class="s0">else </span><span class="s4">&quot;Unassigned&quot;</span><span class="s2">} </span><span class="s0">for </span><span class="s1">t </span><span class="s0">in </span><span class="s1">tickets</span><span class="s2">]</span>
+        <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+
+        <span class="s3"># Generate Excel file</span>
+        <span class="s1">excel_filename </span><span class="s2">= </span><span class="s1">filename</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s4">&quot;.pdf&quot;</span><span class="s2">, </span><span class="s4">&quot;.xlsx&quot;</span><span class="s2">)</span>
+        <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">excel_filename</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span>
+
+        <span class="s3"># Convert DataFrame to HTML table for PDF</span>
+        <span class="s1">html_report </span><span class="s2">= </span><span class="s1">df</span><span class="s2">.</span><span class="s1">to_html</span><span class="s2">(</span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span>
+        <span class="s1">pdfkit</span><span class="s2">.</span><span class="s1">from_string</span><span class="s2">(</span><span class="s1">html_report</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+
+        <span class="s3"># Send Email with attachments</span>
+        <span class="s1">msg </span><span class="s2">= </span><span class="s1">Message</span><span class="s2">(</span><span class="s1">subject</span><span class="s2">, </span><span class="s1">recipients</span><span class="s2">=[</span><span class="s1">recipient_email</span><span class="s2">])</span>
+        <span class="s1">msg</span><span class="s2">.</span><span class="s1">body </span><span class="s2">= </span><span class="s4">f&quot;Attached is the </span><span class="s0">{</span><span class="s1">report_type</span><span class="s2">.</span><span class="s1">capitalize</span><span class="s2">()</span><span class="s0">} </span><span class="s4">Report.&quot;</span>
+        <span class="s0">with </span><span class="s1">open</span><span class="s2">(</span><span class="s1">filename</span><span class="s2">, </span><span class="s4">&quot;rb&quot;</span><span class="s2">) </span><span class="s0">as </span><span class="s1">pdf_file</span><span class="s2">:</span>
+            <span class="s1">msg</span><span class="s2">.</span><span class="s1">attach</span><span class="s2">(</span><span class="s1">filename</span><span class="s2">, </span><span class="s4">&quot;application/pdf&quot;</span><span class="s2">, </span><span class="s1">pdf_file</span><span class="s2">.</span><span class="s1">read</span><span class="s2">())</span>
+        <span class="s0">with </span><span class="s1">open</span><span class="s2">(</span><span class="s1">excel_filename</span><span class="s2">, </span><span class="s4">&quot;rb&quot;</span><span class="s2">) </span><span class="s0">as </span><span class="s1">excel_file</span><span class="s2">:</span>
+            <span class="s1">msg</span><span class="s2">.</span><span class="s1">attach</span><span class="s2">(</span><span class="s1">excel_filename</span><span class="s2">, </span><span class="s4">&quot;application/vnd.ms-excel&quot;</span><span class="s2">, </span><span class="s1">excel_file</span><span class="s2">.</span><span class="s1">read</span><span class="s2">())</span>
+
+        <span class="s1">mail</span><span class="s2">.</span><span class="s1">send</span><span class="s2">(</span><span class="s1">msg</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s4">f&quot;</span><span class="s0">{</span><span class="s1">report_type</span><span class="s2">.</span><span class="s1">capitalize</span><span class="s2">()</span><span class="s0">} </span><span class="s4">report sent to </span><span class="s0">{</span><span class="s1">recipient_email</span><span class="s0">}</span><span class="s4">&quot;</span>
+
+<span class="s3"># Route to schedule reports via email</span>
+<span class="s2">@</span><span class="s1">reports_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/schedule_report'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">schedule_report</span><span class="s2">():</span>
+    <span class="s5">&quot;&quot;&quot;Schedule a Report to be sent via email&quot;&quot;&quot;</span>
+    <span class="s1">report_type </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'report_type'</span><span class="s2">)</span>
+    <span class="s1">recipient_email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'email'</span><span class="s2">)</span>
+
+    <span class="s0">if not </span><span class="s1">report_type </span><span class="s0">or not </span><span class="s1">recipient_email</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;Please select a report type and provide an email!&quot;</span><span class="s2">, </span><span class="s4">&quot;error&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'reports.index'</span><span class="s2">))</span>
+
+    <span class="s1">generate_report_email</span><span class="s2">.</span><span class="s1">apply_async</span><span class="s2">(</span><span class="s1">args</span><span class="s2">=[</span><span class="s1">report_type</span><span class="s2">, </span><span class="s1">recipient_email</span><span class="s2">], </span><span class="s1">countdown</span><span class="s2">=</span><span class="s6">10</span><span class="s2">)  </span><span class="s3"># Send in 10 seconds</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s4">f&quot;</span><span class="s0">{</span><span class="s1">report_type</span><span class="s2">.</span><span class="s1">capitalize</span><span class="s2">()</span><span class="s0">} </span><span class="s4">report will be sent to </span><span class="s0">{</span><span class="s1">recipient_email</span><span class="s0">}</span><span class="s4">!&quot;</span><span class="s2">, </span><span class="s4">&quot;success&quot;</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'reports.index'</span><span class="s2">))</span>
+
+<span class="s3"># Report Generation Page</span>
+<span class="s2">@</span><span class="s1">reports_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
+    <span class="s1">completed_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+    <span class="s1">pending_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">!= </span><span class="s4">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span>
+        <span class="s4">'reports/index.html'</span><span class="s2">,</span>
+        <span class="s1">completed</span><span class="s2">=</span><span class="s1">completed_tickets</span><span class="s2">,</span>
+        <span class="s1">pending</span><span class="s2">=</span><span class="s1">pending_tickets</span>
+    <span class="s2">)</span>
+</pre>
+</body>
+</html>

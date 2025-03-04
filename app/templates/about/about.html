@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="split-screen">
+        <!-- Left Section: Features & Technologies -->
+        <div class="left-section">
+            <h2>About ServPulse</h2>
+            <p class="tagline">Optimizing Technician Management and Service Efficiency 🚀</p>
+            <p>Welcome to <strong>ServPulse</strong>, your intelligent solution for <strong>technician tracking, service ticket automation, and real-time performance analytics</strong>. Designed to enhance field service efficiency, ServPulse ensures seamless ticket management, SLA compliance, and in-depth reporting.</p>
+
+            <h3>Key Features:</h3>
+            <div class="feature-cards">
+                <div class="card">✅ <strong>Live Technician Dashboard</strong><br> Monitor real-time technician availability.</div>
+                <div class="card">✅ <strong>Smart Ticketing System</strong><br> Track, assign, and escalate service requests.</div>
+                <div class="card">✅ <strong>Asset Management</strong><br> Track and manage company assets.</div>
+                <div class="card">✅ <strong>Material Movement</strong><br> Monitor material logistics.</div>
+                <div class="card">✅ <strong>Tracking & Analysis</strong><br> Analyze service trends and efficiency.</div>
+                <div class="card">✅ <strong>History Management</strong><br> Maintain logs for all technician activities.</div>
+            </div>
+
+            <h3>Technologies Used:</h3>
+            <div class="tech-list">
+                🛠 <strong>Frontend:</strong> HTML, Bootstrap, JavaScript<br>
+                🛠 <strong>Backend:</strong> Flask, Python, SQLAlchemy<br>
+                🛠 <strong>Database:</strong> SQLite / PostgreSQL<br>
+                📊 <strong>Reports & Charts:</strong> Chart.js, DataTables
+            </div>
+        </div>
+
+        <!-- Right Section: Developer Info & Version History -->
+        <div class="right-section">
+            <h3>Meet the Developer:</h3>
+            <div class="developer-photo">
+                <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
+            </div>
+            <p><strong>Saifar A.</strong> – Passionate about building efficient IT solutions.</p>
+            <p>Email: <a href="mailto:saifarabdullatheef@gmail.com">saifarabdullatheef@gmail.com</a></p>
+            <p>💡 <strong>Have feedback?</strong> Reach out for feature requests & improvements!</p>
+
+            <h3>Version Information:</h3>
+            <p><strong>ServPulse v2025-1</strong> – Initial release with ticketing & tracking features.</p>
+
+            <h3>Upcoming Features:</h3>
+            <ul>
+                <li>🔹 <strong>Contract Management</strong> – Manage service agreements and contracts.</li>
+                <li>🔹 <strong>Document Management</strong> – Store and retrieve critical service documents.</li>
+                <li>🔹 <strong>Review Meeting Schedules & Reminders</strong> – Stay on top of scheduled meetings.</li>
+                <li>🔹 <strong>Renewal Reminders</strong> – Get alerts for contract renewals.</li>
+                <li>🔹 <strong>Directory Functionality</strong> – Central repository for contacts and resources.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="cta">
+        <p class="note">📌 Need help? Contact us today for a demo!</p>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: auto;
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+        font-family: 'Arial', sans-serif;
+    }
+
+    .split-screen {
+        display: flex;
+        justify-content: space-between;
+        gap: 40px;
+    }
+
+    .left-section, .right-section {
+        width: 48%;
+    }
+
+    .feature-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .card {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        font-size: 1em;
+        width: 48%;
+    }
+
+    .tech-list {
+        background: #eef5ff;
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    .developer-photo {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .oval-photo {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #007BFF;
+    }
+
+    .note {
+        font-size: 1.2em;
+        color: #FF5733;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}

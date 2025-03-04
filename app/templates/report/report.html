@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Reports & Analytics</h1>
+    <p class="text-center text-muted">Comprehensive insights into service performance</p>
+
+    <!-- Date Filter -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" class="form-control">
+        </div>
+        <div class="col-md-4">
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate" class="form-control">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="fetchFilteredData()">Apply Filter</button>
+        </div>
+        <div class="row mt-4">
+    <div class="col-md-6 text-center">
+        <a href="{{ url_for('hourly.hourly_report') }}" class="btn btn-info w-100">
+            View Technician Hourly Report
+        </a>
+    </div>
+    <div class="col-md-6 text-center">
+        <a href="{{ url_for('advance_report.advance_report_dashboard') }}" class="btn btn-info w-100">
+            Advance Reports
+        </a>
+    </div>
+</div>
+
+    <!-- Tabs for Different Reports -->
+    <ul class="nav nav-tabs mb-4" id="reportTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#technicianReport">Technician Productivity</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ticketReport">Ticket Breakdown</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#hourlyReport">Hourly Report</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Technician Productivity -->
+        <div class="tab-pane fade show active" id="technicianReport">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Technician Performance</h5>
+                <canvas id="technicianPerformanceChart"></canvas>
+                <button class="btn btn-success mt-3" onclick="exportReport()">Export to Excel</button>
+            </div>
+        </div>
+
+        <!-- Ticket Breakdown -->
+        <div class="tab-pane fade" id="ticketReport">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card shadow-sm p-3">
+                        <h5 class="text-center">Call Type Distribution</h5>
+                        <canvas id="ticketTypeChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-sm p-3">
+                        <h5 class="text-center">Ticket Status</h5>
+                        <canvas id="ticketStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hourly Report -->
+        <div class="tab-pane fade" id="hourlyReport">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Hourly Ticket Resolution</h5>
+                <canvas id="hourlyReportChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Bootstrap JS & Popper.js (required for tabs) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function fetchFilteredData() {
+        let startDate = document.getElementById("startDate").value;
+        let endDate = document.getElementById("endDate").value;
+
+        fetch(`/report/data?start_date=${startDate}&end_date=${endDate}`)
+            .then(response => response.json())
+            .then(data => updateCharts(data));
+    }
+
+    function updateCharts(data) {
+    // If no data, set empty array to prevent errors
+    let technicianNames = Object.keys(data.tickets_handled || {});
+    let ticketsHandled = Object.values(data.tickets_handled || {});
+
+    let ticketTypes = Object.keys(data.ticket_types || {});
+    let ticketTypeCounts = Object.values(data.ticket_types || {});
+
+    let ticketStatuses = Object.keys(data.ticket_status || {});
+    let ticketStatusCounts = Object.values(data.ticket_status || {});
+
+    let hourlyLabels = Object.keys(data.hourly_ticket_data || {});
+    let hourlyCounts = Object.values(data.hourly_ticket_data || {});
+
+    // Technician Productivity Chart
+    new Chart(document.getElementById("technicianPerformanceChart"), {
+        type: 'bar',
+        data: {
+            labels: technicianNames,
+            datasets: [{ label: "Tickets Handled", data: ticketsHandled, backgroundColor: "#007bff" }]
+        }
+    });
+
+    // Ticket Breakdown by Call Type
+    new Chart(document.getElementById("ticketTypeChart"), {
+        type: 'pie',
+        data: {
+            labels: ticketTypes,
+            datasets: [{ data: ticketTypeCounts, backgroundColor: ["#007bff", "#dc3545", "#ffc107"] }]
+        }
+    });
+
+    // Ticket Breakdown by Status
+    new Chart(document.getElementById("ticketStatusChart"), {
+        type: 'bar',
+        data: {
+            labels: ticketStatuses,
+            datasets: [{ data: ticketStatusCounts, backgroundColor: "#28a745" }]
+        }
+    });
+
+    // Hourly Ticket Resolution
+    new Chart(document.getElementById("hourlyReportChart"), {
+        type: 'line',
+        data: {
+            labels: hourlyLabels,
+            datasets: [{ label: "Tickets Resolved Per Hour", data: hourlyCounts, borderColor: "#17a2b8", fill: false }]
+        }
+    });
+}
+
+
+    function exportReport() {
+        let startDate = document.getElementById("startDate").value;
+        let endDate = document.getElementById("endDate").value;
+        window.location.href = `/report/export?start_date=${startDate}&end_date=${endDate}`;
+    }
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabElms.forEach(function (tab) {
+            tab.addEventListener("click", function (event) {
+                event.preventDefault();
+                let tab = new bootstrap.Tab(this);
+                tab.show();
+            });
+        });
+    });z
+</script>
+
+
+<style>
+    .card { box-shadow: 2px 2px 5px rgba(0,0,0,0.2) !important; }
+    .table th, .table td { text-align: center; }
+</style>
+{% endblock %}

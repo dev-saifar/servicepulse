@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket Dashboard{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Ticket Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Ticket Dashboard</h2>
+
+        <!-- Control Panel -->
+        <div class="d-flex justify-content-between mb-3">
+            <div>
+                <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
+                <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
+                <a href="{{ url_for('ticket1.export_tickets') }}" class="btn btn-success">Export</a>
+                <!-- Import CSV Form -->
+                <form action="{{ url_for('ticket1.import_tickets') }}" method="post" enctype="multipart/form-data" class="mb-3">
+                    <input type="file" name="file" accept=".csv" class="form-control" required>
+                    <button type="submit" class="btn btn-primary mt-2">Import Tickets</button>
+                </form>
+
+            </div>
+            <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+
+
+        <script>
+            function exportToExcel() {
+                let startDate = $("#start_date").val();
+                let endDate = $("#end_date").val();
+                let status = $("#status_filter").val();
+                let customer = $("#customer_filter").val();
+
+                let url = "{{ url_for('ticket1.export_tickets') }}?start_date=" + startDate + "&end_date=" + endDate + "&status=" + status + "&customer=" + customer;
+                window.location.href = url;
+            }
+        </script>
+
+        </div>
+
+        <!-- Filter Options -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="start_date">Start Date:</label>
+                <input type="date" id="start_date" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date">End Date:</label>
+                <input type="date" id="end_date" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="status_filter">Status:</label>
+                <select id="status_filter" class="form-control">
+                    <option value="">All</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Closed">Closed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="customer_filter">Customer:</label>
+                <input type="text" id="customer_filter" class="form-control" placeholder="Search by Customer">
+            </div>
+            <div class="col-md-3">
+                <label for="serial_filter">Serial Number:</label>
+                <input type="text" id="serial_filter" class="form-control" placeholder="Search by Serial No">
+            </div>
+            <div class="col-md-3">
+                <label for="technician_filter">Technician:</label>
+                <input type="text" id="technician_filter" class="form-control" placeholder="Search by Technician">
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="region_filter">Region:</label>
+                <input type="text" id="region_filter" class="form-control" placeholder="Search by Region">
+            </div>
+            <div class="col-md-3">
+                <label for="call_type_filter">Call Type:</label>
+                <input type="text" id="call_type_filter" class="form-control" placeholder="Search by Call Type">
+            </div>
+            <div class="col-md-3 mt-3">
+                <button class="btn btn-info" onclick="applyFilters()">Apply Filters</button>
+            </div>
+        </div>
+
+        <!-- Ticket Table -->
+        <table id="ticketTable" class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Reference No</th>
+                    <th>Title</th>
+                    <th>Customer</th>
+                    <th>Call Type</th>
+                    <th>Technician</th>
+                    <th>Expected Completion Time</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Closed At</th>
+                    <th>Serial Number</th>
+                    <th>TAT</th>
+                    <th>Complete</th>
+                    <th>Service Location</th>
+                    <th>Region</th>
+                    <th>Asset Description</th>
+                    <th>Called By</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket.reference_no }}</td>
+                    <td>{{ ticket.title }}</td>
+                    <td>{{ ticket.customer }}</td>
+                    <td>{{ ticket.call_type }}</td>
+                    <td>{{ ticket.technician_name or "Unassigned" }}</td>
+                    <td>{{ ticket.expected_completion_time }}</td>
+                    <td>{{ ticket.status }}</td>
+                    <td>{{ ticket.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ ticket.closed_at or "N/A" }}</td>
+                    <td>{{ ticket.serial_number or "N/A" }}</td>
+                    <td>{{ ticket.tat or "N/A" }}</td>
+                    <td>{{ ticket.complete or "N/A" }}</td>
+                    <td>{{ ticket.service_location or "N/A" }}</td>
+                    <td>{{ ticket.region or "N/A" }}</td>
+                    <td>{{ ticket.asset_Description or "N/A" }}</td>
+                    <td>{{ ticket.called_by or "N/A" }}</td>
+                    <td>
+                        <a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function exportToExcel() {
+            window.location.href = "{{ url_for('ticket1.export_tickets') }}";
+        }
+
+        function applyFilters() {
+            let startDate = $("#start_date").val();
+            let endDate = $("#end_date").val();
+            let status = $("#status_filter").val();
+            let customer = $("#customer_filter").val();
+            let serial = $("#serial_filter").val();
+            let technician = $("#technician_filter").val();
+            let region = $("#region_filter").val();
+            let callType = $("#call_type_filter").val();
+
+            let url = "{{ url_for('ticket1.ticket_dashboard') }}?start_date=" + startDate + "&end_date=" + endDate + "&status=" + status + "&customer=" + customer + "&serial=" + serial + "&technician=" + technician + "&region=" + region + "&callType=" + callType;
+            window.location.href = url;
+        }
+
+    </script>
+</body>
+</html>
+{% endblock %}

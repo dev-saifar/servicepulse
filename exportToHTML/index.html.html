@@ -1,0 +1,161 @@
+<html>
+<head>
+<title>index.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #d5b778;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+index.html</font>
+</center></td></tr></table>
+<pre><span class="s0">{% extends 'base.html' %}</span>
+
+<span class="s0">{% block content %}</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;h2 </span><span class="s2">class</span><span class="s3">=&quot;title&quot;</span><span class="s1">&gt;</span><span class="s0">Technician Management</span><span class="s1">&lt;/h2&gt;</span>
+
+        <span class="s4">&lt;!-- Technician Controls --&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;technician-controls&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('technicians.add_technician') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;button&quot;</span><span class="s1">&gt;</span><span class="s0">+ Add Technician</span><span class="s1">&lt;/a&gt;</span>
+            <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('technicians.import_technicians') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;button import-button&quot;</span><span class="s1">&gt;</span><span class="s0">📂 Import Technicians</span><span class="s1">&lt;/a&gt;</span>
+            <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">id</span><span class="s3">=&quot;search&quot; </span><span class="s2">class</span><span class="s3">=&quot;search-bar&quot; </span><span class="s2">onkeyup</span><span class="s3">=&quot;filterTechnicians()&quot; </span><span class="s2">placeholder</span><span class="s3">=&quot;Search Technician...&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+
+        <span class="s1">&lt;table </span><span class="s2">class</span><span class="s3">=&quot;technician-table&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;thead&gt;</span>
+                <span class="s1">&lt;tr&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Name</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Status</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Availability</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Last Location</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Calls Today</span><span class="s1">&lt;/th&gt;</span>
+                <span class="s1">&lt;/tr&gt;</span>
+            <span class="s1">&lt;/thead&gt;</span>
+            <span class="s1">&lt;tbody </span><span class="s2">id</span><span class="s3">=&quot;technician-list&quot;</span><span class="s1">&gt;</span>
+                <span class="s0">{% for tech in technicians %}</span>
+                <span class="s1">&lt;tr&gt;</span>
+                    <span class="s1">&lt;td&gt;</span><span class="s0">{{ tech.name }}</span><span class="s1">&lt;/td&gt;</span>
+                    <span class="s1">&lt;td </span><span class="s2">class</span><span class="s3">=&quot;{% if tech.status == 'Busy' %} busy-status {% else %} free-status {% endif %}&quot;</span><span class="s1">&gt;</span>
+                        <span class="s0">{{ tech.status }}</span>
+                    <span class="s1">&lt;/td&gt;</span>
+                    <span class="s1">&lt;td&gt;</span>
+                        <span class="s0">{% if tech.status == 'Busy' %}</span>
+                            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;progress&quot;</span><span class="s1">&gt;</span>
+                                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;progress-bar {% if tech.minutes_left &gt; 30 %} bg-warning {% else %} bg-danger {% endif %}&quot;</span>
+                                     <span class="s2">role</span><span class="s3">=&quot;progressbar&quot;</span>
+                                     <span class="s2">style</span><span class="s3">=&quot;width: {{ tech.progress_percentage }}%;&quot;</span>
+                                     <span class="s2">aria-valuenow</span><span class="s3">=&quot;{{ tech.progress_percentage }}&quot;</span>
+                                     <span class="s2">aria-valuemin</span><span class="s3">=&quot;0&quot; </span><span class="s2">aria-valuemax</span><span class="s3">=&quot;100&quot;</span><span class="s1">&gt;</span>
+                                    <span class="s0">{{ tech.minutes_left }} min</span>
+                                <span class="s1">&lt;/div&gt;</span>
+                            <span class="s1">&lt;/div&gt;</span>
+                        <span class="s0">{% else %}</span>
+                            <span class="s1">&lt;span </span><span class="s2">class</span><span class="s3">=&quot;free-indicator&quot;</span><span class="s1">&gt;</span><span class="s0">Available</span><span class="s1">&lt;/span&gt;</span>
+                        <span class="s0">{% endif %}</span>
+                    <span class="s1">&lt;/td&gt;</span>
+                    <span class="s1">&lt;td&gt;</span><span class="s0">{{ tech.last_location if tech.last_location else 'Unknown' }}</span><span class="s1">&lt;/td&gt;</span>
+                    <span class="s1">&lt;td&gt;</span><span class="s0">{{ tech.calls_today }}</span><span class="s1">&lt;/td&gt;</span>
+                <span class="s1">&lt;/tr&gt;</span>
+                <span class="s0">{% endfor %}</span>
+            <span class="s1">&lt;/tbody&gt;</span>
+        <span class="s1">&lt;/table&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+
+    <span class="s1">&lt;script&gt;</span>
+        <span class="s0">function filterTechnicians() {</span>
+            <span class="s0">let input = document.getElementById(&quot;search&quot;).value.toLowerCase();</span>
+            <span class="s0">let rows = document.querySelectorAll(&quot;#technician-list tr&quot;);</span>
+
+            <span class="s0">rows.forEach(row =&gt; {</span>
+                <span class="s0">let name = row.cells[0].innerText.toLowerCase();</span>
+                <span class="s0">if (name.includes(input)) {</span>
+                    <span class="s0">row.style.display = &quot;table-row&quot;;</span>
+                <span class="s0">} else {</span>
+                    <span class="s0">row.style.display = &quot;none&quot;;</span>
+                <span class="s0">}</span>
+            <span class="s0">});</span>
+        <span class="s0">}</span>
+    <span class="s1">&lt;/script&gt;</span>
+
+    <span class="s1">&lt;style&gt;</span>
+        <span class="s0">.container {</span>
+            <span class="s0">max-width: 1200px;</span>
+            <span class="s0">margin: auto;</span>
+            <span class="s0">background: white;</span>
+            <span class="s0">padding: 20px;</span>
+            <span class="s0">border-radius: 10px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.title {</span>
+            <span class="s0">text-align: center;</span>
+            <span class="s0">color: #007BFF;</span>
+        <span class="s0">}</span>
+        <span class="s0">.technician-controls {</span>
+            <span class="s0">display: flex;</span>
+            <span class="s0">justify-content: space-between;</span>
+            <span class="s0">align-items: center;</span>
+            <span class="s0">margin-bottom: 15px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.search-bar {</span>
+            <span class="s0">padding: 8px;</span>
+            <span class="s0">width: 250px;</span>
+            <span class="s0">border: 1px solid #ccc;</span>
+            <span class="s0">border-radius: 5px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.technician-table {</span>
+            <span class="s0">width: 100%;</span>
+            <span class="s0">border-collapse: collapse;</span>
+            <span class="s0">margin-top: 10px;</span>
+        <span class="s0">}</span>
+        <span class="s0">th, td {</span>
+            <span class="s0">border: 1px solid #ddd;</span>
+            <span class="s0">padding: 10px;</span>
+            <span class="s0">text-align: center;</span>
+        <span class="s0">}</span>
+        <span class="s0">th {</span>
+            <span class="s0">background: #f4f4f4;</span>
+        <span class="s0">}</span>
+        <span class="s0">.busy-status { color: red; font-weight: bold; }</span>
+        <span class="s0">.free-status { color: green; font-weight: bold; }</span>
+        <span class="s0">.progress {</span>
+            <span class="s0">height: 20px;</span>
+            <span class="s0">width: 100%;</span>
+            <span class="s0">background: #e0e0e0;</span>
+            <span class="s0">border-radius: 5px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.progress-bar {</span>
+            <span class="s0">height: 100%;</span>
+            <span class="s0">border-radius: 5px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.free-indicator {</span>
+            <span class="s0">color: green;</span>
+            <span class="s0">font-weight: bold;</span>
+        <span class="s0">}</span>
+        <span class="s0">.button {</span>
+            <span class="s0">background-color: #007bff;</span>
+            <span class="s0">color: white;</span>
+            <span class="s0">padding: 10px 15px;</span>
+            <span class="s0">text-decoration: none;</span>
+            <span class="s0">border-radius: 5px;</span>
+        <span class="s0">}</span>
+        <span class="s0">.import-button {</span>
+            <span class="s0">background-color: #28a745;</span>
+        <span class="s0">}</span>
+        <span class="s0">.button:hover {</span>
+            <span class="s0">background-color: #0056b3;</span>
+        <span class="s0">}</span>
+        <span class="s0">.import-button:hover {</span>
+            <span class="s0">background-color: #218838;</span>
+        <span class="s0">}</span>
+    <span class="s1">&lt;/style&gt;</span>
+<span class="s0">{% endblock %}</span>
+</pre>
+</body>
+</html>

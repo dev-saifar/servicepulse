@@ -1,0 +1,234 @@
+<html>
+<head>
+<title>tickets.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.s6 { color: #5f826b; font-style: italic;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+tickets.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">jsonify</span><span class="s2">, </span><span class="s1">send_file</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span><span class="s2">, </span><span class="s1">timedelta</span>
+<span class="s0">import </span><span class="s1">uuid</span>
+<span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">, </span><span class="s1">Assets</span>
+
+<span class="s3"># Define Blueprint</span>
+<span class="s1">tickets_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s4">'tickets'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s4">'../templates/tickets'</span><span class="s2">)</span>
+
+<span class="s1">WORKING_HOURS_START </span><span class="s2">= </span><span class="s5">8  </span><span class="s3"># 8 AM</span>
+<span class="s1">WORKING_HOURS_END </span><span class="s2">= </span><span class="s5">17  </span><span class="s3"># 5 PM</span>
+
+
+<span class="s0">def </span><span class="s1">get_suggested_technician</span><span class="s2">(</span><span class="s1">call_type</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; Suggests a technician based on availability and workload. &quot;&quot;&quot;</span>
+    <span class="s1">free_technicians </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Free&quot;</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">if not </span><span class="s1">free_technicians</span><span class="s2">:</span>
+        <span class="s0">return None  </span><span class="s3"># No available technicians</span>
+
+    <span class="s0">if </span><span class="s1">call_type </span><span class="s2">== </span><span class="s4">&quot;PM&quot;</span><span class="s2">:</span>
+        <span class="s1">pm_technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">.</span><span class="s1">ilike</span><span class="s2">(</span><span class="s4">&quot;%PM%&quot;</span><span class="s2">), </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">status </span><span class="s2">== </span><span class="s4">&quot;Free&quot;</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">pm_technician</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s1">pm_technician</span><span class="s2">.</span><span class="s1">id  </span><span class="s3"># Assign PM technician</span>
+
+    <span class="s1">suggested_technician </span><span class="s2">= </span><span class="s1">sorted</span><span class="s2">(</span>
+        <span class="s1">free_technicians</span><span class="s2">, </span><span class="s1">key</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">tech</span><span class="s2">: </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">technician_id</span><span class="s2">=</span><span class="s1">tech</span><span class="s2">.</span><span class="s1">id</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Open&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+    <span class="s2">)[</span><span class="s5">0</span><span class="s2">]</span>
+
+    <span class="s0">return </span><span class="s1">suggested_technician</span><span class="s2">.</span><span class="s1">id</span>
+
+
+<span class="s2">@</span><span class="s1">tickets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot; Displays all tickets with filtering &amp; sorting. &quot;&quot;&quot;</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id </span><span class="s2">== </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">)</span>
+
+    <span class="s3"># Apply Filters</span>
+    <span class="s1">filters </span><span class="s2">= {</span>
+        <span class="s4">&quot;reference_no&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;reference_no&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;customer&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;customer&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;call_type&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;call_type&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;status&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;status&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;technician_id&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;technician_id&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;serial_no&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;serial_no&quot;</span><span class="s2">),</span>
+    <span class="s2">}</span>
+
+    <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">value </span><span class="s0">in </span><span class="s1">filters</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+        <span class="s0">if </span><span class="s1">value</span><span class="s2">:</span>
+            <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">field</span><span class="s2">).</span><span class="s1">ilike</span><span class="s2">(</span><span class="s4">f&quot;%</span><span class="s0">{</span><span class="s1">value</span><span class="s0">}</span><span class="s4">%&quot;</span><span class="s2">))</span>
+
+    <span class="s1">tickets </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
+    <span class="s1">free_technicians </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Free&quot;</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'tickets/index.html'</span><span class="s2">, </span><span class="s1">tickets</span><span class="s2">=</span><span class="s1">tickets</span><span class="s2">, </span><span class="s1">free_technicians</span><span class="s2">=</span><span class="s1">free_technicians</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">tickets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/fetch_asset_details'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">fetch_asset_details</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot; Fetch customer details based on Serial Number &quot;&quot;&quot;</span>
+    <span class="s1">serial_no </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'serial_no'</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">serial_no</span><span class="s2">:</span>
+        <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">serial_no</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">asset</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span>
+                <span class="s4">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">,</span>
+                <span class="s4">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">,</span>
+                <span class="s4">&quot;region&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region</span><span class="s2">,</span>
+                <span class="s4">&quot;asset_Description&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description</span>
+            <span class="s2">})</span>
+
+    <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">&quot;error&quot;</span><span class="s2">: </span><span class="s4">&quot;Asset not found&quot;</span><span class="s2">})</span>
+
+
+<span class="s2">@</span><span class="s1">tickets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/quick_ticket'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">, </span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">quick_ticket</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot; Quick Register a Ticket with Serial Number &amp; Auto-Fetched Details &quot;&quot;&quot;</span>
+    <span class="s1">technicians </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s4">'POST'</span><span class="s2">:</span>
+        <span class="s1">serial_no </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'serial_no'</span><span class="s2">)</span>
+        <span class="s1">title </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'title'</span><span class="s2">)</span>
+        <span class="s1">description </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'description'</span><span class="s2">)</span>
+        <span class="s1">called_by </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'called_by'</span><span class="s2">)</span>
+        <span class="s1">email_id </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'email_id'</span><span class="s2">)</span>
+        <span class="s1">phone </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'phone'</span><span class="s2">)</span>
+        <span class="s1">call_type </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'call_type'</span><span class="s2">)</span>
+        <span class="s1">technician_id </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'technician_id'</span><span class="s2">) </span><span class="s0">or </span><span class="s1">get_suggested_technician</span><span class="s2">(</span><span class="s1">call_type</span><span class="s2">)</span>
+        <span class="s1">estimated_time </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'estimated_time'</span><span class="s2">) </span><span class="s0">or </span><span class="s5">60</span><span class="s2">)</span>
+        <span class="s1">travel_time </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'travel_time'</span><span class="s2">) </span><span class="s0">or </span><span class="s5">15</span><span class="s2">)</span>
+
+        <span class="s3"># Fetch Asset Details</span>
+        <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">serial_no</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if not </span><span class="s1">asset</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;Asset not found for this serial number.&quot;</span><span class="s2">, </span><span class="s4">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'tickets.quick_ticket'</span><span class="s2">))</span>
+
+        <span class="s1">customer_name </span><span class="s2">= </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span>
+        <span class="s1">service_location </span><span class="s2">= </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span>
+
+        <span class="s1">expected_completion_time </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">() + </span><span class="s1">timedelta</span><span class="s2">(</span><span class="s1">minutes</span><span class="s2">=</span><span class="s1">estimated_time </span><span class="s2">+ </span><span class="s1">travel_time</span><span class="s2">)</span>
+
+        <span class="s3"># Create Ticket</span>
+        <span class="s1">ticket </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">(</span>
+            <span class="s1">reference_no</span><span class="s2">=</span><span class="s1">str</span><span class="s2">(</span><span class="s1">uuid</span><span class="s2">.</span><span class="s1">uuid4</span><span class="s2">())[:</span><span class="s5">8</span><span class="s2">],</span>
+            <span class="s1">serial_no</span><span class="s2">=</span><span class="s1">serial_no</span><span class="s2">,</span>
+            <span class="s1">customer</span><span class="s2">=</span><span class="s1">customer_name</span><span class="s2">,</span>
+            <span class="s1">service_location</span><span class="s2">=</span><span class="s1">service_location</span><span class="s2">,</span>
+            <span class="s1">call_type</span><span class="s2">=</span><span class="s1">call_type</span><span class="s2">,</span>
+            <span class="s1">technician_id</span><span class="s2">=</span><span class="s1">technician_id</span><span class="s2">,</span>
+            <span class="s1">email_id</span><span class="s2">=</span><span class="s1">email_id</span><span class="s2">,</span>
+            <span class="s1">phone</span><span class="s2">=</span><span class="s1">phone</span><span class="s2">,</span>
+            <span class="s1">title</span><span class="s2">=</span><span class="s1">title</span><span class="s2">,</span>
+            <span class="s1">description</span><span class="s2">=</span><span class="s1">description</span><span class="s2">,</span>
+            <span class="s1">estimated_time</span><span class="s2">=</span><span class="s1">estimated_time</span><span class="s2">,</span>
+            <span class="s1">travel_time</span><span class="s2">=</span><span class="s1">travel_time</span><span class="s2">,</span>
+            <span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Open&quot;</span><span class="s2">,</span>
+            <span class="s1">created_at</span><span class="s2">=</span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">(),</span>
+            <span class="s1">expected_completion_time</span><span class="s2">=</span><span class="s1">expected_completion_time</span>
+        <span class="s2">)</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">ticket</span><span class="s2">)</span>
+
+        <span class="s3"># Assign Technician</span>
+        <span class="s0">if </span><span class="s1">technician_id</span><span class="s2">:</span>
+            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">technician_id</span><span class="s2">)</span>
+            <span class="s0">if </span><span class="s1">technician</span><span class="s2">:</span>
+                <span class="s1">technician</span><span class="s2">.</span><span class="s1">status </span><span class="s2">= </span><span class="s4">&quot;Busy&quot;</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;Quick Ticket Registered Successfully!&quot;</span><span class="s2">, </span><span class="s4">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'tickets.quick_ticket'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'tickets/quick_register.html'</span><span class="s2">, </span><span class="s1">technicians</span><span class="s2">=</span><span class="s1">technicians</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">tickets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/edit/&lt;int:ticket_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">, </span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">edit_ticket</span><span class="s2">(</span><span class="s1">ticket_id</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; Edit an existing ticket &quot;&quot;&quot;</span>
+    <span class="s1">ticket </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">ticket_id</span><span class="s2">)</span>
+    <span class="s1">technicians </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s4">'POST'</span><span class="s2">:</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">title </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'title'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">description </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'description'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">customer </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'customer'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">call_type </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'call_type'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">service_location </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'service_location'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'status'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">action_taken </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'action_taken'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">complete </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'complete'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">mr_mono </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'mr_mono'</span><span class="s2">)</span>
+        <span class="s1">ticket</span><span class="s2">.</span><span class="s1">mr_color </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'mr_color'</span><span class="s2">)</span>
+
+        <span class="s0">if </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">== </span><span class="s4">&quot;First Completed&quot;</span><span class="s2">:</span>
+            <span class="s1">ticket</span><span class="s2">.</span><span class="s1">closed_at </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()</span>
+
+            <span class="s3"># Free Technician</span>
+            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">)</span>
+            <span class="s0">if </span><span class="s1">technician</span><span class="s2">:</span>
+                <span class="s1">technician</span><span class="s2">.</span><span class="s1">status </span><span class="s2">= </span><span class="s4">&quot;Free&quot;</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;Ticket updated successfully!&quot;</span><span class="s2">, </span><span class="s4">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'tickets.index'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'tickets/edit_ticket.html'</span><span class="s2">, </span><span class="s1">ticket</span><span class="s2">=</span><span class="s1">ticket</span><span class="s2">, </span><span class="s1">technicians</span><span class="s2">=</span><span class="s1">technicians</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">tickets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/export'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">export_excel</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot; Exports tickets based on applied filters. &quot;&quot;&quot;</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span>
+
+    <span class="s1">filters </span><span class="s2">= {</span>
+        <span class="s4">&quot;reference_no&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;reference_no&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;customer&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;customer&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;call_type&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;call_type&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;status&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;status&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;technician_id&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;technician_id&quot;</span><span class="s2">),</span>
+        <span class="s4">&quot;serial_no&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;serial_no&quot;</span><span class="s2">),</span>
+    <span class="s2">}</span>
+
+    <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">value </span><span class="s0">in </span><span class="s1">filters</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+        <span class="s0">if </span><span class="s1">value</span><span class="s2">:</span>
+            <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">field</span><span class="s2">).</span><span class="s1">ilike</span><span class="s2">(</span><span class="s4">f&quot;%</span><span class="s0">{</span><span class="s1">value</span><span class="s0">}</span><span class="s4">%&quot;</span><span class="s2">))</span>
+
+    <span class="s1">tickets </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s3"># Convert to DataFrame</span>
+    <span class="s1">data </span><span class="s2">= [({</span>
+        <span class="s4">&quot;Reference No&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">reference_no</span><span class="s2">,</span>
+        <span class="s4">&quot;Title&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">title</span><span class="s2">,</span>
+        <span class="s4">&quot;Description&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">description</span><span class="s2">,</span>
+        <span class="s4">&quot;Customer&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">customer</span><span class="s2">,</span>
+        <span class="s4">&quot;Call Type&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">call_type</span><span class="s2">,</span>
+        <span class="s4">&quot;Technician&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">technician</span><span class="s2">.</span><span class="s1">name </span><span class="s0">if </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">technician </span><span class="s0">else </span><span class="s4">&quot;Unassigned&quot;</span><span class="s2">,</span>
+        <span class="s4">&quot;Status&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+        <span class="s4">&quot;Serial No&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">serial_no</span><span class="s2">,</span>
+        <span class="s4">&quot;Created At&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">,</span>
+        <span class="s4">&quot;Closed At&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">closed_at</span><span class="s2">,</span>
+        <span class="s4">&quot;TAT&quot;</span><span class="s2">: </span><span class="s1">ticket</span><span class="s2">.</span><span class="s1">tat</span>
+    <span class="s2">}) </span><span class="s0">for </span><span class="s1">ticket </span><span class="s0">in </span><span class="s1">tickets</span><span class="s2">]</span>
+
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">data</span><span class="s2">)</span>
+    <span class="s1">file_path </span><span class="s2">= </span><span class="s4">&quot;tickets_export.xlsx&quot;</span>
+    <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">file_path</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">file_path</span><span class="s2">, </span><span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">mimetype</span><span class="s2">=</span><span class="s4">&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;</span><span class="s2">)</span>
+</pre>
+</body>
+</html>

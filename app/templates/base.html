@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serv-Pulse</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .logo {
+            width: 100px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .sidebar {
+            width: 250px;
+            position: fixed;
+            height: 100%;
+            background: #343a40;
+            color: white;
+            padding-top: 20px;
+            transition: background 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar a {
+            display: block;
+            color: white;
+            padding: 15px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        .sidebar a:hover {
+            background: #495057;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 20px;
+        }
+        .dark-mode {
+            background-color: #212529 !important;
+            color: white !important;
+        }
+        .toggle-dark {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            color: white;
+        }
+        .sidebar-footer {
+            text-align: center;
+            padding: 10px;
+            background: #2c3034;
+            color: white;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar text-center">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Serv-Pulse Logo" class="logo">
+        <h3>Serv-Pulse</h3>
+        <a href="{{ url_for('dashboard.index') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="{{ url_for('technicians.index') }}"><i class="fas fa-user-cog"></i> Technicians</a>
+        <a href="{{ url_for('assets.index') }}"><i class="fas fa-box"></i> Assets</a>
+        <a href="{{ url_for('users.user_list') }}"><i class="fas fa-users"></i> Users</a>
+        <a href="{{ url_for('ticket1.ticket_dashboard') }}"><i class="fas fa-ticket-alt"></i> Tickets</a>
+        <a href="{{ url_for('report.report_dashboard') }}"><i class="fas fa-chart-bar"></i> Report</a>
+        <a href="{{ url_for('material.material_dashboard') }}"><i class="fas fa-warehouse"></i> Material Dashboard</a>
+        <a href="{{ url_for('about.about') }}"><i class="fas fa-info-circle"></i> About</a>
+
+        <!-- Sidebar Footer for Logged-in User and Logout/Login -->
+        <div class="sidebar-footer">
+            {% if current_user.is_authenticated %}
+                <p>Logged in as: <strong>{{ current_user.username }}</strong></p>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm"><i class="fas fa-sign-in-alt"></i> Login</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        <!-- Bootstrap JS (Required for Tabs to Work) -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </script>
+</body>
+</html>

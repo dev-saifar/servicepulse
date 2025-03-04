@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Import Assets</h2>
+
+    <!-- Flash Messages for Success/Error -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Import Form -->
+    <div class="card p-4 shadow">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file"><strong>Upload Excel/CSV File:</strong></label>
+                <input type="file" class="form-control-file" name="file" id="file" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Import</button>
+            <a href="{{ url_for('assets.download_template') }}" class="btn btn-secondary">Download Template</a>
+            <a href="{{ url_for('assets.index') }}" class="btn btn-light">Back to Assets</a>
+            <button type="button" class="btn btn-danger" id="resetButton">Reset</button>
+        </form>
+    </div>
+
+    <!-- Search Results Section -->
+    <div class="mt-4">
+        <h3>Search Results</h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Serial No</th>
+                    <th>Customer Name</th>
+                    <th>Service Location</th>
+                    <th>Region</th>
+                    <th>Asset Description</th>
+                </tr>
+            </thead>
+            <tbody id="assetResults">
+                <tr><td colspan="5" class="text-center">No results found.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.getElementById("resetButton").addEventListener("click", function() {
+        document.getElementById("file").value = "";
+    });
+
+    function searchAssets() {
+        let serialNo = document.getElementById("serial_number").value.trim();
+        let customerName = document.getElementById("customer_name").value.trim();
+        let serviceLocation = document.getElementById("service_location").value.trim();
+        let region = document.getElementById("region").value.trim();
+
+        fetch("/tickets/search_assets", {
+            method: "POST",
+            body: JSON.stringify({
+                serial_number: serialNo,
+                customer_name: customerName,
+                service_location: serviceLocation,
+                region: region
+            }),
+            headers: { "Content-Type": "application/json" }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP Error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            let tableBody = document.getElementById("assetResults");
+            tableBody.innerHTML = "";
+
+            if (data.message) {
+                tableBody.innerHTML = `<tr><td colspan='5' class='text-center text-danger'>${data.message}</td></tr>`;
+                return;
+            }
+
+            data.forEach(asset => {
+                let row = `<tr>
+                    <td>${asset.serial_number}</td>
+                    <td>${asset.customer_name}</td>
+                    <td>${asset.service_location}</td>
+                    <td>${asset.region}</td>
+                    <td>${asset.asset_Description}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        })
+        .catch(error => {
+            console.error("Error fetching assets:", error);
+            let tableBody = document.getElementById("assetResults");
+            tableBody.innerHTML = `<tr><td colspan='5' class='text-center text-danger'>An error occurred. Please try again.</td></tr>`;
+        });
+    }
+</script>
+
+{% endblock %}

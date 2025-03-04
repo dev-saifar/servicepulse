@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="text-center text-primary fw-bold" style="font-family: 'Roboto', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">
+            Reports & Analytics
+        </h1>
+        <p class="text-center text-muted">Comprehensive insights into service performance</p>
+
+        <!-- Summary Metrics -->
+        <div class="row text-center mb-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm p-3">
+                    <h5>Total Tickets</h5>
+                    <p class="fs-3 fw-bold text-primary">{{ total_tickets }}</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm p-3">
+                    <h5>Open Tickets</h5>
+                    <p class="fs-3 fw-bold text-warning">{{ open_tickets }}</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm p-3">
+                    <h5>Closed Tickets</h5>
+                    <p class="fs-3 fw-bold text-success">{{ closed_tickets }}</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm p-3">
+                    <h5>Average TAT (Hrs)</h5>
+                    <p class="fs-3 fw-bold text-danger">{{ avg_tat }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technician Performance Chart -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="text-center">Technician Productivity</h5>
+                <canvas id="technicianPerformanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Ticket Breakdown Chart -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="text-center">Call Type Distribution</h5>
+                        <canvas id="ticketTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="text-center">Hourly Ticket Volume</h5>
+                        <canvas id="hourlyReportChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Table -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="text-center">Detailed Report</h5>
+                <table class="table table-hover table-striped align-middle" id="reportTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Technician</th>
+                            <th>Tickets Handled</th>
+                            <th>Resolved</th>
+                            <th>Avg TAT (Hrs)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tech in technician_report %}
+                        <tr>
+                            <td>{{ tech.name }}</td>
+                            <td>{{ tech.total_tickets }}</td>
+                            <td>{{ tech.resolved_tickets }}</td>
+                            <td>{{ tech.avg_tat }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Technician Performance Chart
+            new Chart(document.getElementById("technicianPerformanceChart"), {
+                type: 'bar',
+                data: {
+                    labels: {{ technician_names|tojson }},
+                    datasets: [{
+                        label: "Tickets Handled",
+                        data: {{ tickets_handled|tojson }},
+                        backgroundColor: "#007bff"
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Ticket Type Distribution
+            new Chart(document.getElementById("ticketTypeChart"), {
+                type: 'pie',
+                data: {
+                    labels: ["PM", "CM", "Installation"],
+                    datasets: [{
+                        data: {{ ticket_types|tojson }},
+                        backgroundColor: ["#28a745", "#ffc107", "#dc3545"]
+                    }]
+                }
+            });
+
+            // Hourly Ticket Volume
+            new Chart(document.getElementById("hourlyReportChart"), {
+                type: 'line',
+                data: {
+                    labels: {{ hours|tojson }},
+                    datasets: [{
+                        label: "Tickets Resolved Per Hour",
+                        data: {{ hourly_data|tojson }},
+                        borderColor: "#17a2b8",
+                        fill: false
+                    }]
+                },
+                options: { responsive: true }
+            });
+        });
+    </script>
+
+    <style>
+        .card {
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2) !important;
+        }
+        .table th, .table td {
+            text-align: center;
+        }
+    </style>
+{% endblock %}

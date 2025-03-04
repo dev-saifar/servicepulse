@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket Dashboard{% endblock %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Register Ticket</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Register New Ticket</h2>
+        <form method="POST">
+
+            <!-- Serial Number & Status Message -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Serial Number</label>
+                    <input type="text" name="serial_number" id="serial_number" class="form-control" required>
+                    <small id="serial_status" class="text-danger"></small>
+                </div>
+                <div class="col-md-6">
+                    <label>Asset Description</label>
+                    <input type="text" name="asset_Description" id="asset_Description" class="form-control">
+                </div>
+            </div>
+
+            <!-- Customer Details -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Customer Name</label>
+                    <input type="text" name="customer_name" id="customer_name" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label>Service Location</label>
+                    <input type="text" name="service_location" id="service_location" class="form-control">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Region</label>
+                    <input type="text" name="region" id="region" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label>Call Type</label>
+                    <select name="call_type" class="form-control" required>
+                        <option value="PM">PM</option>
+                        <option value="MYQ">MYQ</option>
+                        <option value="MFI-CENTRAL">MFI-CENTRAL</option>
+                        <option value="CM">CM</option>
+                        <option value="OTHER">OTHER</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Issue Details -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Issue Title</label>
+                    <input type="text" name="title" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label>Called By</label>
+                    <input type="text" name="called_by" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label>Description</label>
+                <textarea name="description" class="form-control" required></textarea>
+            </div>
+
+            <!-- Contact Details -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Email ID</label>
+                    <input type="email" name="email_id" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label>Phone</label>
+                    <input type="text" name="phone" class="form-control">
+                </div>
+            </div>
+
+            <!-- Technician & Estimated Time -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Assigned Technician</label>
+                    <select name="technician_id" class="form-control">
+                        <option value="">-- Select Technician --</option>
+                        {% for tech in technicians %}
+                            <option value="{{ tech.id }}">{{ tech.name }},{{ tech.status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Estimated Time (minutes)</label>
+                    <input type="number" name="estimated_time" class="form-control" value="60">
+                </div>
+                <div class="col-md-3">
+                    <label>Travel Time (minutes)</label>
+                    <input type="number" name="travel_time" class="form-control" value="15">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">Create Ticket</button>
+                <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        // Function to extract URL parameters and populate form fields
+        document.addEventListener("DOMContentLoaded", function () {
+            function getQueryParam(param) {
+                let urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(param) || '';
+            }
+
+            // Autofill form fields with URL parameters
+            document.getElementById("serial_number").value = getQueryParam("serial_number");
+            document.getElementById("customer_name").value = getQueryParam("customer_name");
+            document.getElementById("service_location").value = getQueryParam("service_location");
+            document.getElementById("region").value = getQueryParam("region");
+            document.getElementById("asset_Description").value = getQueryParam("asset_Description");
+
+            // Serial number check (optional feature)
+            $("#serial_number").change(function(){
+                let serial = $(this).val();
+                $.get("/ticket1/check_serial/" + serial, function(data){
+                    $("#customer_name").val(data.customer_name);
+                    $("#service_location").val(data.service_location);
+                    $("#region").val(data.region);
+                    $("#asset_Description").val(data.asset_Description);
+                }).fail(function(){
+                    $("#serial_status").text("Serial Number not found!");
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
+{% endblock %}

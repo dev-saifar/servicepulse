@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Edit Asset</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Edit Form -->
+    <div class="card p-4 shadow">
+        <form method="POST">
+            <div class="form-group">
+                <label for="account_code">Account Code:</label>
+                <input type="text" class="form-control" name="account_code" id="account_code" value="{{ asset.account_code }}">
+            </div>
+
+            <div class="form-group">
+                <label for="customer_name">Customer Name:</label>
+                <input type="text" class="form-control" name="customer_name" id="customer_name" value="{{ asset.customer_name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="serial_number">Serial Number:</label>
+                <input type="text" class="form-control" name="serial_number" id="serial_number" value="{{ asset.serial_number }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="service_location">Service Location:</label>
+                <input type="text" class="form-control" name="service_location" id="service_location" value="{{ asset.service_location }}">
+            </div>
+
+            <div class="form-group">
+                <label for="region">Region:</label>
+                <input type="text" class="form-control" name="region" id="region" value="{{ asset.region }}">
+            </div>
+
+            <div class="form-group">
+                <label for="technician_name">Technician Name:</label>
+                <input type="text" class="form-control" name="technician_name" id="technician_name" value="{{ asset.technician_name }}">
+            </div>
+
+            <div class="form-group">
+                <label for="technician_email">Technician Email:</label>
+                <input type="email" class="form-control" name="technician_email" id="technician_email" value="{{ asset.technician_email }}">
+            </div>
+
+            <div class="form-group">
+                <label for="contract">Contract:</label>
+                <input type="text" class="form-control" name="contract" id="contract" value="{{ asset.contract }}">
+            </div>
+
+            <div class="form-group">
+                <label for="asset_Description">Asset Description:</label>
+                <input type="text" class="form-control" name="asset_Description" id="asset_Description" value="{{ asset.asset_Description }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Update Asset</button>
+            <a href="{{ url_for('assets.index') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

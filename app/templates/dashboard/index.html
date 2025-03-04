@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="text-center text-success fw-bold">Technician Dashboard</h1>
+
+        <div class="row mt-4">
+            <div class="col-lg-3 col-md-6 d-flex flex-column gap-3">
+                <div class="card shadow-sm p-3 text-center" style="width: 300px; height: 425px;">
+                    <h4>Ticket Status</h4>
+                    <canvas id="ticketChart"></canvas>
+                </div>
+                <div class="card shadow-sm p-3 text-center" style="width: 300px; height: 175px;">
+                    <h5>🎖️ Performer of the Month</h5>
+                    <p class="highlight">{{ performer_of_month.name }}</p>
+                    <p>Tickets Handled: {{ performer_of_month.total_tickets }}</p>
+                </div>
+                <div class="card shadow-sm p-3 text-center" style="width: 300px; height: 175px;">
+                    <h5>🏆 Performer of the Day</h5>
+                    <p class="highlight">{{ performer_of_day.name }}</p>
+                    <p>Tickets Handled Today: {{ performer_of_day.daily_tickets }}</p>
+                </div>
+            </div>
+
+            <!-- Technician Status Overview -->
+               <div class="col-lg-9">
+                   <div class="card shadow-sm p-4">
+                       <h4 class="text-center">Technician Status</h4>
+                       <div class="row justify-content-center">
+                           {% for tech in technicians %}
+                           <div class="col-lg-2 col-md-3 col-sm-4 mb-3 d-flex align-items-stretch">
+                               <div class="technician-box p-3 rounded shadow-sm text-center d-flex flex-column justify-content-center align-items-center {{ 'free-box' if tech.status == 'Free' else 'busy-box' }}" style="width: 100%; height: 100%; font-family: 'Roboto', sans-serif; font-size: 14px;">
+                                   <h5 class="tech-name" style="text-transform: capitalize;">{{ tech.name }}</h5>
+                                   <p>Status: <span class="fw-bold {{ 'text-danger' if tech.status == 'Busy' else 'text-success' }}" style="text-transform: capitalize;">{{ tech.status }}</span></p>
+                                   <p>Tickets Today: <strong>{{ tech.tickets_handled_today }}</strong></p>
+                                   {% if tech.name in exceeded_time_techs %}
+                                       <p class="text-warning small">⚠ Exceeded Estimated Time!</p>
+                                   {% endif %}
+                               </div>
+                           </div>
+                           {% endfor %}
+                       </div>
+                   </div>
+              </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let ticketChartInstance = null;
+
+            function updateDashboard() {
+        fetch("/dashboard/dashboard-data", { credentials: "include" })
+
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch dashboard data");
+            }
+            return response.json();
+        })
+        .then(data => {
+            let ctx = document.getElementById("ticketChart").getContext("2d");
+            if (ticketChartInstance) {
+                ticketChartInstance.destroy();
+            }
+            ticketChartInstance = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: ["Completed", "Pending"],
+                    datasets: [{
+                        data: [data.completed_tickets, data.pending_tickets],
+                        backgroundColor: ["#28a745", "#dc3545"]
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        })
+        .catch(error => console.error("Error loading dashboard:", error));
+    }
+
+
+        setInterval(updateDashboard, 10000);
+        updateDashboard();
+    </script>
+
+    <style>
+        .technician-box {
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            padding: 15px;
+            background: white;
+        }
+        .technician-box:hover {
+            transform: scale(1.05);
+        }
+        .free-box { background: #28a745; color: white; }
+        .busy-box { background: #dc3545; color: white; }
+        .highlight { font-weight: bold; color: #007BFF; }
+    </style>
+{% endblock %}

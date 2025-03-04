@@ -1,0 +1,118 @@
+
+{% block content %}
+<style>
+    /* Fullscreen background */
+    body {
+        background: url('/static/background.jpg') no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+    }
+
+    /* Centering container */
+    .register-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100vh;
+    }
+
+    /* Glassmorphism Register Container */
+    .register-container {
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        padding: 30px;
+        width: 350px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Logo styling */
+    .logo {
+        width: 100px;
+        margin-bottom: 15px;
+    }
+
+    /* Header text */
+    .register-container h2 {
+        color: #00ff99;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    /* Input fields */
+    .form-control {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: #fff;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.3);
+        outline: none;
+        box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    }
+
+    /* Register Button */
+    .btn-register {
+        background: linear-gradient(90deg, #00ff99, #009966);
+        border: none;
+        color: #fff;
+        padding: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 10px;
+        transition: 0.3s;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .btn-register:hover {
+        background: linear-gradient(90deg, #009966, #00ff99);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+
+    /* Login Redirect Link */
+    .login-redirect {
+        margin-top: 15px;
+        display: block;
+        color: #00ff99;
+        font-size: 14px;
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+    .login-redirect:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div class="register-wrapper">
+    <div class="register-container">
+        <img src="/static/servpulse-logo.png" alt="ServPulse Logo" class="logo">
+        <h2>Create an Account</h2>
+
+        <form method="POST">
+            <input type="text" name="username" class="form-control" placeholder="Username" required>
+            <input type="email" name="email" class="form-control" placeholder="Email" required>
+            <input type="password" name="password" class="form-control" placeholder="Password" required>
+            <button type="submit" class="btn-register">Register</button>
+        </form>
+
+        <a href="{{ url_for('auth.login') }}" class="login-redirect">Already have an account? Login here</a>
+    </div>
+</div>
+
+{% endblock %}

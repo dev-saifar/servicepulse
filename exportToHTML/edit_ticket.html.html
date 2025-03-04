@@ -1,0 +1,155 @@
+<html>
+<head>
+<title>edit_ticket.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #d5b778;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+edit_ticket.html</font>
+</center></td></tr></table>
+<pre><span class="s0">{% extends 'base.html' %}</span>
+
+<span class="s0">{% block content %}</span>
+<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container mt-4&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;h2 </span><span class="s2">class</span><span class="s3">=&quot;font-weight-bold mb-4 text-center&quot;</span><span class="s1">&gt;</span><span class="s0">Edit Ticket</span><span class="s1">&lt;/h2&gt;</span>
+
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card shadow p-4&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;POST&quot; </span><span class="s2">action</span><span class="s3">=&quot;{{ url_for('tickets.edit_ticket', ticket_id=ticket.id) }}&quot;</span><span class="s1">&gt;</span>
+
+            <span class="s4">&lt;!-- Reference No (Non-Editable) --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Reference No</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control bg-light&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.reference_no }}&quot; </span><span class="s2">readonly</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Title --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Title</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;title&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.title }}&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Description --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Description</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;textarea </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;description&quot; </span><span class="s2">rows</span><span class="s3">=&quot;2&quot; </span><span class="s2">required</span><span class="s1">&gt;</span><span class="s0">{{ ticket.description }}</span><span class="s1">&lt;/textarea&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Customer &amp; Service Location --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Customer</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;customer&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.customer }}&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Service Location</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;service_location&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.service_location }}&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Call Type --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Call Type</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;call_type&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.call_type }}&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Serial Number --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Serial No</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;serial_no&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.serial_no }}&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Status Dropdown --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Status</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;select </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;status&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Open&quot; </span><span class="s2">{% if ticket.status </span><span class="s3">== </span><span class="s0">&quot;Open&quot; %}selected{% endif %}&gt;Open</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;In Process&quot; </span><span class="s2">{% if ticket.status </span><span class="s3">== </span><span class="s0">&quot;In Process&quot; %}selected{% endif %}&gt;In Process</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Spare&quot; </span><span class="s2">{% if ticket.status </span><span class="s3">== </span><span class="s0">&quot;Spare&quot; %}selected{% endif %}&gt;Spare</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;First Completed&quot; </span><span class="s2">{% if ticket.status </span><span class="s3">== </span><span class="s0">&quot;First Completed&quot; %}selected{% endif %}&gt;First Completed</span><span class="s1">&lt;/option&gt;</span>
+                    <span class="s1">&lt;/select&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Closed At (Auto-fills with system time) --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Closed At</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;datetime-local&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control bg-light&quot; </span><span class="s2">name</span><span class="s3">=&quot;closed_at&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.closed_at }}&quot; </span><span class="s2">readonly</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Action Taken --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Action Taken</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;textarea </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;action_taken&quot; </span><span class="s2">rows</span><span class="s3">=&quot;2&quot;</span><span class="s1">&gt;</span><span class="s0">{{ ticket.action_taken }}</span><span class="s1">&lt;/textarea&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Complete Status --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Complete Status</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-9&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;select </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;complete&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Pending&quot; </span><span class="s2">{% if ticket.complete </span><span class="s3">== </span><span class="s0">&quot;Pending&quot; %}selected{% endif %}&gt;Pending</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Completed&quot; </span><span class="s2">{% if ticket.complete </span><span class="s3">== </span><span class="s0">&quot;Completed&quot; %}selected{% endif %}&gt;Completed</span><span class="s1">&lt;/option&gt;</span>
+                    <span class="s1">&lt;/select&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Meter Readings --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group row&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Mono Meter Reading</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;number&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;mr_mono&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.mr_mono }}&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+
+                <span class="s1">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3 col-form-label font-weight-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Color Meter Reading</span><span class="s1">&lt;/label&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-sm-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;number&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;mr_color&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ ticket.mr_color }}&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- Save Button --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;text-center mt-4&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-success btn-lg&quot;</span><span class="s1">&gt;</span><span class="s0">Save Changes</span><span class="s1">&lt;/button&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">&lt;/form&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+<span class="s1">&lt;/div&gt;</span>
+
+<span class="s1">&lt;script&gt;</span>
+    <span class="s0">// Auto-fill closed_at when status changes to 'First Completed'</span>
+    <span class="s0">document.querySelector(&quot;select[name='status']&quot;).addEventListener(&quot;change&quot;, function() {</span>
+        <span class="s0">if (this.value === &quot;First Completed&quot;) {</span>
+            <span class="s0">document.querySelector(&quot;input[name='closed_at']&quot;).value = new Date().toISOString().slice(0, 16);</span>
+        <span class="s0">}</span>
+    <span class="s0">});</span>
+<span class="s1">&lt;/script&gt;</span>
+<span class="s0">{% endblock %}</span>
+</pre>
+</body>
+</html>

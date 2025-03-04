@@ -1,0 +1,224 @@
+<html>
+<head>
+<title>assets.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+.s6 { color: #5f826b; font-style: italic;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+assets.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">send_file</span>
+<span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">os</span>
+<span class="s0">import </span><span class="s1">io</span>
+<span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">utils </span><span class="s0">import </span><span class="s1">secure_filename</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Assets</span>
+
+<span class="s1">assets_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'assets'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/assets'</span><span class="s2">)</span>
+
+<span class="s1">UPLOAD_FOLDER </span><span class="s2">= </span><span class="s3">'uploads'</span>
+<span class="s1">os</span><span class="s2">.</span><span class="s1">makedirs</span><span class="s2">(</span><span class="s1">UPLOAD_FOLDER</span><span class="s2">, </span><span class="s1">exist_ok</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+<span class="s1">ALLOWED_EXTENSIONS </span><span class="s2">= {</span><span class="s3">'xls'</span><span class="s2">, </span><span class="s3">'xlsx'</span><span class="s2">, </span><span class="s3">'csv'</span><span class="s2">}</span>
+
+
+<span class="s4"># ✅ Utility function to check allowed file types</span>
+<span class="s0">def </span><span class="s1">allowed_file</span><span class="s2">(</span><span class="s1">filename</span><span class="s2">):</span>
+    <span class="s0">return </span><span class="s3">'.' </span><span class="s0">in </span><span class="s1">filename </span><span class="s0">and </span><span class="s1">filename</span><span class="s2">.</span><span class="s1">rsplit</span><span class="s2">(</span><span class="s3">'.'</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)[</span><span class="s5">1</span><span class="s2">].</span><span class="s1">lower</span><span class="s2">() </span><span class="s0">in </span><span class="s1">ALLOWED_EXTENSIONS</span>
+
+
+<span class="s4"># ✅ Download template route (Fix for missing template error)</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/download-template'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">download_template</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot;Generates and provides an asset import template file.&quot;&quot;&quot;</span>
+    <span class="s1">template_file </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">UPLOAD_FOLDER</span><span class="s2">, </span><span class="s3">&quot;assets_template.csv&quot;</span><span class="s2">)</span>
+
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">columns</span><span class="s2">=[</span>
+        <span class="s3">&quot;account_code&quot;</span><span class="s2">, </span><span class="s3">&quot;customer_name&quot;</span><span class="s2">, </span><span class="s3">&quot;serial_number&quot;</span><span class="s2">, </span><span class="s3">&quot;service_location&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;region&quot;</span><span class="s2">, </span><span class="s3">&quot;technician_name&quot;</span><span class="s2">, </span><span class="s3">&quot;technician_email&quot;</span><span class="s2">, </span><span class="s3">&quot;contract&quot;</span><span class="s2">, </span><span class="s3">&quot;asset_Description&quot;</span>
+    <span class="s2">])</span>
+
+    <span class="s1">df</span><span class="s2">.</span><span class="s1">to_csv</span><span class="s2">(</span><span class="s1">template_file</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">template_file</span><span class="s2">, </span><span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+
+<span class="s4"># ✅ Display paginated assets with filters</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span>
+
+    <span class="s4"># Capture filter values from URL parameters</span>
+    <span class="s1">filters </span><span class="s2">= {</span>
+        <span class="s3">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;customer_name&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;serial_number&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;serial_number&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;service_location&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;region&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;region&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;technician_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;technician_name&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;asset_Description&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;asset_Description&quot;</span><span class="s2">),</span>
+    <span class="s2">}</span>
+
+    <span class="s4"># Apply filters dynamically</span>
+    <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">value </span><span class="s0">in </span><span class="s1">filters</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+        <span class="s0">if </span><span class="s1">value</span><span class="s2">:</span>
+            <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">, </span><span class="s1">field</span><span class="s2">).</span><span class="s1">ilike</span><span class="s2">(</span><span class="s3">f&quot;%</span><span class="s0">{</span><span class="s1">value</span><span class="s0">}</span><span class="s3">%&quot;</span><span class="s2">))</span>
+
+    <span class="s4"># Pagination setup</span>
+    <span class="s1">page </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;page&quot;</span><span class="s2">, </span><span class="s5">1</span><span class="s2">, </span><span class="s1">type</span><span class="s2">=</span><span class="s1">int</span><span class="s2">)</span>
+    <span class="s1">per_page </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;per_page&quot;</span><span class="s2">, </span><span class="s5">100</span><span class="s2">, </span><span class="s1">type</span><span class="s2">=</span><span class="s1">int</span><span class="s2">)  </span><span class="s4"># Default to 100 per page</span>
+    <span class="s1">paginated_assets </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">paginate</span><span class="s2">(</span><span class="s1">page</span><span class="s2">=</span><span class="s1">page</span><span class="s2">, </span><span class="s1">per_page</span><span class="s2">=</span><span class="s1">per_page</span><span class="s2">, </span><span class="s1">error_out</span><span class="s2">=</span><span class="s0">False</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;assets/index.html&quot;</span><span class="s2">, </span><span class="s1">assets</span><span class="s2">=</span><span class="s1">paginated_assets</span><span class="s2">, </span><span class="s1">filters</span><span class="s2">=</span><span class="s1">filters</span><span class="s2">, </span><span class="s1">per_page</span><span class="s2">=</span><span class="s1">per_page</span><span class="s2">)</span>
+
+
+<span class="s4"># ✅ Export assets to Excel</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/export-to-excel'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">export_to_excel</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot;Exports asset data to an Excel file.&quot;&quot;&quot;</span>
+
+    <span class="s4"># Fetch asset data from the database</span>
+    <span class="s1">assets </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s4"># Convert database records to a list of dictionaries</span>
+    <span class="s1">assets_data </span><span class="s2">= [</span>
+        <span class="s2">{</span>
+            <span class="s3">'Customer Name'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">,</span>
+            <span class="s3">'Serial Number'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">,</span>
+            <span class="s3">'Location'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">,</span>
+            <span class="s3">'Region'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region</span><span class="s2">,</span>
+            <span class="s3">'Technician'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_name</span><span class="s2">,</span>
+            <span class="s3">'Asset Description'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description</span>
+        <span class="s2">}</span>
+        <span class="s0">for </span><span class="s1">asset </span><span class="s0">in </span><span class="s1">assets</span>
+    <span class="s2">]</span>
+
+    <span class="s4"># Convert data to Pandas DataFrame</span>
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">assets_data</span><span class="s2">)</span>
+
+    <span class="s4"># Create an Excel file in memory</span>
+    <span class="s1">output </span><span class="s2">= </span><span class="s1">io</span><span class="s2">.</span><span class="s1">BytesIO</span><span class="s2">()</span>
+    <span class="s0">with </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">ExcelWriter</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">engine</span><span class="s2">=</span><span class="s3">'xlsxwriter'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">writer</span><span class="s2">:</span>
+        <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">writer</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">, </span><span class="s1">sheet_name</span><span class="s2">=</span><span class="s3">'Assets'</span><span class="s2">)</span>
+
+    <span class="s1">output</span><span class="s2">.</span><span class="s1">seek</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+
+    <span class="s4"># Send file as a response</span>
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;assets.xlsx&quot;</span><span class="s2">, </span><span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+                     <span class="s1">mimetype</span><span class="s2">=</span><span class="s3">&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;</span><span class="s2">)</span>
+
+
+<span class="s4"># ✅ Import assets from an Excel/CSV file</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/import'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">import_assets</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s0">if </span><span class="s3">'file' </span><span class="s0">not in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;No file part&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.import_assets'</span><span class="s2">))</span>
+
+        <span class="s1">file </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s3">'file'</span><span class="s2">]</span>
+        <span class="s0">if </span><span class="s1">file</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">== </span><span class="s3">''</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;No selected file&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.import_assets'</span><span class="s2">))</span>
+
+        <span class="s0">if </span><span class="s1">file </span><span class="s0">and </span><span class="s1">allowed_file</span><span class="s2">(</span><span class="s1">file</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">):</span>
+            <span class="s1">filename </span><span class="s2">= </span><span class="s1">secure_filename</span><span class="s2">(</span><span class="s1">file</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">)</span>
+            <span class="s1">filepath </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">UPLOAD_FOLDER</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+            <span class="s1">file</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">filepath</span><span class="s2">)</span>
+
+            <span class="s0">try</span><span class="s2">:</span>
+                <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">read_csv</span><span class="s2">(</span><span class="s1">filepath</span><span class="s2">) </span><span class="s0">if </span><span class="s1">filename</span><span class="s2">.</span><span class="s1">endswith</span><span class="s2">(</span><span class="s3">'.csv'</span><span class="s2">) </span><span class="s0">else </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">read_excel</span><span class="s2">(</span><span class="s1">filepath</span><span class="s2">)</span>
+                <span class="s1">required_columns </span><span class="s2">= {</span><span class="s3">&quot;account_code&quot;</span><span class="s2">, </span><span class="s3">&quot;customer_name&quot;</span><span class="s2">, </span><span class="s3">&quot;serial_number&quot;</span><span class="s2">, </span><span class="s3">&quot;service_location&quot;</span><span class="s2">,</span>
+                                    <span class="s3">&quot;region&quot;</span><span class="s2">, </span><span class="s3">&quot;technician_name&quot;</span><span class="s2">, </span><span class="s3">&quot;technician_email&quot;</span><span class="s2">, </span><span class="s3">&quot;contract&quot;</span><span class="s2">, </span><span class="s3">&quot;asset_Description&quot;</span><span class="s2">}</span>
+
+                <span class="s0">if not </span><span class="s1">required_columns</span><span class="s2">.</span><span class="s1">issubset</span><span class="s2">(</span><span class="s1">df</span><span class="s2">.</span><span class="s1">columns</span><span class="s2">):</span>
+                    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Invalid file format. Please use the correct template.&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+                    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.import_assets'</span><span class="s2">))</span>
+
+                <span class="s1">imported_count </span><span class="s2">= </span><span class="s5">0</span>
+                <span class="s0">for </span><span class="s1">_</span><span class="s2">, </span><span class="s1">row </span><span class="s0">in </span><span class="s1">df</span><span class="s2">.</span><span class="s1">iterrows</span><span class="s2">():</span>
+                    <span class="s0">if not </span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">):</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Skipping row due to missing serial number.&quot;</span><span class="s2">, </span><span class="s3">&quot;warning&quot;</span><span class="s2">)</span>
+                        <span class="s0">continue</span>
+
+                    <span class="s1">existing_asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">)).</span><span class="s1">first</span><span class="s2">()</span>
+                    <span class="s0">if </span><span class="s1">existing_asset</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Duplicate serial number </span><span class="s0">{</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">)</span><span class="s0">} </span><span class="s3">skipped.&quot;</span><span class="s2">, </span><span class="s3">&quot;warning&quot;</span><span class="s2">)</span>
+                        <span class="s0">continue</span>
+
+                    <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">(</span>
+                        <span class="s1">account_code</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'account_code'</span><span class="s2">),</span>
+                        <span class="s1">customer_name</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'customer_name'</span><span class="s2">),</span>
+                        <span class="s1">serial_number</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">),</span>
+                        <span class="s1">service_location</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'service_location'</span><span class="s2">),</span>
+                        <span class="s1">region</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'region'</span><span class="s2">),</span>
+                        <span class="s1">technician_name</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_name'</span><span class="s2">),</span>
+                        <span class="s1">technician_email</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_email'</span><span class="s2">),</span>
+                        <span class="s1">contract</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'contract'</span><span class="s2">),</span>
+                        <span class="s1">asset_Description</span><span class="s2">=</span><span class="s1">row</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'asset_Description'</span><span class="s2">)</span>
+                    <span class="s2">)</span>
+                    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">)</span>
+                    <span class="s1">imported_count </span><span class="s2">+= </span><span class="s5">1</span>
+
+                <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+                <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s0">{</span><span class="s1">imported_count</span><span class="s0">} </span><span class="s3">assets imported successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+
+            <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Error processing file: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/import.html'</span><span class="s2">)</span>
+
+
+<span class="s4"># ✅ Edit an asset</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/edit/&lt;int:asset_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">edit_asset</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">):</span>
+    <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">)</span>
+    <span class="s0">if not </span><span class="s1">asset</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Asset not found!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s0">for </span><span class="s1">field </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">:</span>
+                <span class="s1">setattr</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">, </span><span class="s1">field</span><span class="s2">, </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s1">field</span><span class="s2">])</span>
+
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Asset updated successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Error updating asset: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/edit.html'</span><span class="s2">, </span><span class="s1">asset</span><span class="s2">=</span><span class="s1">asset</span><span class="s2">)</span>
+
+
+<span class="s4"># ✅ Delete an asset</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/delete/&lt;int:asset_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">delete_asset</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">):</span>
+    <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">)</span>
+    <span class="s0">if not </span><span class="s1">asset</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Asset not found!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Asset deleted successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Error deleting asset: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+</pre>
+</body>
+</html>

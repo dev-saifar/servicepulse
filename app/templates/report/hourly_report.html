@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Technician Hourly Report</h1>
+
+    <!-- Navigation Tabs -->
+      <ul class="nav nav-tabs mt-3" id="reportTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#technicianReport">Technician Productivity</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dailyHourlyReport">Hourly Location Report</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ticketBreakdown">Ticket Breakdown</button>
+        </li>
+    </ul>
+
+
+    <div class="tab-content mt-3">
+        <!-- Technician Productivity -->
+        <div class="tab-pane fade show active" id="technicianReport">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Technician Productivity</h5>
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Technician</th>
+                            <th>PM Done</th>
+                            <th>CM Done</th>
+                            <th>Installations</th>
+                            <th>MyQ Installations</th>
+                            <th>Other Tickets</th>
+                        </tr>
+                    </thead>
+                    <tbody id="technicianReportTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Daily Hourly Report -->
+        <div class="tab-pane fade" id="dailyHourlyReport">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Technician Daily Hourly Location Report</h5>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="reportDate">Select Date:</label>
+                        <input type="date" id="reportDate" class="form-control">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="fetchDailyHourlyReport()">Generate Report</button>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-success w-100" onclick="exportHourlyReport()">Export to Excel</button>
+                    </div>
+                </div>
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Technician</th>
+                            <th>8-9 AM</th>
+                            <th>9-10 AM</th>
+                            <th>10-11 AM</th>
+                            <th>11-12 PM</th>
+                            <th>12-1 PM</th>
+                            <th>1-2 PM</th>
+                            <th>2-3 PM</th>
+                            <th>3-4 PM</th>
+                            <th>4-5 PM</th>
+                            <th>Total Tickets</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyHourlyReportTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ticket Breakdown -->
+        <div class="tab-pane fade" id="ticketBreakdown">
+            <div class="card shadow-sm p-3">
+                <h5 class="text-center">Ticket Breakdown</h5>
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Status</th>
+                            <th>Call Type</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketBreakdownTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function fetchTechnicianProductivity() {
+        console.log("Fetching Technician Productivity...");
+        fetch("/hourly/productivity")
+            .then(response => response.json())
+            .then(data => {
+                console.log("Received Technician Data:", data);
+                let tableBody = document.getElementById("technicianReportTable");
+                tableBody.innerHTML = "";
+                data.forEach(entry => {
+                    let row = `<tr>
+                        <td>${entry.technician}</td>
+                        <td>${entry.pm_done}</td>
+                        <td>${entry.cm_done}</td>
+                        <td>${entry.installations}</td>
+                        <td>${entry.myq_installations}</td>
+                        <td>${entry.other_tickets}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error("Error fetching data:", error));
+    }
+
+    function fetchDailyHourlyReport() {
+    console.log("🔍 Fetching Daily Hourly Report...");
+
+    let selectedDate = document.getElementById("reportDate").value;
+    if (!selectedDate) {
+        let today = new Date().toISOString().split("T")[0];
+        document.getElementById("reportDate").value = today;
+        selectedDate = today;
+    }
+
+    fetch(`/hourly/daily_hourly_report?date=${selectedDate}`)
+        .then(response => {
+            console.log("🟢 API Response Status:", response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log("📊 Received Hourly Report Data:", data);
+
+            let tableBody = document.getElementById("dailyHourlyReportTable");
+            tableBody.innerHTML = ""; // Clear previous data
+
+            Object.keys(data).forEach(technician => {
+                let row = `<tr><td>${technician}</td>`;
+
+                // Extract time slot keys dynamically
+                let timeSlots = [
+                    "8-00 - 9-00", "9-00 - 10-00", "10-00 - 11-00",
+                    "11-00 - 12-00", "12-00 - 13-00", "13-00 - 14-00",
+                    "14-00 - 15-00", "15-00 - 16-00", "16-00 - 17-00"
+                ];
+
+                timeSlots.forEach(timeSlot => {
+                    row += `<td>${data[technician][timeSlot] || "No Activity"}</td>`;
+                });
+
+                row += `<td>${data[technician]["total_tickets"]}</td></tr>`;
+                tableBody.innerHTML += row;
+            });
+
+            console.log("✅ Data Updated in Table");
+        })
+        .catch(error => console.error("❌ Error fetching data:", error));
+}
+
+    function fetchTicketBreakdown() {
+        console.log("Fetching Ticket Breakdown...");
+        fetch("/hourly/ticket_breakdown")
+            .then(response => response.json())
+            .then(data => {
+                console.log("Received Ticket Breakdown:", data);
+                let tableBody = document.getElementById("ticketBreakdownTable");
+                tableBody.innerHTML = "";
+
+                data.forEach(entry => {
+                    let row = `<tr>
+                        <td>${entry.status}</td>
+                        <td>${entry.call_type}</td>
+                        <td>${entry.count}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(error => console.error("Error fetching data:", error));
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+    console.log("🟢 Page Loaded: Fetching Initial Data...");
+    let today = new Date().toISOString().split("T")[0];
+    document.getElementById("reportDate").value = today;
+    fetchDailyHourlyReport();
+
+    // Add event listeners to fetch data when tabs are clicked
+    document.querySelector('[data-bs-target="#technicianReport"]').addEventListener("click", fetchTechnicianProductivity);
+    document.querySelector('[data-bs-target="#dailyHourlyReport"]').addEventListener("click", fetchDailyHourlyReport);
+    document.querySelector('[data-bs-target="#ticketBreakdown"]').addEventListener("click", fetchTicketBreakdown);
+});
+
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Movement Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 100%; margin: auto; }
+        .filter-section { margin-bottom: 8px; }
+        .table-container { overflow-x: auto; max-width: 100%; }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: auto;
+        }
+
+        /* Column-wise width adjustments */
+        .table th, .table td {
+            border: 1px solid black;
+            padding: 8px;
+
+            text-align: left;
+            word-wrap: break-word;
+            white-space: normal;
+            font-size:14px;
+        }
+
+        /* Ensure filter inputs align with columns */
+        .table thead input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .table th:nth-child(1), .table td:nth-child(1), .table th:nth-child(1) input { width: 50px; }  /* ID */
+        .table th:nth-child(2), .table td:nth-child(2), .table th:nth-child(2) input { width: 100px; } /* Date */
+        .table th:nth-child(3), .table td:nth-child(3), .table th:nth-child(3) input { width: 180px; } /* Customer */
+        .table th:nth-child(4), .table td:nth-child(4), .table th:nth-child(4) input { width: 60px; } /* FOC */
+        .table th:nth-child(5), .table td:nth-child(5), .table th:nth-child(5) input { width: 70px; } /* Serial Number */
+        .table th:nth-child(6), .table td:nth-child(6), .table th:nth-child(6) input { width: 130px; } /* Asset Description */
+        .table th:nth-child(7), .table td:nth-child(7), .table th:nth-child(7) input { width: 80px; } /* Technician */
+        .table th:nth-child(8), .table td:nth-child(8), .table th:nth-child(8) input { width: 65px; } /* Warehouse */
+        .table th:nth-child(9), .table td:nth-child(9), .table th:nth-child(9) input { width: 70px; } /* Product Code */
+        .table th:nth-child(10), .table td:nth-child(10), .table th:nth-child(10) input { width: 90px; } /* Description */
+        .table th:nth-child(11), .table td:nth-child(11), .table th:nth-child(11) input { width: 80px; } /* Warranty Status */
+        .table th:nth-child(12), .table td:nth-child(12) { width: 50px; } /* Actions (No filter input) */
+
+        .pagination { margin-top: 10px; }
+        .btn { padding: 8px 12px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
+        .status-pending { background-color: yellow; }
+        .status-approved { background-color: lightgreen; }
+        .status-rejected { background-color: lightcoral; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Material Movement Dashboard</h1>
+        <div class="filter-section">
+            <label>From Date: <input type="date" id="fromDate"></label>
+            <label>To Date: <input type="date" id="toDate"></label>
+            <button class="btn" onclick="fetchRequests(1)">Filter</button>
+            <button class="btn" onclick="exportToExcel()">Export to Excel</button>
+            <button class="btn" onclick="window.location.href='/material/movement'">Make a Request</button>
+        </div>
+
+        <div class="table-container">
+            <table class="table" id="requestTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>FOC</th>
+                        <th>Serial Number</th>
+                        <th>Asset Description</th>
+                        <th>Technician</th>
+                        <th>Warehouse</th>
+                        <th>Product Code</th>
+                        <th>Description</th>
+                        <th>Warranty Status</th>
+                        <th>Actions</th>
+                    </tr>
+                    <tr>
+                        <th><input type="text" id="filterId" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterDate" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterCustomer" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterFOC" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterSerial" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterAsset" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterTechnician" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterWarehouse" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterProduct" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterDescription" onkeyup="filterTable()"></th>
+                        <th><input type="text" id="filterStatus" onkeyup="filterTable()"></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be loaded here dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <button class="btn" onclick="loadMore()">Load More</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+
+        function fetchRequests(page) {
+            const fromDate = document.getElementById("fromDate").value;
+            const toDate = document.getElementById("toDate").value;
+            fetch(`/material/fetch_requests?page=${page}&fromDate=${fromDate}&toDate=${toDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (page === 1) document.querySelector("#requestTable tbody").innerHTML = "";
+                    data.forEach(request => {
+                        let row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${request.id}</td>
+                            <td>${request.date}</td>
+                            <td>${request.customer_name}</td>
+                            <td>${request.foc_no}</td>
+                            <td>${request.serial_number}</td>
+                            <td>${request.asset_Description}</td>
+                            <td>${request.technician_name}</td>
+                            <td>${request.warehouse}</td>
+                            <td>${request.product_code}</td>
+                            <td>${request.description}</td>
+                            <td>${request.warranty_status}</td>
+                            <td><button class="btn" onclick="redirectToEditPage(${request.id})">Edit</button></td>
+                        `;
+                        document.querySelector("#requestTable tbody").appendChild(row);
+                    });
+                });
+        }
+
+        function filterTable() {
+            const filters = Array.from(document.querySelectorAll("thead input")).map(input => input.value.toLowerCase());
+            document.querySelectorAll("#requestTable tbody tr").forEach(row => {
+                const cells = Array.from(row.getElementsByTagName("td"));
+                const match = filters.every((filter, index) => !filter || cells[index].textContent.toLowerCase().includes(filter));
+                row.style.display = match ? "" : "none";
+            });
+        }
+
+        window.onload = () => fetchRequests(1);
+        function redirectToEditPage(requestId) {
+    window.location.href = `/material/edit_request/${requestId}`;
+}
+
+    </script>
+</body>
+</html>
+
+{% endblock %}

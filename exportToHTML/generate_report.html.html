@@ -1,0 +1,31 @@
+<html>
+<head>
+<title>generate_report.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #d5b778;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+generate_report.html</font>
+</center></td></tr></table>
+<pre><span class="s0">{% extends 'base.html' %}</span>
+
+<span class="s0">{% block content %}</span>
+    <span class="s1">&lt;h2&gt;</span><span class="s0">Generate Report</span><span class="s1">&lt;/h2&gt;</span>
+    <span class="s1">&lt;form </span><span class="s2">action</span><span class="s3">=&quot;{{ url_for('reports.generate_report') }}&quot; </span><span class="s2">method</span><span class="s3">=&quot;POST&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;date_range&quot;</span><span class="s1">&gt;</span><span class="s0">Select Date Range:</span><span class="s1">&lt;/label&gt;</span>
+        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;date&quot; </span><span class="s2">name</span><span class="s3">=&quot;start_date&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;date&quot; </span><span class="s2">name</span><span class="s3">=&quot;end_date&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;button&quot;</span><span class="s1">&gt;</span><span class="s0">Generate</span><span class="s1">&lt;/button&gt;</span>
+    <span class="s1">&lt;/form&gt;</span>
+<span class="s0">{% endblock %}</span>
+</pre>
+</body>
+</html>

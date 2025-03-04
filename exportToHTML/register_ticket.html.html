@@ -1,0 +1,126 @@
+<html>
+<head>
+<title>register_ticket.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+register_ticket.html</font>
+</center></td></tr></table>
+<pre><span class="s0">&lt;!--{% extends 'base.html' %}--&gt;</span>
+
+<span class="s0">&lt;!--{% block content %}--&gt;</span>
+<span class="s0">&lt;!--&lt;div class=&quot;container mt-4&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--    &lt;h2 class=&quot;font-weight-bold mb-4 text-center&quot;&gt;Register Ticket&lt;/h2&gt;--&gt;</span>
+
+<span class="s0">&lt;!--    &lt;div class=&quot;card shadow p-4&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--        &lt;form method=&quot;POST&quot; action=&quot;{{ url_for('tickets.register_ticket') }}&quot;&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &amp;lt;!&amp;ndash; Serial Number Input &amp; Fetch Button &amp;ndash;&amp;gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group row&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;serial_no&quot; class=&quot;col-sm-3 col-form-label font-weight-bold&quot;&gt;Serial Number&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;div class=&quot;col-sm-6&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;input type=&quot;text&quot; class=&quot;form-control&quot; id=&quot;serial_no&quot; name=&quot;serial_no&quot; placeholder=&quot;Enter Serial Number&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;/div&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;div class=&quot;col-sm-3&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;button type=&quot;button&quot; class=&quot;btn btn-primary btn-block&quot; onclick=&quot;fetchAssetDetails()&quot;&gt;Fetch Details&lt;/button&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;/div&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &amp;lt;!&amp;ndash; Auto-Fetched Fields &amp;ndash;&amp;gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;fieldset disabled&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;label for=&quot;customer_name&quot;&gt;Customer Name&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;input type=&quot;text&quot; class=&quot;form-control bg-light&quot; id=&quot;customer_name&quot; name=&quot;customer_name&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--                &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;label for=&quot;service_location&quot;&gt;Service Location&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;input type=&quot;text&quot; class=&quot;form-control bg-light&quot; id=&quot;service_location&quot; name=&quot;service_location&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;/div&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/fieldset&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;hr class=&quot;my-4&quot;&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &amp;lt;!&amp;ndash; Additional Manual Input Fields &amp;ndash;&amp;gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;title&quot;&gt;Issue Title&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;input type=&quot;text&quot; class=&quot;form-control&quot; id=&quot;title&quot; name=&quot;title&quot; required&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;description&quot;&gt;Issue Details&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;textarea class=&quot;form-control&quot; id=&quot;description&quot; name=&quot;description&quot; rows=&quot;3&quot; required&gt;&lt;/textarea&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;call_type&quot;&gt;Type of Call&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;select class=&quot;form-control&quot; id=&quot;call_type&quot; name=&quot;call_type&quot; required&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;PM&quot;&gt;PM&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;CM&quot;&gt;CM&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;MYQ&quot;&gt;MYQ&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;MFI_CENTRAL&quot;&gt;MFI_CENTRAL&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;OTHER&quot;&gt;OTHER&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;/select&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;technician_id&quot;&gt;Technician&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;select class=&quot;form-control&quot; id=&quot;technician_id&quot; name=&quot;technician_id&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                    &lt;option value=&quot;&quot;&gt;&amp;#45;&amp;#45; Select Technician &amp;#45;&amp;#45;&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    {% for tech in technicians %}--&gt;</span>
+<span class="s0">&lt;!--                        &lt;option value=&quot;{{ tech.id }}&quot;&gt;{{ tech.name }} ({{ tech.status }})&lt;/option&gt;--&gt;</span>
+<span class="s0">&lt;!--                    {% endfor %}--&gt;</span>
+<span class="s0">&lt;!--                &lt;/select&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;estimated_time&quot;&gt;Estimated Time (minutes)&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;input type=&quot;number&quot; class=&quot;form-control&quot; id=&quot;estimated_time&quot; name=&quot;estimated_time&quot; placeholder=&quot;Defaults to 60&quot; value=&quot;60&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &lt;div class=&quot;form-group&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;label for=&quot;travel_time&quot;&gt;Traveling Time (minutes)&lt;/label&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;input type=&quot;number&quot; class=&quot;form-control&quot; id=&quot;travel_time&quot; name=&quot;travel_time&quot; placeholder=&quot;Defaults to 0&quot; value=&quot;0&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--            &amp;lt;!&amp;ndash; Submit Button &amp;ndash;&amp;gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;div class=&quot;text-center&quot;&gt;--&gt;</span>
+<span class="s0">&lt;!--                &lt;button type=&quot;submit&quot; class=&quot;btn btn-success btn-lg&quot;&gt;Register Ticket&lt;/button&gt;--&gt;</span>
+<span class="s0">&lt;!--            &lt;/div&gt;--&gt;</span>
+<span class="s0">&lt;!--        &lt;/form&gt;--&gt;</span>
+<span class="s0">&lt;!--    &lt;/div&gt;--&gt;</span>
+<span class="s0">&lt;!--&lt;/div&gt;--&gt;</span>
+
+<span class="s0">&lt;!--&amp;lt;!&amp;ndash; JavaScript for Fetching Asset Details &amp;ndash;&amp;gt;--&gt;</span>
+<span class="s0">&lt;!--&lt;script&gt;--&gt;</span>
+<span class="s0">&lt;!--    function fetchAssetDetails() {--&gt;</span>
+<span class="s0">&lt;!--        let serialNo = document.getElementById(&quot;serial_no&quot;).value;--&gt;</span>
+<span class="s0">&lt;!--        if (!serialNo) {--&gt;</span>
+<span class="s0">&lt;!--            alert(&quot;Please enter a Serial Number!&quot;);--&gt;</span>
+<span class="s0">&lt;!--            return;--&gt;</span>
+<span class="s0">&lt;!--        }--&gt;</span>
+
+<span class="s0">&lt;!--        fetch(`/tickets/fetch_asset_details?serial_no=${serialNo}`)--&gt;</span>
+<span class="s0">&lt;!--        .then(response =&gt; response.json())--&gt;</span>
+<span class="s0">&lt;!--        .then(data =&gt; {--&gt;</span>
+<span class="s0">&lt;!--            if (data.error) {--&gt;</span>
+<span class="s0">&lt;!--                alert(data.error);--&gt;</span>
+<span class="s0">&lt;!--            } else {--&gt;</span>
+<span class="s0">&lt;!--                document.getElementById(&quot;customer_name&quot;).value = data.customer_name;--&gt;</span>
+<span class="s0">&lt;!--                document.getElementById(&quot;service_location&quot;).value = data.service_location;--&gt;</span>
+<span class="s0">&lt;!--            }--&gt;</span>
+<span class="s0">&lt;!--        })--&gt;</span>
+<span class="s0">&lt;!--        .catch(error =&gt; console.error(&quot;Error fetching asset details:&quot;, error));--&gt;</span>
+<span class="s0">&lt;!--    }--&gt;</span>
+<span class="s0">&lt;!--&lt;/script&gt;--&gt;</span>
+<span class="s0">&lt;!--{% endblock %}--&gt;</span>
+</pre>
+</body>
+</html>

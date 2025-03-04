@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket Dashboard{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Edit Ticket</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Edit Ticket</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="row">
+                <!-- Read-Only Fields -->
+                <div class="col-md-6 mb-3">
+                    <label>Reference No</label>
+                    <input type="text" name="reference_no" class="form-control" value="{{ ticket.reference_no }}" readonly>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Created At</label>
+                    <input type="text" class="form-control" value="{{ ticket.created_at.strftime('%Y-%m-%d %H:%M:%S') }}" readonly>
+                </div>
+
+                <!-- Editable Fields -->
+                <div class="col-md-6 mb-3">
+                    <label>Serial Number</label>
+                    <input type="text" name="serial_number" class="form-control" value="{{ ticket.serial_number }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Customer</label>
+                    <input type="text" name="customer" class="form-control" value="{{ ticket.customer }}" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Called By</label>
+                    <input type="text" name="called_by" class="form-control" value="{{ ticket.called_by }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Email ID</label>
+                    <input type="email" name="email_id" class="form-control" value="{{ ticket.email_id }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Phone</label>
+                    <input type="text" name="phone" class="form-control" value="{{ ticket.phone }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Service Location</label>
+                    <input type="text" name="service_location" class="form-control" value="{{ ticket.service_location }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Region</label>
+                    <input type="text" name="region" class="form-control" value="{{ ticket.region }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Asset Description</label>
+                    <input type="text" name="asset_description" class="form-control" value="{{ ticket.asset_description }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ ticket.title }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Description</label>
+                    <textarea name="description" class="form-control" required>{{ ticket.description }}</textarea>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Call Type</label>
+                    <select name="call_type" class="form-control">
+                        <option value="PM" {% if ticket.call_type == 'PM' %}selected{% endif %}>PM</option>
+                        <option value="MYQ" {% if ticket.call_type == 'MYQ' %}selected{% endif %}>MYQ</option>
+                        <option value="MFI-CENTRAL" {% if ticket.call_type == 'MFI-CENTRAL' %}selected{% endif %}>MFI-CENTRAL</option>
+                        <option value="CM" {% if ticket.call_type == 'CM' %}selected{% endif %}>CM</option>
+                        <option value="OTHER" {% if ticket.call_type == 'OTHER' %}selected{% endif %}>OTHER</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Technician ID</label>
+                    <select name="technician_id" class="form-control">
+                        <option value="">-- Select Technician --</option>
+                        {% for tech in technicians %}
+                            <option value="{{ tech.id }}" {% if ticket.technician_id == tech.id %}selected{% endif %}>
+                                {{ tech.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Estimated Time (minutes)</label>
+                    <input type="number" name="estimated_time" class="form-control" value="{{ ticket.estimated_time }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Travel Time (minutes)</label>
+                    <input type="number" name="travel_time" class="form-control" value="{{ ticket.travel_time }}" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Status</label>
+                    <select name="status" class="form-control">
+                        <option value="Open" {% if ticket.status == 'Open' %}selected{% endif %}>Open</option>
+                        <option value="In Progress" {% if ticket.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Spares" {% if ticket.status == 'Spares' %}selected{% endif %}>Spares</option>
+                        <option value="Closed" {% if ticket.status == 'Closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Closed At</label>
+                    <input type="datetime-local" name="closed_at" class="form-control" value="{{ ticket.closed_at.strftime('%Y-%m-%dT%H:%M') if ticket.closed_at else '' }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Action Taken</label>
+                    <textarea name="action_taken" class="form-control">{{ ticket.action_taken }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>Complete</label>
+                    <select name="complete" class="form-control">
+                        <option value="Pending" {% if ticket.complete == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="Completed" {% if ticket.complete == 'Completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>MR Mono</label>
+                    <input type="text" name="mr_mono" class="form-control" value="{{ ticket.mr_mono }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label>MR Color</label>
+                    <input type="text" name="mr_color" class="form-control" value="{{ ticket.mr_color }}">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Update Ticket</button>
+        </form>
+    </div>
+</body>
+</html>
+{% endblock %}

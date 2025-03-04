@@ -1,0 +1,132 @@
+<html>
+<head>
+<title>dashboard.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+dashboard.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_required</span>
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">jsonify</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span>
+<span class="s0">from </span><span class="s1">sqlalchemy</span><span class="s2">.</span><span class="s1">sql </span><span class="s0">import </span><span class="s1">func</span><span class="s2">, </span><span class="s1">case</span>
+
+<span class="s1">dashboard_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'dashboard'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/dashboard'</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">dashboard_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
+    <span class="s1">completed_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+    <span class="s1">pending_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">!= </span><span class="s3">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+
+    <span class="s1">today </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+
+    <span class="s4"># Get technician details including tickets handled today</span>
+    <span class="s1">technicians </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">case</span><span class="s2">((</span><span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">today</span><span class="s2">, </span><span class="s5">1</span><span class="s2">), </span><span class="s1">else_</span><span class="s2">=</span><span class="s0">None</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'tickets_handled_today'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id </span><span class="s2">== </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s4"># Get performer of the month and performer of the day</span>
+    <span class="s1">performer_of_month </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'total_tickets'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">join</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m'</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">now</span><span class="s2">())</span>
+    <span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">order_by</span><span class="s2">(</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">desc</span><span class="s2">()).</span><span class="s1">first</span><span class="s2">()</span>
+
+    <span class="s1">performer_of_day </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'daily_tickets'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">join</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">today</span>
+    <span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">order_by</span><span class="s2">(</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">desc</span><span class="s2">()).</span><span class="s1">first</span><span class="s2">()</span>
+
+    <span class="s1">exceeded_time_techs </span><span class="s2">= [</span>
+        <span class="s1">t</span><span class="s2">.</span><span class="s1">name </span><span class="s0">for </span><span class="s1">t </span><span class="s0">in </span><span class="s1">technicians </span><span class="s0">if </span><span class="s1">t</span><span class="s2">.</span><span class="s1">status </span><span class="s2">== </span><span class="s3">&quot;Busy&quot; </span><span class="s0">and </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id </span><span class="s2">== </span><span class="s1">t</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">!= </span><span class="s3">&quot;Completed&quot;</span><span class="s2">,</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">expected_completion_time </span><span class="s2">&lt; </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()</span>
+        <span class="s2">).</span><span class="s1">count</span><span class="s2">() &gt; </span><span class="s5">0</span>
+    <span class="s2">]</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span>
+        <span class="s3">'dashboard/index.html'</span><span class="s2">,</span>
+        <span class="s1">completed_tickets</span><span class="s2">=</span><span class="s1">completed_tickets</span><span class="s2">,</span>
+        <span class="s1">pending_tickets</span><span class="s2">=</span><span class="s1">pending_tickets</span><span class="s2">,</span>
+        <span class="s1">technicians</span><span class="s2">=</span><span class="s1">technicians</span><span class="s2">,</span>
+        <span class="s1">performer_of_month</span><span class="s2">=</span><span class="s1">performer_of_month </span><span class="s0">or </span><span class="s2">{</span><span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s3">&quot;No Data&quot;</span><span class="s2">, </span><span class="s3">&quot;total_tickets&quot;</span><span class="s2">: </span><span class="s5">0</span><span class="s2">},</span>
+        <span class="s1">performer_of_day</span><span class="s2">=</span><span class="s1">performer_of_day </span><span class="s0">or </span><span class="s2">{</span><span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s3">&quot;No Data&quot;</span><span class="s2">, </span><span class="s3">&quot;daily_tickets&quot;</span><span class="s2">: </span><span class="s5">0</span><span class="s2">},</span>
+        <span class="s1">exceeded_time_techs</span><span class="s2">=</span><span class="s1">exceeded_time_techs</span>
+    <span class="s2">)</span>
+
+<span class="s4"># API Endpoint to Fetch Dashboard Data for Real-Time Updates</span>
+<span class="s2">@</span><span class="s1">dashboard_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/dashboard-data'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">dashboard_data</span><span class="s2">():</span>
+    <span class="s1">today </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+
+    <span class="s1">completed_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+    <span class="s1">pending_tickets </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">!= </span><span class="s3">&quot;Completed&quot;</span><span class="s2">).</span><span class="s1">count</span><span class="s2">()</span>
+
+    <span class="s1">technicians </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">case</span><span class="s2">((</span><span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">today</span><span class="s2">, </span><span class="s5">1</span><span class="s2">), </span><span class="s1">else_</span><span class="s2">=</span><span class="s0">None</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'tickets_handled_today'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id </span><span class="s2">== </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s1">performer_of_month </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'total_tickets'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">join</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m'</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">now</span><span class="s2">())</span>
+    <span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">order_by</span><span class="s2">(</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">desc</span><span class="s2">()).</span><span class="s1">first</span><span class="s2">()</span>
+
+    <span class="s1">performer_of_day </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">, </span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'daily_tickets'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">join</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">, </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at</span><span class="s2">) == </span><span class="s1">today</span>
+    <span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">order_by</span><span class="s2">(</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">desc</span><span class="s2">()).</span><span class="s1">first</span><span class="s2">()</span>
+
+    <span class="s1">exceeded_time_techs </span><span class="s2">= [</span>
+        <span class="s1">t</span><span class="s2">.</span><span class="s1">name </span><span class="s0">for </span><span class="s1">t </span><span class="s0">in </span><span class="s1">technicians </span><span class="s0">if </span><span class="s1">t</span><span class="s2">.</span><span class="s1">status </span><span class="s2">== </span><span class="s3">&quot;Busy&quot; </span><span class="s0">and </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id </span><span class="s2">== </span><span class="s1">t</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status </span><span class="s2">!= </span><span class="s3">&quot;Completed&quot;</span><span class="s2">,</span>
+            <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">expected_completion_time </span><span class="s2">&lt; </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()</span>
+        <span class="s2">).</span><span class="s1">count</span><span class="s2">() &gt; </span><span class="s5">0</span>
+    <span class="s2">]</span>
+
+    <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span>
+        <span class="s3">&quot;completed_tickets&quot;</span><span class="s2">: </span><span class="s1">completed_tickets</span><span class="s2">,</span>
+        <span class="s3">&quot;pending_tickets&quot;</span><span class="s2">: </span><span class="s1">pending_tickets</span><span class="s2">,</span>
+        <span class="s3">&quot;technicians&quot;</span><span class="s2">: [</span>
+            <span class="s2">{</span>
+                <span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+                <span class="s3">&quot;status&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+                <span class="s3">&quot;tickets_handled_today&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">tickets_handled_today </span><span class="s0">or </span><span class="s5">0</span><span class="s2">,</span>
+                <span class="s3">&quot;exceeded&quot;</span><span class="s2">: </span><span class="s1">t</span><span class="s2">.</span><span class="s1">name </span><span class="s0">in </span><span class="s1">exceeded_time_techs</span>
+            <span class="s2">} </span><span class="s0">for </span><span class="s1">t </span><span class="s0">in </span><span class="s1">technicians</span>
+        <span class="s2">],</span>
+        <span class="s3">&quot;performer_of_month&quot;</span><span class="s2">: {</span>
+            <span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">performer_of_month</span><span class="s2">.</span><span class="s1">name </span><span class="s0">if </span><span class="s1">performer_of_month </span><span class="s0">else </span><span class="s3">&quot;No Data&quot;</span><span class="s2">,</span>
+            <span class="s3">&quot;total_tickets&quot;</span><span class="s2">: </span><span class="s1">performer_of_month</span><span class="s2">.</span><span class="s1">total_tickets </span><span class="s0">if </span><span class="s1">performer_of_month </span><span class="s0">else </span><span class="s5">0</span>
+        <span class="s2">},</span>
+        <span class="s3">&quot;performer_of_day&quot;</span><span class="s2">: {</span>
+            <span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">performer_of_day</span><span class="s2">.</span><span class="s1">name </span><span class="s0">if </span><span class="s1">performer_of_day </span><span class="s0">else </span><span class="s3">&quot;No Data&quot;</span><span class="s2">,</span>
+            <span class="s3">&quot;daily_tickets&quot;</span><span class="s2">: </span><span class="s1">performer_of_day</span><span class="s2">.</span><span class="s1">daily_tickets </span><span class="s0">if </span><span class="s1">performer_of_day </span><span class="s0">else </span><span class="s5">0</span>
+        <span class="s2">}</span>
+    <span class="s2">})</span>
+</pre>
+</body>
+</html>

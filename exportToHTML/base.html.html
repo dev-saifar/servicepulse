@@ -1,0 +1,56 @@
+<html>
+<head>
+<title>base.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #d5b778;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+base.html</font>
+</center></td></tr></table>
+<pre><span class="s0">&lt;!DOCTYPE </span><span class="s2">html</span><span class="s0">&gt;</span>
+<span class="s0">&lt;html </span><span class="s2">lang</span><span class="s3">=&quot;en&quot;</span><span class="s0">&gt;</span>
+<span class="s0">&lt;head&gt;</span>
+    <span class="s0">&lt;meta </span><span class="s2">charset</span><span class="s3">=&quot;UTF-8&quot;</span><span class="s0">&gt;</span>
+    <span class="s0">&lt;meta </span><span class="s2">name</span><span class="s3">=&quot;viewport&quot; </span><span class="s2">content</span><span class="s3">=&quot;width=device-width, initial-scale=1.0&quot;</span><span class="s0">&gt;</span>
+    <span class="s0">&lt;title&gt;</span><span class="s1">TechTrack</span><span class="s0">&lt;/title&gt;</span>
+    <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('static', filename='css/styles.css') }}&quot;</span><span class="s0">&gt;</span>
+<span class="s0">&lt;/head&gt;</span>
+<span class="s0">&lt;body&gt;</span>
+
+    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;navbar&quot;</span><span class="s0">&gt;</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('dashboard.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Dashboard</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('technicians.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Technicians</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('tickets.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Tickets</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('reports.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Reports</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Assets</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('about.about') }}&quot;</span><span class="s0">&gt;</span><span class="s1">About</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('users.user_list') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Users</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+
+        <span class="s4">&lt;!-- ✅ Authentication Logic --&gt;</span>
+        <span class="s1">{% if current_user.is_authenticated %}</span>
+            <span class="s0">&lt;span&gt;</span><span class="s1">Welcome, {{ current_user.username }} | </span><span class="s0">&lt;/span&gt;</span>
+            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.logout') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Logout</span><span class="s0">&lt;/a&gt;</span>
+        <span class="s1">{% else %}</span>
+            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.login') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Login</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.register') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Register</span><span class="s0">&lt;/a&gt;</span>
+        <span class="s1">{% endif %}</span>
+    <span class="s0">&lt;/div&gt;</span>
+
+    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container&quot;</span><span class="s0">&gt;</span>
+        <span class="s1">{% block content %}{% endblock %}</span>
+    <span class="s0">&lt;/div&gt;</span>
+
+<span class="s0">&lt;/body&gt;</span>
+<span class="s0">&lt;/html&gt;</span>
+</pre>
+</body>
+</html>

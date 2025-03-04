@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Create New Ticket</h2>
+
+    <div class="card p-4 shadow">
+        <form method="POST" action="{{ url_for('new_tickets.register_ticket') }}">
+            <input type="hidden" name="reference_no" value="{{ reference_no }}">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="serial_number">Serial Number:</label>
+                    <input type="text" class="form-control" name="serial_number" id="serial_number" value="{{ serial_number }}" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="customer_name">Customer Name:</label>
+                    <input type="text" class="form-control" name="customer_name" id="customer_name" value="{{ customer_name }}" readonly>
+                </div>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label for="service_location">Service Location:</label>
+                    <input type="text" class="form-control" name="service_location" id="service_location" value="{{ service_location }}" readonly>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="region">Region:</label>
+                    <input type="text" class="form-control" name="region" id="region" value="{{ region }}" readonly>
+                </div>
+            </div>
+
+            <div class="mt-2">
+                <label for="asset_description">Asset Description:</label>
+                <input type="text" class="form-control" name="asset_description" id="asset_description" value="{{ asset_description }}" readonly>
+            </div>
+
+            <div class="mt-2">
+                <label for="issue_title">Issue Title:</label>
+                <input type="text" class="form-control" name="issue_title" id="issue_title" required>
+            </div>
+
+            <div class="mt-2">
+                <label for="description">Issue Description:</label>
+                <textarea class="form-control" name="description" id="description" required></textarea>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label for="called_by">Called By:</label>
+                    <input type="text" class="form-control" name="called_by" id="called_by" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="email_id">Email ID:</label>
+                    <input type="email" class="form-control" name="email_id" id="email_id">
+                </div>
+            </div>
+
+            <div class="mt-2">
+                <label for="phone">Phone:</label>
+                <input type="text" class="form-control" name="phone" id="phone">
+            </div>
+
+            <div class="mt-2">
+                <label for="technician_id">Assigned Technician:</label>
+                <select class="form-control" name="technician_id" id="technician_id" required>
+                    <option value="">-- Select Technician --</option>
+                    {% for tech in technicians %}
+                        <option value="{{ tech.id }}">{{ tech.name }} ({{ tech.status }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mt-2">
+                <label for="call_type">Call Type:</label>
+                <select class="form-control" name="call_type" id="call_type" required>
+                    <option value="PM">PM</option>
+                    <option value="MYQ">MYQ</option>
+                    <option value="MFI-CENTRAL">MFI_CENTRAL</option>
+                    <option value="CM">CM</option>
+                    <option value="OTHER">OTHER</option>
+                </select>
+            </div>
+
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label for="estimated_time">Estimated Time (minutes):</label>
+                    <input type="number" class="form-control" name="estimated_time" id="estimated_time" placeholder="Defaults to 60">
+                </div>
+
+                <div class="col-md-6">
+                    <label for="travel_time">Travel Time (minutes):</label>
+                    <input type="number" class="form-control" name="travel_time" id="travel_time" placeholder="Defaults to 15">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Generate Ticket</button>
+                <a href="{{ url_for('new_tickets.index') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

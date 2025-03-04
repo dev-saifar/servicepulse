@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket-Wise Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h2>Ticket-Wise Report</h2>
+
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" value="2025-02-01">
+
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" value="2025-02-19">
+
+    <button onclick="loadTicketReport()">Load Report</button>
+    <button onclick="exportToExcel()">Download Excel</button>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Ticket ID</th>
+                <th>Technician Name</th>
+                <th>Call Type</th>
+                <th>Status</th>
+                <th>Customer Name</th>
+                <th>Service Location</th>
+                <th>Region</th>
+                <th>Serial Number</th>
+                <th>Asset Description</th>
+                <th>Created At</th>
+                <th>Action Taken</th>
+                <th>TAT</th>
+                <th>Updated At</th>
+
+
+            </tr>
+        </thead>
+        <tbody id="ticket-report-table">
+            <tr><td colspan="12">No data loaded</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        function loadTicketReport() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+
+            fetch(`/report/tickets?start_date=${startDate}&end_date=${endDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Loaded Ticket Report Data:", data); // Debugging
+                    const tableBody = document.getElementById("ticket-report-table");
+                    tableBody.innerHTML = ""; // Clear old data
+
+                    if (data.length === 0) {
+                        tableBody.innerHTML = "<tr><td colspan='12'>No records found.</td></tr>";
+                        return;
+                    }
+
+                    data.forEach(ticket => {
+                        let row = document.createElement("tr");
+                        row.innerHTML = `
+
+
+                        <td>${ticket.ticket_id}</td>
+                        <td>${ticket.technician_name}</td>
+                        <td>${ticket.call_type}</td>
+                        <td>${ticket.status}</td>
+                        <td>${ticket.customer_name}</td>
+                        <td>${ticket.service_location}</td>
+                        <td>${ticket.region}</td>
+                        <td>${ticket.serial_number}</td>
+                        <td>${ticket.asset_description}</td>
+                        <td>${ticket.created_at}</td>
+                        <td>${ticket.action_taken}</td>
+                        <td>${ticket.tat}</td>
+                        <td>${ticket.updated_at}</td>
+
+
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error("Error loading ticket report:", error));
+        }
+
+        function exportToExcel() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            window.location.href = `/report/export-tickets?start_date=${startDate}&end_date=${endDate}`;
+        }
+    </script>
+</body>
+</html>

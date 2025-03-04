@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Material Movement Request</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 20px;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Fields */
+.input-field {
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Buttons */
+.button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+.print-button {
+    margin-top: 15px;
+}
+
+/* Table Styling */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    background: white;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.table th {
+    background-color: #007bff;
+    color: white;
+}
+
+.table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .container {
+        width: 95%;
+    }
+
+    .button {
+        width: 100%;
+    }
+}
+
+    </style>
+</head>
+<body onload="fetchTechnicians()">
+
+    <div class="container">
+        <h2>Material Movement Request</h2>
+
+        <label>Serial Number:</label>
+        <input type="text" id="serial_number" class="input-field" onblur="fetchAssetDetails()">
+
+        <label>Customer Name:</label>
+        <input type="text" id="customer_name" class="input-field" readonly>
+
+        <label>Service Location:</label>
+        <input type="text" id="service_location" class="input-field" readonly>
+
+        <label>Region:</label>
+        <input type="text" id="region" class="input-field" readonly>
+
+        <label>Contract Code:</label>
+        <input type="text" id="contract" class="input-field" readonly>
+
+        <label>Contract Expiry Date:</label>
+        <input type="text" id="contract_expiry_date" class="input-field" >
+
+        <label>Asset Description:</label>
+        <input type="text" id="asset_Description" class="input-field" readonly>
+        <label>Technician Name:</label>
+        <select id="technician" class="input-field"></select>
+
+        <label>Current Meter Reading:</label>
+        <input type="number" id="current_reading" class="input-field">
+
+        <h3 class="section-title">Request New Spare</h3>
+        <table class="table spare_table">
+            <tr>
+                <th>Product Code</th>
+                <th>Description</th>
+                <th>Previous Reading</th>
+                <th>Current Reading</th>
+                <th>Yield</th>
+                <th>Qty.</th>
+                <th>Spare Type</th>
+                <th>Warehouse</th>
+                <th>Remarks</th>
+                <th>Action</th>
+            </tr>
+        </table>
+
+        <button class="button" onclick="addNewItem()">➕ Add New Item</button>
+
+        <div class="print-button">
+            <button class="button" onclick="submitRequest()">Submit Request</button>
+            <button class="button" onclick="printRequest()">Print Request</button>
+        </div>
+
+        <h3 class="section-title">Spare Request History</h3>
+        <table class="table" id="historyTable">
+            <tr>
+                <th>Date</th>
+                <th>Product Description</th>
+                <th>Replaced Reading</th>
+                <th>Part Code</th>
+                <th>Yield</th>
+                <th>Qty.</th>
+                <th>Warehouse</th>
+                <th>Technician</th>
+                <th>Remarks</th>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+    function fetchAssetDetails() {
+    var serial = document.getElementById("serial_number").value.trim();
+
+    if (serial === "") {
+        alert("Please enter a serial number.");
+        return;
+    }
+
+    fetch(`/material/fetch_asset/${encodeURIComponent(serial)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.error) {
+                document.getElementById("customer_name").value = data.customer_name;
+                document.getElementById("service_location").value = data.service_location;
+                document.getElementById("region").value = data.region;
+                document.getElementById("contract").value = data.contract;
+                document.getElementById("contract_expiry_date").value = data.contract_expiry_date;
+                document.getElementById("asset_Description").value = data.asset_Description;
+
+                // Fetch and display history for this serial number
+                fetchHistory(serial);
+            } else {
+                alert("Asset not found!");
+            }
+        })
+        .catch(error => console.error("Error fetching asset:", error));
+}
+
+    function fetchTechnicians() {
+    fetch("/material/fetch_technicians")
+        .then(response => response.json())
+        .then(data => {
+            var technicianDropdown = document.getElementById("technician");
+            technicianDropdown.innerHTML = "<option value=''>Select Technician</option>";
+
+            data.forEach(tech => {
+                var option = document.createElement("option");
+                option.value = tech.id;
+                option.textContent = tech.name;
+                technicianDropdown.appendChild(option);
+            });
+        })
+        .catch(error => console.error("Error fetching technicians:", error));
+}
+function calculateYield(input) {
+    let row = input.parentNode.parentNode;
+    let prevReading = parseFloat(row.querySelector(".prev_reading").value) || 0;
+    let currentReading = parseFloat(input.value) || 0;
+    let yieldField = row.querySelector(".yield");
+
+    let calculatedYield = currentReading - prevReading;
+    yieldField.value = isNaN(calculatedYield) ? 0 : calculatedYield;
+}
+
+    function addNewItem() {
+        let table = document.querySelector(".spare_table");
+        let row = table.insertRow(-1);
+
+        row.innerHTML = `
+            <td><input type="text" class="input-field part_code" onblur="fetchSpareDetails(this)"></td>
+            <td><input type="text" class="input-field description" readonly></td>
+            <td><input type="number" class="input-field prev_reading" readonly></td>
+            <td><input type="number" class="input-field current_reading" onblur="calculateYield(this)"></td>
+            <td><input type="number" class="input-field yield" readonly></td>
+            <td><input type="number" class="input-field qty"></td>
+            <td><select class="input-field spare_type">
+                <option value="Rollers">Rollers</option>
+                <option value="Consumables">Consumables</option>
+                <option value="PCB">PCB</option>
+                <option value="Spares">Spares</option>
+            </select></td>
+            <td>
+                <select class="input-field warehouse">
+                    <option value="Store">Store</option>
+                    <option value="Workshop">Workshop</option>
+                </select>
+            </td>
+            <td><input type="text" class="input-field remarks"></td>
+            <td><button class="button" onclick="removeItem(this)">❌ Remove</button></td>
+        `;
+
+        fetchTechnicians();
+    }
+
+    function removeItem(button) {
+        let row = button.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+    }
+
+    function printRequest() {
+    let serial_number = document.getElementById("serial_number").value.trim();
+    let technician_id = document.getElementById("technician").value;
+    let technician_name = document.getElementById("technician").options[document.getElementById("technician").selectedIndex].text;
+    let current_reading = document.getElementById("current_reading").value.trim();
+
+    if (serial_number === "" || technician_id === "") {
+        alert("Error: Please enter all required fields (Serial Number & Technician).");
+        return;
+    }
+
+    let spare_requests = [];
+    document.querySelectorAll(".spare_table tr").forEach((row, index) => {
+        if (index === 0) return;  // Skip header row
+
+        let part_code = row.querySelector(".part_code").value.trim();
+        let description = row.querySelector(".description").value.trim();
+        let prev_reading = row.querySelector(".prev_reading").value.trim();
+        let yield_achvd = row.querySelector(".yield").value.trim();
+        let qty = row.querySelector(".qty").value.trim();
+        let spare_type = row.querySelector(".spare_type").value;
+        let warehouse = row.querySelector(".warehouse").value;
+        let remarks = row.querySelector(".remarks").value.trim();
+
+        spare_requests.push({
+            serial_number: serial_number,
+            asset_Description: document.getElementById("asset_Description").value,
+            technician_id: technician_id,
+            technician_name: technician_name,
+            reading: current_reading,
+            customer_name: document.getElementById("customer_name").value,
+            service_location: document.getElementById("service_location").value,
+            region: document.getElementById("region").value,
+            contract: document.getElementById("contract").value,
+            contract_expiry_date: document.getElementById("contract_expiry_date").value,
+            product_code: part_code,
+            description: description,
+            yield_achvd: yield_achvd,
+            qty: qty,
+            spare_type: spare_type,
+            warehouse: warehouse,
+            any_remarks: remarks,
+            warranty_status: (spare_type === "PCB" || spare_type === "Consumables") ? "Pending" : "Not Applicable"
+        });
+    });
+
+    console.log("Submitting the following data:", spare_requests); // Debugging output
+
+    fetch("/material/submit_request", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(spare_requests)
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Redirect to the Print Request page after successful submission
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        if (data && data.error) {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error("Error submitting request:", error);
+        alert("An error occurred while submitting the request.");
+    });
+}
+
+
+    function fetchSpareDetails(input) {
+        let partNumber = input.value.trim();
+        let serialNumber = document.getElementById("serial_number").value.trim();
+        let prevReadingField = input.parentNode.parentNode.querySelector(".prev_reading");
+        let descriptionField = input.parentNode.parentNode.querySelector(".description");
+
+        if (partNumber === "" || serialNumber === "") {
+            prevReadingField.value = 0;
+            descriptionField.value = "";
+            return;
+        }
+
+        fetch(`/material/fetch_spare/${encodeURIComponent(partNumber)}`)
+            .then(response => response.json())
+            .then(data => {
+                descriptionField.value = data.description || "Not Found";
+            });
+
+        fetch(`/material/fetch_previous_reading/${encodeURIComponent(serialNumber)}/${encodeURIComponent(partNumber)}`)
+            .then(response => response.json())
+            .then(data => {
+                prevReadingField.value = data.previous_reading;
+            });
+    }
+    function fetchHistory(serial) {
+    fetch(`/material/fetch_history/${encodeURIComponent(serial)}`)
+        .then(response => response.json())
+        .then(data => {
+            let historyTable = document.getElementById("historyTable");
+            historyTable.innerHTML = `<tr>
+                <th>Date</th>
+                <th>Product Code</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Reading</th>
+                <th>Yield</th>
+                <th>Warehouse</th>
+                <th>Technician</th>
+                <th>FOC No</th>
+                <th>Warranty Status</th>
+                <th>Remarks</th>
+            </tr>`;
+
+            if (data.length === 0) {  // ✅ Handle empty history properly
+                let row = historyTable.insertRow();
+                let cell = row.insertCell(0);
+                cell.colSpan = 7;
+                cell.textContent = "No history found.";
+                cell.style.textAlign = "center";
+                return;
+            }
+
+            data.forEach(spare => {
+                let row = historyTable.insertRow();
+                row.innerHTML = `<td>${spare.date}</td>
+                                 <td>${spare.product_code}</td>
+                                 <td>${spare.description}</td>
+                                 <td>${spare.qty}</td>
+                                 <td>${spare.reading}</td>
+                                 <td>${spare.yield_achvd}</td>
+                                 <td>${spare.warehouse}</td>
+                                 <td>${spare.technician_name}</td>
+                                 <td>${spare.foc_no}</td>
+                                 <td>${spare.warranty_status}</td>
+                                 <td>${spare.remarks}</td>`;
+            });
+        })
+        .catch(error => console.error("Error fetching history:", error));
+}
+
+function submitRequest() {
+    let serial_number = document.getElementById("serial_number").value.trim();
+    let technician_id = document.getElementById("technician").value;
+    let technician_name = document.getElementById("technician").options[document.getElementById("technician").selectedIndex].text;
+    let current_reading = document.getElementById("current_reading").value.trim();
+
+    if (serial_number === "" || technician_id === "") {
+        alert("Error: Please enter all required fields (Serial Number & Technician).");
+        return;
+    }
+
+    let spare_requests = [];
+    document.querySelectorAll(".spare_table tr").forEach((row, index) => {
+        if (index === 0) return;  // Skip header row
+
+        let part_code = row.querySelector(".part_code").value.trim();
+        let description = row.querySelector(".description").value.trim();
+        let prev_reading = row.querySelector(".prev_reading").value.trim();
+        let yield_achvd = row.querySelector(".yield").value.trim();
+        let qty = row.querySelector(".qty").value.trim();
+        let spare_type = row.querySelector(".spare_type").value;
+        let warehouse = row.querySelector(".warehouse").value;
+        let remarks = row.querySelector(".remarks").value.trim();
+
+        spare_requests.push({
+            serial_number: serial_number,
+            asset_Description: document.getElementById("asset_Description").value,
+            technician_id: technician_id,
+            technician_name: technician_name,
+            reading: current_reading,
+            customer_name: document.getElementById("customer_name").value,
+            service_location: document.getElementById("service_location").value,
+            region: document.getElementById("region").value,
+            contract: document.getElementById("contract").value,
+            contract_expiry_date: document.getElementById("contract_expiry_date").value,
+            product_code: part_code,
+            description: description,
+            yield_achvd: yield_achvd,
+            qty: qty,
+            spare_type: spare_type,
+            warehouse: warehouse,
+            any_remarks: remarks,
+            warranty_status: (spare_type === "PCB" || spare_type === "Consumables") ? "Pending" : "Not Applicable"
+        });
+    });
+
+    console.log("Submitting the following data:", spare_requests); // Debugging output
+
+    fetch("/material/submit_request", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(spare_requests)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert(data.message);
+            window.location.href = "/material/dashboard";
+// Redirect to Material Dashboard
+        } else {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error("Error submitting request:", error);
+        alert("An error occurred while submitting the request.");
+    });
+}
+
+
+    </script>
+
+</body>
+</html>
+{% endblock %}

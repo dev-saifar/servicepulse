@@ -1,0 +1,159 @@
+<html>
+<head>
+<title>about.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #d5b778;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+about.html</font>
+</center></td></tr></table>
+<pre><span class="s0">{% extends 'base.html' %}</span>
+
+<span class="s0">{% block content %}</span>
+<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;logo-container&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;img </span><span class="s2">src</span><span class="s3">=&quot;{{ url_for('static', filename='logo.png') }}&quot; </span><span class="s2">alt</span><span class="s3">=&quot;ServPulse Logo&quot; </span><span class="s2">class</span><span class="s3">=&quot;small-logo&quot;</span><span class="s1">&gt;</span>
+<span class="s1">&lt;/div&gt;</span>
+
+<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;header&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;h2&gt;</span><span class="s0">About ServPulse</span><span class="s1">&lt;/h2&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+    <span class="s1">&lt;p&gt;</span><span class="s0">Welcome to </span><span class="s1">&lt;strong&gt;</span><span class="s0">ServPulse</span><span class="s1">&lt;/strong&gt;</span><span class="s0">, your ultimate solution for </span><span class="s1">&lt;strong&gt;</span><span class="s0">managed document services, technician tracking, and service request automation</span><span class="s1">&lt;/strong&gt;</span><span class="s0">. We are dedicated to providing innovative solutions for your service management needs.</span><span class="s1">&lt;/p&gt;</span>
+
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;content-wrapper&quot;</span><span class="s1">&gt;</span>
+        <span class="s4">&lt;!-- Features Section --&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;features-section&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Application Features:</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;ul&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Ticket Management with Quick Registration</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Technician Status &amp; Availability Tracking</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Asset Management &amp; Import Feature</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Real-Time Service Request Updates</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Reports &amp; Performance Monitoring</span><span class="s1">&lt;/li&gt;</span>
+            <span class="s1">&lt;/ul&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+
+        <span class="s4">&lt;!-- Developer Section --&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;developer-section&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;developer-photo&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;img </span><span class="s2">src</span><span class="s3">=&quot;{{ url_for('static', filename='developer.jpg') }}&quot; </span><span class="s2">alt</span><span class="s3">=&quot;Developer Photo&quot; </span><span class="s2">class</span><span class="s3">=&quot;oval-photo&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Developer Information:</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;p&gt;&lt;strong&gt;</span><span class="s0">Developer: SAIFAR. A</span><span class="s1">&lt;/strong&gt;&lt;/p&gt;</span>
+            <span class="s1">&lt;p&gt;</span><span class="s0">Email: </span><span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;mailto:saifarabdullatheef@gmail.com&quot;</span><span class="s1">&gt;</span><span class="s0">saifarabdullatheef@gmail.com</span><span class="s1">&lt;/a&gt;&lt;/p&gt;</span>
+            <span class="s1">&lt;p&gt;</span><span class="s0">For feature requests, bug reports, or changes, please feel free to contact the developer.</span><span class="s1">&lt;/p&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+
+    <span class="s1">&lt;h3&gt;</span><span class="s0">Version Information:</span><span class="s1">&lt;/h3&gt;</span>
+    <span class="s1">&lt;p&gt;&lt;strong&gt;</span><span class="s0">ServPulse v2025-1</span><span class="s1">&lt;/strong&gt; </span><span class="s0">- Built with Flask, SQLite, and SQLAlchemy.</span><span class="s1">&lt;/p&gt;</span>
+
+    <span class="s1">&lt;p </span><span class="s2">class</span><span class="s3">=&quot;note&quot;</span><span class="s1">&gt;</span><span class="s0">This is a test version. Please contact the developer for any changes or added features.</span><span class="s1">&lt;/p&gt;</span>
+<span class="s1">&lt;/div&gt;</span>
+
+<span class="s1">&lt;style&gt;</span>
+    <span class="s0">/* Small Logo Styling */</span>
+    <span class="s0">.logo-container {</span>
+        <span class="s0">text-align: center;</span>
+        <span class="s0">margin-top: 20px;</span>
+        <span class="s0">margin-bottom: 20px;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.small-logo {</span>
+        <span class="s0">width: 120px; /* Adjust size as needed */</span>
+        <span class="s0">height: auto;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.container {</span>
+        <span class="s0">max-width: 800px;</span>
+        <span class="s0">margin: auto;</span>
+        <span class="s0">background: #f9f9f9;</span>
+        <span class="s0">padding: 20px;</span>
+        <span class="s0">border-radius: 10px;</span>
+        <span class="s0">box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);</span>
+        <span class="s0">font-family: 'Arial', sans-serif;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.header {</span>
+        <span class="s0">text-align: center;</span>
+        <span class="s0">margin-bottom: 20px;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">h2 {</span>
+        <span class="s0">text-align: center;</span>
+        <span class="s0">color: #007BFF;</span>
+        <span class="s0">font-size: 2em;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">h3 {</span>
+        <span class="s0">color: #0056b3;</span>
+        <span class="s0">margin-top: 20px;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">p {</span>
+        <span class="s0">font-size: 1.1em;</span>
+        <span class="s0">color: #333;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">ul {</span>
+        <span class="s0">list-style-type: none;</span>
+        <span class="s0">padding: 0;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">li {</span>
+        <span class="s0">margin: 10px 0;</span>
+        <span class="s0">font-size: 1.1em;</span>
+        <span class="s0">color: #555;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">a {</span>
+        <span class="s0">color: #007BFF;</span>
+        <span class="s0">text-decoration: none;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">a:hover {</span>
+        <span class="s0">text-decoration: underline;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.note {</span>
+        <span class="s0">font-size: 1.2em;</span>
+        <span class="s0">color: #FF5733;</span>
+        <span class="s0">font-weight: bold;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.content-wrapper {</span>
+        <span class="s0">display: flex;</span>
+        <span class="s0">justify-content: space-between;</span>
+        <span class="s0">margin-top: 20px;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.features-section, .developer-section {</span>
+        <span class="s0">width: 48%;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.developer-photo {</span>
+        <span class="s0">text-align: center;</span>
+        <span class="s0">margin-bottom: 20px;</span>
+    <span class="s0">}</span>
+
+    <span class="s0">.oval-photo {</span>
+        <span class="s0">width: 150px;</span>
+        <span class="s0">height: 150px;</span>
+        <span class="s0">border-radius: 50%;</span>
+        <span class="s0">object-fit: cover;</span>
+        <span class="s0">border: 3px solid #007BFF;</span>
+    <span class="s0">}</span>
+<span class="s1">&lt;/style&gt;</span>
+<span class="s0">{% endblock %}</span>
+</pre>
+</body>
+</html>

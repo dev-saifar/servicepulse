@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h2 class="title">Import Technicians</h2>
+
+        <form action="{{ url_for('technicians.import_technicians') }}" method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv" required>
+            <button type="submit" class="button">Upload CSV</button>
+        </form>
+
+        <a href="{{ url_for('technicians.index') }}" class="button">Back to List</a>
+    </div>
+{% endblock %}

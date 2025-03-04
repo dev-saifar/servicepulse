@@ -1,0 +1,73 @@
+<html>
+<head>
+<title>auth.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+auth.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">flash</span>
+<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_user</span><span class="s2">, </span><span class="s1">logout_user</span><span class="s2">, </span><span class="s1">login_required</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">db</span><span class="s2">, </span><span class="s1">User</span>
+<span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">security </span><span class="s0">import </span><span class="s1">generate_password_hash</span><span class="s2">, </span><span class="s1">check_password_hash</span>
+
+<span class="s1">auth_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">&quot;auth&quot;</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">&quot;../templates/auth&quot;</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/login&quot;</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">&quot;GET&quot;</span><span class="s2">, </span><span class="s3">&quot;POST&quot;</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">login</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">&quot;POST&quot;</span><span class="s2">:</span>
+        <span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;username&quot;</span><span class="s2">)</span>
+        <span class="s1">password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;password&quot;</span><span class="s2">)</span>
+        <span class="s1">user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+
+        <span class="s0">if </span><span class="s1">user </span><span class="s0">and </span><span class="s1">check_password_hash</span><span class="s2">(</span><span class="s1">user</span><span class="s2">.</span><span class="s1">password_hash</span><span class="s2">, </span><span class="s1">password</span><span class="s2">):</span>
+            <span class="s1">login_user</span><span class="s2">(</span><span class="s1">user</span><span class="s2">)</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Login successful!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;dashboard.index&quot;</span><span class="s2">))</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Invalid username or password&quot;</span><span class="s2">, </span><span class="s3">&quot;danger&quot;</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;auth/login.html&quot;</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/logout&quot;</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s0">def </span><span class="s1">logout</span><span class="s2">():</span>
+    <span class="s1">logout_user</span><span class="s2">()</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;You have been logged out.&quot;</span><span class="s2">, </span><span class="s3">&quot;info&quot;</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.login&quot;</span><span class="s2">))</span>
+
+<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/register&quot;</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">&quot;GET&quot;</span><span class="s2">, </span><span class="s3">&quot;POST&quot;</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">register</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">&quot;POST&quot;</span><span class="s2">:</span>
+        <span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;username&quot;</span><span class="s2">)</span>
+        <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;email&quot;</span><span class="s2">)</span>
+        <span class="s1">password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;password&quot;</span><span class="s2">)</span>
+
+        <span class="s4"># Check if user exists</span>
+        <span class="s1">existing_user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">existing_user</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Username already exists. Choose a different one.&quot;</span><span class="s2">, </span><span class="s3">&quot;warning&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.register&quot;</span><span class="s2">))</span>
+
+        <span class="s4"># Create new user</span>
+        <span class="s1">new_user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">password_hash</span><span class="s2">=</span><span class="s1">generate_password_hash</span><span class="s2">(</span><span class="s1">password</span><span class="s2">))</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_user</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Account created successfully! Please log in.&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.login&quot;</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;auth/register.html&quot;</span><span class="s2">)</span>
+</pre>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<html>
+<head>
+<title>import.html</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #d5b778;}
+.s2 { color: #bababa;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #56a8f5;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+import.html</font>
+</center></td></tr></table>
+<pre><span class="s0">{% extends 'base.html' %}</span>
+
+<span class="s0">{% block content %}</span>
+<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container mt-4&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;h2 </span><span class="s2">class</span><span class="s3">=&quot;mb-4&quot;</span><span class="s1">&gt;</span><span class="s0">Import Assets</span><span class="s1">&lt;/h2&gt;</span>
+
+    <span class="s4">&lt;!-- Flash Messages for Success/Error --&gt;</span>
+    <span class="s0">{% with messages = get_flashed_messages(with_categories=true) %}</span>
+        <span class="s0">{% if messages %}</span>
+            <span class="s0">{% for category, message in messages %}</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;alert alert-{{ category }} alert-dismissible fade show&quot; </span><span class="s2">role</span><span class="s3">=&quot;alert&quot;</span><span class="s1">&gt;</span>
+                    <span class="s0">{{ message }}</span>
+                    <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">class</span><span class="s3">=&quot;close&quot; </span><span class="s2">data-dismiss</span><span class="s3">=&quot;alert&quot; </span><span class="s2">aria-label</span><span class="s3">=&quot;Close&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;span </span><span class="s2">aria-hidden</span><span class="s3">=&quot;true&quot;</span><span class="s1">&gt;</span><span class="s5">&amp;times;</span><span class="s1">&lt;/span&gt;</span>
+                    <span class="s1">&lt;/button&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s0">{% endfor %}</span>
+        <span class="s0">{% endif %}</span>
+    <span class="s0">{% endwith %}</span>
+
+    <span class="s4">&lt;!-- Import Form --&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card p-4 shadow&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;POST&quot; </span><span class="s2">enctype</span><span class="s3">=&quot;multipart/form-data&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;form-group&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;file&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">Upload Excel/CSV File:</span><span class="s1">&lt;/strong&gt;&lt;/label&gt;</span>
+                <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;file&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control-file&quot; </span><span class="s2">name</span><span class="s3">=&quot;file&quot; </span><span class="s2">id</span><span class="s3">=&quot;file&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-primary&quot;</span><span class="s1">&gt;</span><span class="s0">Import</span><span class="s1">&lt;/button&gt;</span>
+            <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.download_template') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-secondary&quot;</span><span class="s1">&gt;</span><span class="s0">Download Template</span><span class="s1">&lt;/a&gt;</span>
+            <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.index') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-light&quot;</span><span class="s1">&gt;</span><span class="s0">Back to Assets</span><span class="s1">&lt;/a&gt;</span>
+        <span class="s1">&lt;/form&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+<span class="s1">&lt;/div&gt;</span>
+
+<span class="s0">{% endblock %}</span>
+</pre>
+</body>
+</html>

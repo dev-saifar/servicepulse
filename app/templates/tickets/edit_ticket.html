@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Edit Ticket</h2>
+    <form method="POST" action="{{ url_for('tickets.update_ticket', ticket_id=ticket.id) }}">
+        <label for="title">Title:</label>
+        <input type="text" name="title" value="{{ ticket.title }}" required>
+
+        <label for="description">Description:</label>
+        <textarea name="description">{{ ticket.description }}</textarea>
+
+        <label for="status">Status:</label>
+        <select name="status">
+            <option value="Open" {% if ticket.status == 'Open' %}selected{% endif %}>Open</option>
+            <option value="InProgress" {% if ticket.status == 'InProgress' %}selected{% endif %}>In Progress</option>
+            <option value="Completed" {% if ticket.status == 'Completed' %}selected{% endif %}>Completed</option>
+        </select>
+
+        <label for="action_taken">Action Taken:</label>
+        <textarea name="action_taken">{{ ticket.action_taken }}</textarea>
+
+        <button type="submit">Update Ticket</button>
+    </form>
+</div>
+{% endblock %}

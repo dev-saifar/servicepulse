@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Generate Report</h2>
+    <form action="{{ url_for('reports.generate_report') }}" method="POST">
+        <label for="date_range">Select Date Range:</label>
+        <input type="date" name="start_date" required>
+        <input type="date" name="end_date" required>
+        <button type="submit" class="button">Generate</button>
+    </form>
+{% endblock %}

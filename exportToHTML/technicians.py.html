@@ -1,0 +1,108 @@
+<html>
+<head>
+<title>technicians.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+technicians.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span><span class="s2">, </span><span class="s1">timedelta</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Technician</span><span class="s2">, </span><span class="s1">Ticket</span>
+
+<span class="s1">technicians_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'technicians'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/technicians'</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
+    <span class="s1">technicians </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+        <span class="s1">Technician</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">description</span><span class="s2">, </span><span class="s3">'Unknown'</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'last_location'</span><span class="s2">),</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at </span><span class="s2">&gt;= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'calls_today'</span><span class="s2">),</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">expected_completion_time</span><span class="s2">, </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'expected_free_time'</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id </span><span class="s2">== </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">) </span><span class="s1">\</span>
+        <span class="s2">.</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s4"># Process estimated free time</span>
+    <span class="s1">technician_list </span><span class="s2">= []</span>
+    <span class="s0">for </span><span class="s1">tech </span><span class="s0">in </span><span class="s1">technicians</span><span class="s2">:</span>
+        <span class="s1">minutes_left </span><span class="s2">= </span><span class="s1">max</span><span class="s2">((</span><span class="s1">tech</span><span class="s2">.</span><span class="s1">expected_free_time </span><span class="s2">- </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()).</span><span class="s1">total_seconds</span><span class="s2">() / </span><span class="s5">60</span><span class="s2">, </span><span class="s5">0</span><span class="s2">)</span>
+        <span class="s1">progress_percentage </span><span class="s2">= </span><span class="s1">min</span><span class="s2">(</span><span class="s5">100</span><span class="s2">, (</span><span class="s1">minutes_left </span><span class="s2">/ </span><span class="s5">60</span><span class="s2">) * </span><span class="s5">100</span><span class="s2">)</span>
+
+        <span class="s1">technician_list</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
+            <span class="s3">&quot;id&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+            <span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+            <span class="s3">&quot;status&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+            <span class="s3">&quot;last_location&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">last_location</span><span class="s2">,</span>
+            <span class="s3">&quot;calls_today&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">calls_today</span><span class="s2">,</span>
+            <span class="s3">&quot;minutes_left&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">minutes_left</span><span class="s2">),</span>
+            <span class="s3">&quot;progress_percentage&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">progress_percentage</span><span class="s2">),</span>
+        <span class="s2">})</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/index.html'</span><span class="s2">, </span><span class="s1">technicians</span><span class="s2">=</span><span class="s1">technician_list</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/add'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">add_technician</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'name'</span><span class="s2">]</span>
+        <span class="s1">mobile </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'mobile'</span><span class="s2">]</span>
+        <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'email'</span><span class="s2">]</span>
+
+        <span class="s0">if not </span><span class="s1">name </span><span class="s0">or not </span><span class="s1">mobile </span><span class="s0">or not </span><span class="s1">email</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;All fields are required!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.add_technician'</span><span class="s2">))</span>
+
+        <span class="s1">new_technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Free&quot;</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_technician</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Technician added successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.index'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/add_technician.html'</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/import'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">import_technicians</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">file </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s3">'file'</span><span class="s2">]</span>
+        <span class="s0">if not </span><span class="s1">file</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;No file selected!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.import_technicians'</span><span class="s2">))</span>
+
+        <span class="s0">import </span><span class="s1">csv</span>
+        <span class="s0">from </span><span class="s1">io </span><span class="s0">import </span><span class="s1">TextIOWrapper</span>
+
+        <span class="s1">file_stream </span><span class="s2">= </span><span class="s1">TextIOWrapper</span><span class="s2">(</span><span class="s1">file</span><span class="s2">.</span><span class="s1">stream</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s3">'utf-8'</span><span class="s2">)</span>
+        <span class="s1">csv_reader </span><span class="s2">= </span><span class="s1">csv</span><span class="s2">.</span><span class="s1">reader</span><span class="s2">(</span><span class="s1">file_stream</span><span class="s2">)</span>
+        <span class="s1">next</span><span class="s2">(</span><span class="s1">csv_reader</span><span class="s2">)  </span><span class="s4"># Skip header row</span>
+
+        <span class="s0">for </span><span class="s1">row </span><span class="s0">in </span><span class="s1">csv_reader</span><span class="s2">:</span>
+            <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">row</span><span class="s2">) &lt; </span><span class="s5">3</span><span class="s2">:</span>
+                <span class="s0">continue</span>
+            <span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email </span><span class="s2">= </span><span class="s1">row</span><span class="s2">[:</span><span class="s5">3</span><span class="s2">]</span>
+            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Free&quot;</span><span class="s2">)</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">technician</span><span class="s2">)</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Technicians imported successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.index'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/import_technicians.html'</span><span class="s2">)</span>
+</pre>
+</body>
+</html>

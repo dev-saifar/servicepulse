@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Advanced Reports</h1>
+    <p class="text-center text-muted">Select a report type to generate, export, or schedule</p>
+
+    <div class="list-group">
+        <a href="{{ url_for('advance_report.ticket_report') }}" class="list-group-item list-group-item-action">
+            📄 Ticket Report
+        </a>
+        <a href="{{ url_for('technician_performance.technician_performance') }}" class="list-group-item list-group-item-action">
+            👨‍🔧 Technician Performance Report
+        </a>
+         <a href="{{ url_for('technician_performance.technician_foc_war') }}" class="list-group-item list-group-item-action">
+    👨‍🔧 Technician FOC Warranty Performance
+</a>
+
+        </a>
+
+        </a>
+    </div>
+
+    <h2 class="mt-5 text-center">Scheduled Reports</h2>
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Report Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Schedule</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in scheduled_reports %}
+            <tr>
+                <td>{{ report.report_type }}</td>
+                <td>{{ report.start_date }}</td>
+                <td>{{ report.end_date }}</td>
+                <td>{{ report.schedule }}</td>
+                <td>{{ report.email }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

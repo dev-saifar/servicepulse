@@ -1,0 +1,26 @@
+<html>
+<head>
+<title>extensions.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+extensions.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask_sqlalchemy </span><span class="s0">import </span><span class="s1">SQLAlchemy</span>
+<span class="s0">from </span><span class="s1">flask_migrate </span><span class="s0">import </span><span class="s1">Migrate</span>
+<span class="s0">from </span><span class="s1">flask_mail </span><span class="s0">import </span><span class="s1">Mail</span>
+
+<span class="s1">db </span><span class="s2">= </span><span class="s1">SQLAlchemy</span><span class="s2">()</span>
+<span class="s1">migrate </span><span class="s2">= </span><span class="s1">Migrate</span><span class="s2">()</span>
+<span class="s1">mail </span><span class="s2">= </span><span class="s1">Mail</span><span class="s2">()</span>
+</pre>
+</body>
+</html>
