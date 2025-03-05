@@ -11,20 +11,20 @@
 
             <h3>Key Features:</h3>
             <div class="feature-cards">
-                <div class="card">✅ <strong>Live Technician Dashboard</strong><br> Monitor real-time technician availability.</div>
-                <div class="card">✅ <strong>Smart Ticketing System</strong><br> Track, assign, and escalate service requests.</div>
-                <div class="card">✅ <strong>Asset Management</strong><br> Track and manage company assets.</div>
-                <div class="card">✅ <strong>Material Movement</strong><br> Monitor material logistics.</div>
-                <div class="card">✅ <strong>Tracking & Analysis</strong><br> Analyze service trends and efficiency.</div>
-                <div class="card">✅ <strong>History Management</strong><br> Maintain logs for all technician activities.</div>
+                <div class="card"><i class="fas fa-chart-line"></i> <strong>Live Technician Dashboard</strong><br> Monitor real-time technician availability.</div>
+                <div class="card"><i class="fas fa-tools"></i> <strong>Smart Ticketing System</strong><br> Track, assign, and escalate service requests.</div>
+                <div class="card"><i class="fas fa-box"></i> <strong>Asset Management</strong><br> Track and manage company assets.</div>
+                <div class="card"><i class="fas fa-truck-moving"></i> <strong>Material Movement</strong><br> Monitor material logistics.</div>
+                <div class="card"><i class="fas fa-chart-pie"></i> <strong>Tracking & Analysis</strong><br> Analyze service trends and efficiency.</div>
+                <div class="card"><i class="fas fa-history"></i> <strong>History Management</strong><br> Maintain logs for all technician activities.</div>
             </div>
 
             <h3>Technologies Used:</h3>
             <div class="tech-list">
-                🛠 <strong>Frontend:</strong> HTML, Bootstrap, JavaScript<br>
-                🛠 <strong>Backend:</strong> Flask, Python, SQLAlchemy<br>
-                🛠 <strong>Database:</strong> SQLite / PostgreSQL<br>
-                📊 <strong>Reports & Charts:</strong> Chart.js, DataTables
+                <p><i class="fab fa-html5"></i> <strong>Frontend:</strong> HTML, Bootstrap, JavaScript</p>
+                <p><i class="fab fa-python"></i> <strong>Backend:</strong> Flask, Python, SQLAlchemy</p>
+                <p><i class="fas fa-database"></i> <strong>Database:</strong> SQLite / PostgreSQL</p>
+                <p><i class="fas fa-chart-bar"></i> <strong>Reports & Charts:</strong> Chart.js, DataTables</p>
             </div>
         </div>
 
@@ -34,21 +34,21 @@
             <div class="developer-photo">
                 <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
             </div>
-            <p><strong>Saifar A.</strong> – Passionate about building efficient IT solutions.</p>
-            <p>Email: <a href="mailto:saifarabdullatheef@gmail.com">saifarabdullatheef@gmail.com</a></p>
+            <p><strong>Saifar Abdul Latheef.</strong> – Passionate about building efficient IT solutions.</p>
+            <p>Email: <a href="mailto:dev.saifar@gmail.com">dev.saifar@gmail.com</a></p>
             <p>💡 <strong>Have feedback?</strong> Reach out for feature requests & improvements!</p>
 
             <h3>Version Information:</h3>
             <p><strong>ServPulse v2025-1</strong> – Initial release with ticketing & tracking features.</p>
 
             <h3>Upcoming Features:</h3>
-            <ul>
-                <li>🔹 <strong>Contract Management</strong> – Manage service agreements and contracts.</li>
-                <li>🔹 <strong>Document Management</strong> – Store and retrieve critical service documents.</li>
-                <li>🔹 <strong>Review Meeting Schedules & Reminders</strong> – Stay on top of scheduled meetings.</li>
-                <li>🔹 <strong>Renewal Reminders</strong> – Get alerts for contract renewals.</li>
-                <li>🔹 <strong>Directory Functionality</strong> – Central repository for contacts and resources.</li>
-            </ul>
+            <div class="feature-cards">
+                <div class="card">🔹 <strong>Contract Management</strong> – Manage service agreements and contracts.</div>
+                <div class="card">🔹 <strong>Document Management</strong> – Store and retrieve critical service documents.</div>
+                <div class="card">🔹 <strong>Review Meeting Schedules & Reminders</strong> – Stay on top of scheduled meetings.</div>
+                <div class="card">🔹 <strong>Renewal Reminders</strong> – Get alerts for contract renewals.</div>
+                <div class="card">🔹 <strong>Directory Functionality</strong> – Central repository for contacts and resources.</div>
+            </div>
         </div>
     </div>
 
@@ -59,14 +59,25 @@
 </div>
 
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #eef5ff;
+        background-image: url("{{ url_for('static', filename='images/logo1.png') }}");
+        background-size: 300px;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 100;
+    }
+
     .container {
         max-width: 1200px;
         margin: auto;
-        background: #f9f9f9;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
-        font-family: 'Arial', sans-serif;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
     }
 
     .split-screen {
@@ -83,15 +94,22 @@
         display: flex;
         flex-wrap: wrap;
         gap: 15px;
+        justify-content: space-between;
     }
 
     .card {
-        background: white;
+        background: linear-gradient(135deg, #007BFF, #00D4FF);
+        color: white;
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
         font-size: 1em;
         width: 48%;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .card:hover {
+        transform: scale(1.05);
     }
 
     .tech-list {
