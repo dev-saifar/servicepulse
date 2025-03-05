@@ -66,6 +66,10 @@ class Assets(db.Model):
     contract = db.Column(db.String(100), nullable=True)
     asset_Description = db.Column(db.Text, nullable=True)
     contract_expiry_date = db.Column(db.String(100), nullable=True)
+    last_pm_date= db.Column(db.String(100), nullable=True)
+    pm_freq = db.Column(db.String(100), nullable=True)
+    install_date = db.Column(db.String(100), nullable=True)
+
 
 
 
