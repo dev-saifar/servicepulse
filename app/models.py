@@ -112,6 +112,7 @@ class spare_req(db.Model):
     any_remarks = db.Column(db.String, nullable=True)
     warranty_status = db.Column(db.String, nullable=False)
     warranty_remarks = db.Column(db.String, nullable=True)
+    request_id = db.Column(db.String(50), nullable=False)
 
 
 

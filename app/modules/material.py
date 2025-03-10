@@ -135,6 +135,8 @@ def fetch_requests():
         "total_pages": total_pages  # ✅ Send total pages to frontend
 
     })
+import uuid  # ✅ Import UUID to generate unique request IDs
+
 @material_bp.route('/submit_request', methods=['POST'])
 def submit_request():
     """Handles spare request submission and saves data to the database."""
@@ -147,6 +149,7 @@ def submit_request():
 
     try:
         last_inserted_id = None  # To store last request ID
+        request_id = str(uuid.uuid4())  # ✅ Generate a unique request_id for this batch
 
         for item in data:  # Process each item in the list
             spare_request = spare_req(
@@ -156,6 +159,7 @@ def submit_request():
                 technician_name=item['technician_name'],
                 reading=int(item['reading']) if item['reading'].isdigit() else 0,
                 date=datetime.now(),
+                request_id=request_id,  # ✅ Assign same request_id to all items
                 customer_name=item['customer_name'],
                 service_location=item['service_location'],
                 region=item['region'],
@@ -170,7 +174,6 @@ def submit_request():
                 any_remarks=item.get('any_remarks', ""),
                 warranty_status=item['warranty_status'],
                 foc_no="Pending",  # ✅ Default to "Pending" if empty
-
             )
 
             db.session.add(spare_request)
@@ -178,26 +181,31 @@ def submit_request():
             last_inserted_id = spare_request.id  # Store last inserted request ID
 
         db.session.commit()
-        print(f"✅ All requests saved successfully! Last Inserted ID: {last_inserted_id}")
+        print(f"✅ All requests saved successfully! Request ID: {request_id}")
 
         flash("✅ Request submitted successfully!", "success")
 
-        # ✅ Redirect to the Print Request page with correct request ID
-        return redirect(url_for('material.print_request', request_id=last_inserted_id))
+        # ✅ Redirect to the Print Request page with correct request_id
+        return redirect(url_for('material.print_request', request_id=request_id))
 
     except Exception as e:
         db.session.rollback()
         flash(f"❌ Error saving to DB: {str(e)}", "error")
         print("❌ Error Saving to DB:", str(e))
         return render_template("material/material_dashboard.html")
-@material_bp.route('/print_request/<int:request_id>', methods=['GET'])
+
+@material_bp.route('/print_request/<request_id>', methods=['GET'])
 def print_request(request_id):
     """ Fetches print request details and loads the print page """
-    request_entry = spare_req.query.get(request_id)
+    request_entries = spare_req.query.filter_by(request_id=request_id).all()
 
-    if not request_entry:
+    if not request_entries:
         flash(f"❌ Request ID {request_id} not found!", "error")
         return redirect(url_for('material.material_dashboard'))
+
+    # ✅ Fetch details from the first entry (all have the same metadata)
+    request_entry = request_entries[0]
+
     # ✅ Count number of warranty pending requests for this technician
     warranty_pending_count = spare_req.query.filter(
         spare_req.technician_id == request_entry.technician_id,
@@ -210,52 +218,65 @@ def print_request(request_id):
         spare_req.foc_no == "Pending"
     ).count()
 
-    # Convert SQLAlchemy object to a dictionary
-    request_data = {
+    # ✅ Gather all spare items for this request_id
+    spare_items = [
+        {
+            "product_code": spare.product_code,
+            "description": spare.description,
+            "previous_reading": spare_req.query.filter(
+                spare_req.serial_number == spare.serial_number,
+                spare_req.product_code == spare.product_code,
+                spare_req.request_id != request_id  # ✅ Exclude the current request
+            ).order_by(spare_req.date.desc()).first().reading if spare_req.query.filter(
+                spare_req.serial_number == spare.serial_number,
+                spare_req.product_code == spare.product_code,
+                spare_req.request_id != request_id
+            ).order_by(spare_req.date.desc()).first() else 0,  # ✅ Fetch the correct previous reading
+            "current_reading": spare.reading,
+            "yield": spare.yield_achvd,
+            "qty": spare.qty,
+            "spare_type": spare.spare_type,
+            "warehouse": spare.warehouse,
+            "remarks": spare.any_remarks,
+        }
+        for spare in request_entries
+    ]
+
+    # ✅ Fetch history excluding the current request_id
+    history_entries = spare_req.query.filter(
+        spare_req.serial_number == request_entry.serial_number,
+        spare_req.request_id != request_id  # ✅ Exclude the latest request
+    ).order_by(spare_req.date.desc()).all()
+
+    history_data = [
+        {
+            "date": entry.date.strftime('%Y-%m-%d'),
+            "product_code": entry.product_code,
+            "description": entry.description,
+            "qty": entry.qty,
+            "reading": entry.reading,
+            "yield_achvd": entry.yield_achvd,
+            "warehouse": entry.warehouse,
+            "technician_name": entry.technician_name,
+            "remarks": entry.any_remarks,
+        }
+        for entry in history_entries
+    ]
+
+    return render_template("material/print_request.html", request_data={
         "customer_name": request_entry.customer_name,
         "service_location": request_entry.service_location,
         "region": request_entry.region,
         "contract": request_entry.contract,
-        "contract_expiry_date": request_entry.contract_expiry_date if isinstance(request_entry.contract_expiry_date, str) else request_entry.contract_expiry_date.strftime('%Y-%m-%d') if request_entry.contract_expiry_date else "",
+        "contract_expiry_date": request_entry.contract_expiry_date,
         "asset_Description": request_entry.asset_Description,
         "serial_number": request_entry.serial_number,
         "technician_name": request_entry.technician_name,
-        "warranty_pending":warranty_pending_count,
+        "warranty_pending": warranty_pending_count,
         "foc_pending": foc_pending_count,
+        "spare_items": spare_items
+    }, history=history_data)
 
-        "spare_items": [{
-            "product_code": request_entry.product_code,
-            "description": request_entry.description,
-            "previous_reading": request_entry.reading,
-            "current_reading": request_entry.reading,
-            "yield": request_entry.yield_achvd,
-            "qty": request_entry.qty,
-            "spare_type": request_entry.spare_type,
-            "warehouse": request_entry.warehouse,
-            "remarks": request_entry.any_remarks,
-        }]
-    }
-
-    # Fetch spare request history for the same serial number
-    # Fetch spare request history for the same serial number, excluding the latest request
-    history_entries = spare_req.query.filter(
-        spare_req.serial_number == request_entry.serial_number,
-        spare_req.id != request_entry.id  # ✅ Exclude the latest request
-    ).order_by(spare_req.date.desc()).all()
-
-    history_data = [{
-        "date": entry.date.strftime('%Y-%m-%d'),
-        "product_code": entry.product_code,
-        "description": entry.description,
-        "qty": entry.qty,
-        "reading": entry.reading,
-        "yield_achvd": entry.yield_achvd,
-        "warehouse": entry.warehouse,
-        "technician_name": entry.technician_name,
-        "remarks": entry.any_remarks,
-    } for entry in history_entries]
-
-    return render_template("material/print_request.html", request_data=request_data, history=history_data)
 
 @material_bp.route('/movement', methods=['GET'])
 def material_movement():

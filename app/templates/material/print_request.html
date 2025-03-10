@@ -6,7 +6,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 5px;
+            font-size: 10px;
         }
         .header {
             display: flex;
@@ -15,21 +16,23 @@
             text-align: center;
         }
         .header img {
-            width: 100px;
+            width: 80px;
             height: auto;
         }
         .title {
             flex-grow: 1;
+            font-size: 14px;
         }
         .content {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         .machine-details {
             width: 65%;
             border: 1px solid black;
-            padding: 10px;
+            padding: 5px;
+            font-size: 10px;
         }
         .pending-info {
             width: 30%;
@@ -40,41 +43,43 @@
         .table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         .table th, .table td {
             border: 1px solid black;
-            padding: 5px;
+            padding: 3px;
             text-align: left;
+            font-size: 10px;
         }
         .approval-box {
-            height: 80px;
+            height: 50px;
         }
         .print-button {
-            margin-top: 20px;
+            margin-top: 10px;
             text-align: center;
         }
         .button {
-            padding: 10px 20px;
+            padding: 8px 15px;
             background-color: blue;
             color: white;
             border: none;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 12px;
         }
     </style>
 </head>
 <body onload="loadPrintData()">
 
     <div class="header">
-        <img src="/static/images/logo1.png" alt="Company Logo">
-        <div class="title">
-            <h2>SPARE REQUEST</h2>
-            <p>MFI MANAGED DOCUMENT SOLUTIONS LIMITED</p>
-            <p>Plot No. 43, Lumumba Avenue, Kampala, Uganda</p>
-        </div>
-        <img src="/static/images/logo2.png" alt="Company Logo">
+    <img src="/static/images/logo1.png" alt="Company Logo">
+    <div id="title_section" class="title">
+        <h2>SPARE REQUEST</h2>
+        <p>MFI MANAGED DOCUMENT SOLUTIONS LIMITED</p>
+        <p>Plot No. 43, Lumumba Avenue, Kampala, Uganda</p>
     </div>
+    <img src="/static/images/logo2.png" alt="Company Logo">
+</div>
+
 
     <div class="content">
         <div class="machine-details">
@@ -96,14 +101,15 @@
     <h3>Approval Section</h3>
     <table class="table">
         <tr>
-            <th style="width: 50%;">First Level Approval</th>
-            <th style="width: 50%;">Second Level Approval</th>
+            <th style="width: 40%;">First Level Approval</th>
+            <th style="width: 40%;">Second Level Approval</th>
         </tr>
         <tr>
             <td class="approval-box"></td>
             <td class="approval-box"></td>
         </tr>
     </table>
+
 
     <h3>Requested Spare Parts</h3>
     <table class="table" id="requested_spares_table">
@@ -140,56 +146,74 @@
     </div>
 
     <script>
-
         function loadPrintData() {
-        let requestData = {{ request_data | tojson | safe }};
-        let historyData = {{ history | tojson | safe }};
+            let requestData = {{ request_data | tojson | safe }};
+            let historyData = {{ history | tojson | safe }};
 
-        if (!requestData) {
-            alert("No data found! Please generate a request first.");
-            return;
+            if (!requestData) {
+                alert("No data found! Please generate a request first.");
+                return;
+            }
+
+            document.getElementById("customer_name").textContent = requestData.customer_name;
+            document.getElementById("service_location").textContent = requestData.service_location;
+            document.getElementById("region").textContent = requestData.region;
+            document.getElementById("contract").textContent = requestData.contract;
+            document.getElementById("contract_expiry_date").textContent = requestData.contract_expiry_date;
+            document.getElementById("asset_Description").textContent = requestData.asset_Description;
+            document.getElementById("serial_number").textContent = requestData.serial_number;
+            document.getElementById("technician").textContent = requestData.technician_name;
+
+            // ✅ Check if contract code starts with "MDS" or "DS" and update title
+            let contractCode = requestData.contract.trim();
+            let titleSection = document.getElementById("title_section");
+
+            if (contractCode.startsWith("MDS")) {
+                titleSection.innerHTML = `
+                    <h2>SPARE REQUEST</h2>
+                    <p>MFI MANAGED DOCUMENT SOLUTIONS LIMITED</p>
+                    <p>Plot No. 43, Lumumba Avenue, Kampala, Uganda</p>
+                `;
+            } else if (contractCode.startsWith("DS")) {
+                titleSection.innerHTML = `
+                    <h2>SPARE REQUEST</h2>
+                    <p>MFI DOCUMENT SOLUTIONS LIMITED</p>
+                    <p>Plot No. 43, Lumumba Avenue, Kampala, Uganda</p>
+                `;
+            }
+
+            // Fill requested spare parts
+            let requestedTable = document.getElementById("requested_spares_table");
+            requestData.spare_items.forEach(item => {
+                let row = requestedTable.insertRow();
+                row.innerHTML = `<td>${item.product_code}</td>
+                                 <td>${item.description}</td>
+                                 <td>${item.previous_reading}</td>
+                                 <td>${item.current_reading}</td>
+                                 <td>${item.yield}</td>
+                                 <td>${item.qty}</td>
+                                 <td>${item.spare_type}</td>
+                                 <td>${item.warehouse}</td>
+                                 <td>${item.remarks}</td>`;
+            });
+
+            // Fill spare request history
+            let historyTable = document.getElementById("spare_history_table");
+            historyData.forEach(item => {
+                let row = historyTable.insertRow();
+                row.innerHTML = `<td>${item.date}</td>
+                                 <td>${item.description}</td>
+                                 <td>${item.reading}</td>
+                                 <td>${item.product_code}</td>
+                                 <td>${item.yield_achvd}</td>
+                                 <td>${item.qty}</td>
+                                 <td>${item.warehouse}</td>
+                                 <td>${item.technician_name}</td>
+                                 <td>${item.remarks}</td>`;
+            });
         }
 
-        document.getElementById("customer_name").textContent = requestData.customer_name;
-        document.getElementById("service_location").textContent = requestData.service_location;
-        document.getElementById("region").textContent = requestData.region;
-        document.getElementById("contract").textContent = requestData.contract;
-        document.getElementById("contract_expiry_date").textContent = requestData.contract_expiry_date;
-        document.getElementById("asset_Description").textContent = requestData.asset_Description;
-        document.getElementById("serial_number").textContent = requestData.serial_number;
-        document.getElementById("technician").textContent = requestData.technician_name;
 
-
-        // Fill requested spare parts
-        let requestedTable = document.getElementById("requested_spares_table");
-        requestData.spare_items.forEach(item => {
-            let row = requestedTable.insertRow();
-            row.innerHTML = `<td>${item.product_code}</td>
-                             <td>${item.description}</td>
-                             <td>${item.previous_reading}</td>
-                             <td>${item.current_reading}</td>
-                             <td>${item.yield}</td>
-                             <td>${item.qty}</td>
-                             <td>${item.spare_type}</td>
-                             <td>${item.warehouse}</td>
-                             <td>${item.remarks}</td>`;
-        });
-
-        // Fill spare request history
-        let historyTable = document.getElementById("spare_history_table");
-        historyData.forEach(item => {
-            let row = historyTable.insertRow();
-            row.innerHTML = `<td>${item.date}</td>
-                             <td>${item.description}</td>
-                             <td>${item.reading}</td>
-                             <td>${item.product_code}</td>
-                             <td>${item.yield_achvd}</td>
-                             <td>${item.qty}</td>
-                             <td>${item.warehouse}</td>
-                             <td>${item.technician_name}</td>
-                             <td>${item.remarks}</td>`;
-        });
-    }
     </script>
 </body>
 </html>

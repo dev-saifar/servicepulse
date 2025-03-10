@@ -116,7 +116,8 @@
         <select id="technician" class="input-field"></select>
 
         <label>Current Meter Reading:</label>
-        <input type="number" id="current_reading" class="input-field">
+        <input type="number" id="current_reading" class="input-field" required oninput="updateAllCurrentReadings()">
+
 
         <h3 class="section-title">Request New Spare</h3>
         <table class="table spare_table">
@@ -220,8 +221,8 @@ function calculateYield(input) {
             <td><input type="text" class="input-field part_code" onblur="fetchSpareDetails(this)"></td>
             <td><input type="text" class="input-field description" readonly></td>
             <td><input type="number" class="input-field prev_reading" readonly></td>
-            <td><input type="number" class="input-field current_reading" onblur="calculateYield(this)"></td>
-            <td><input type="number" class="input-field yield" readonly></td>
+            <td><input type="number" class="input-field curr_reading" readonly></td>  <!-- ✅ Auto-filled -->
+        <td><input type="number" class="input-field yield" readonly></td>  <!-- ✅ Auto-calculated -->
             <td><input type="number" class="input-field qty"></td>
             <td><select class="input-field spare_type">
                 <option value="Rollers">Rollers</option>
@@ -461,7 +462,14 @@ function submitRequest() {
         console.error("Error submitting request:", error);
         alert("An error occurred while submitting the request.");
     });
+    }function updateAllCurrentReadings() {
+        let currentReading = parseFloat(document.getElementById("current_reading").value) || 0;
+        document.querySelectorAll(".curr_reading").forEach(input => {
+            input.value = currentReading;
+            calculateYield(input); // Trigger Yield Calculation
+        });
 }
+
 
 
     </script>
