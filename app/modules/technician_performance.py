@@ -225,7 +225,7 @@ def fetch_foc_warranty_report_data(preset=None, date_from=None, date_to=None):
 
         warranty_claimed = spare_requests_query.filter(spare_req.warranty_status == "Claimed").count()
         warranty_pending = spare_requests_query.filter(spare_req.warranty_status == "Pending").count()
-        foc_pending = spare_requests_query.filter(spare_req.foc_no.is_(None)).count()  # FOC No is NULL
+        foc_pending = spare_requests_query.filter(spare_req.foc_no == "Pending").count()
 
         # Append Data
         data.append({

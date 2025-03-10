@@ -41,6 +41,17 @@ def edit_ticket(ticket_id):
             ticket.technician_id = int(request.form['technician_id']) if request.form['technician_id'] else None
             ticket.estimated_time = int(request.form['estimated_time']) if request.form['estimated_time'] else None
             ticket.travel_time = int(request.form['travel_time']) if request.form['travel_time'] else None
+            ticket.serial_number = request.form['serial_number']
+            ticket.called_by = request.form['called_by']
+            ticket.email_id = request.form['email_id']
+            ticket.phone = request.form['phone']
+            ticket.service_location = request.form['service_location']
+            ticket.region = request.form['region']
+            ticket.asset_Description = request.form['asset_description']  # Note: Fix naming mismatch
+            ticket.action_taken = request.form['action_taken']
+            ticket.complete = request.form['complete']
+            ticket.mr_mono = request.form['mr_mono']
+            ticket.mr_color = request.form['mr_color']
 
             new_status = request.form['status']
 
@@ -50,11 +61,16 @@ def edit_ticket(ticket_id):
 
             ticket.status = new_status
 
-            # ✅ Free up the technician if the ticket is marked "Closed"
+            # ✅ Free up the technician only if they have no other pending tickets
             if ticket.status == "Closed" and ticket.technician_id:
                 assigned_technician = Technician.query.get(ticket.technician_id)
                 if assigned_technician:
-                    assigned_technician.status = "Free"
+                    # Check if the technician has other pending tickets
+                    open_tickets = Ticket.query.filter_by(technician_id=ticket.technician_id).filter(
+                        Ticket.status != "Closed").count()
+
+                    if open_tickets == 0:  # Only mark as "Free" if no open tickets remain
+                        assigned_technician.status = "Free"
 
             db.session.commit()
             flash("Ticket updated successfully!", "success")
@@ -65,6 +81,7 @@ def edit_ticket(ticket_id):
 
     technicians = Technician.query.all()
     return render_template('ticket1/edit_ticket.html', ticket=ticket, technicians=technicians)
+
 
 
 @ticket1_bp.route('/new', methods=['GET', 'POST'])
@@ -178,85 +195,29 @@ from io import BytesIO
 from datetime import datetime
 
 
-def export_tickets():
-    """Export only the filtered tickets to an Excel file."""
-
-    # Get filter parameters from request
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    status = request.args.get('status')
-    customer = request.args.get('customer')
-
-    # Start query
-    query = Ticket.query
-
-    # Apply filters if present
-    if start_date:
-        query = query.filter(Ticket.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
-    if end_date:
-        query = query.filter(Ticket.created_at <= datetime.strptime(end_date, '%Y-%m-%d'))
-    if status:
-        query = query.filter(Ticket.status == status)
-    if customer:
-        query = query.filter(Ticket.customer.ilike(f"%{customer}%"))
-
-    # Fetch only the filtered records
-    tickets = query.order_by(Ticket.created_at.desc()).all()
-
-    # ✅ Ensure correct field names match UI table
-    data = [
-        {
-            "Reference No": ticket.reference_no,
-            "Title": ticket.title,
-            "Customer": ticket.customer,
-            "Call Type": ticket.call_type,
-            "Technician": ticket.technician.name if ticket.technician else "Unassigned",
-            "Expected Completion": ticket.expected_completion_time.strftime(
-                '%Y-%m-%d %H:%M:%S') if ticket.expected_completion_time else "",
-            "Status": ticket.status,
-            "Created At": ticket.created_at.strftime('%Y-%m-%d %H:%M:%S') if ticket.created_at else "",
-            "Closed At": ticket.closed_at.strftime('%Y-%m-%d %H:%M:%S') if ticket.closed_at else "",
-            "Serial No": ticket.serial_number,
-            "TAT": ticket.tat,
-            "Complete": ticket.complete,
-            "Service Location": ticket.service_location,
-            "Region": ticket.region,
-            "Asset Description": ticket.asset_Description,
-            "Called By": ticket.called_by
-        }
-        for ticket in tickets
-    ]
-
-    # Create Excel file
-    df = pd.DataFrame(data)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Filtered Tickets")
-
-    output.seek(0)
-
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name="filtered_tickets.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
 
 @ticket1_bp.route('/export', methods=['GET'])
 def export_tickets():
     """Export only the filtered tickets to an Excel file."""
-
-    # Get filter parameters from request
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     status = request.args.get('status')
     customer = request.args.get('customer')
+    serial_number = request.args.get('serial')
+    technician_name = request.args.get('technician')
+    region = request.args.get('region')
+    call_type = request.args.get('callType')
 
-    # Start query
-    query = Ticket.query
+    tech_alias = aliased(Technician)
+    query = db.session.query(
+        Ticket.reference_no, Ticket.title, Ticket.customer, Ticket.call_type,
+        tech_alias.name.label("technician_name"), Ticket.expected_completion_time,
+        Ticket.status, Ticket.created_at, Ticket.closed_at, Ticket.serial_number,
+        Ticket.tat, Ticket.complete, Ticket.service_location, Ticket.region,
+        Ticket.asset_Description, Ticket.called_by
+    ).outerjoin(tech_alias, tech_alias.id == Ticket.technician_id)
 
-    # Apply filters if present
+    # Apply filters
     if start_date:
         query = query.filter(Ticket.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
     if end_date:
@@ -265,20 +226,27 @@ def export_tickets():
         query = query.filter(Ticket.status == status)
     if customer:
         query = query.filter(Ticket.customer.ilike(f"%{customer}%"))
+    if serial_number:
+        query = query.filter(Ticket.serial_number.ilike(f"%{serial_number}%"))
+    if technician_name:
+        query = query.filter(tech_alias.name.ilike(f"%{technician_name}%"))
+    if region:
+        query = query.filter(Ticket.region.ilike(f"%{region}%"))
+    if call_type:
+        query = query.filter(Ticket.call_type.ilike(f"%{call_type}%"))
 
-    # Fetch only the filtered records
     tickets = query.order_by(Ticket.created_at.desc()).all()
 
-    # ✅ Ensure correct field names match UI table
-    data = [
-        {
+    # Create formatted data
+    data = []
+    for ticket in tickets:
+        ticket_data = {
             "Reference No": ticket.reference_no,
             "Title": ticket.title,
             "Customer": ticket.customer,
             "Call Type": ticket.call_type,
-            "Technician": ticket.technician.name if ticket.technician else "Unassigned",
-            "Expected Completion": ticket.expected_completion_time.strftime(
-                '%Y-%m-%d %H:%M:%S') if ticket.expected_completion_time else "",
+            "Technician": getattr(ticket, 'technician_name', "Unassigned"),
+            "Expected Completion": ticket.expected_completion_time.strftime('%Y-%m-%d %H:%M:%S') if ticket.expected_completion_time else "",
             "Status": ticket.status,
             "Created At": ticket.created_at.strftime('%Y-%m-%d %H:%M:%S') if ticket.created_at else "",
             "Closed At": ticket.closed_at.strftime('%Y-%m-%d %H:%M:%S') if ticket.closed_at else "",
@@ -290,10 +258,8 @@ def export_tickets():
             "Asset Description": ticket.asset_Description,
             "Called By": ticket.called_by
         }
-        for ticket in tickets
-    ]
+        data.append(ticket_data)
 
-    # Create Excel file
     df = pd.DataFrame(data)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -301,12 +267,8 @@ def export_tickets():
 
     output.seek(0)
 
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name="filtered_tickets.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    return send_file(output, as_attachment=True, download_name="filtered_tickets.xlsx")
+
 
 @ticket1_bp.route('/search_asset', methods=['GET'])
 def search_asset():

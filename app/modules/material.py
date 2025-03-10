@@ -4,7 +4,7 @@ from app.models import spares, Technician, spare_req, Assets
 from datetime import datetime
 from flask import send_file
 from flask import send_file
-
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 material_bp = Blueprint('material', __name__, template_folder='../templates/material')
 
 @material_bp.route('/dashboard', methods=['GET'])
@@ -53,7 +53,6 @@ def fetch_previous_reading(serial_number, part_number):
     return jsonify({"previous_reading": spare_entry.reading if spare_entry else 0})
 
 # Fetch warranty pending count and FOC return pending count for a technician
-@material_bp.route('/fetch_pending_counts/<technician_id>', methods=['GET'])
 @material_bp.route('/fetch_pending_counts/<int:technician_id>', methods=['GET'])
 def fetch_pending_counts(technician_id):
     """ Fetch count of warranty pending and FOC return pending for a technician """
@@ -72,100 +71,18 @@ def fetch_pending_counts(technician_id):
         "foc_pending": foc_pending
     })
 
-@material_bp.route('/fetch_history/<serial_number>', methods=['GET'])
-def fetch_history(serial_number):
-    history = spare_req.query.filter_by(serial_number=serial_number).all()
-
-    if not history:  # ✅ Handle empty results
-        return jsonify([])  # Return an empty list to avoid errors
-
-    history_data = []
-    for spare in history:
-        if spare:  # Ensure spare is not None
-            history_data.append({
-                "date": spare.date if spare.date else "N/A",
-                "product_code": spare.product_code if spare.product_code else "N/A",
-                "description": spare.description if spare.description else "N/A",
-                "qty": spare.qty if spare.qty else 0,
-                "reading": spare.reading if spare.reading else "NA",
-                "yield_achvd": spare.yield_achvd if spare.yield_achvd else "N/A",
-                "warehouse": spare.warehouse if spare.warehouse else "N/A",
-                "technician_name": spare.technician_name if spare.technician_name else "N/A",
-                "foc_no": spare.foc_no if spare.foc_no else "N/A",
-                "warranty_status": spare.warranty_status if spare.warranty_status else "N/A",
-                "remarks": spare.any_remarks if spare.any_remarks else "N/A"
-            })
-
-    return jsonify(history_data)
-from flask import flash, redirect, url_for, render_template
-
-@material_bp.route('/submit_request', methods=['POST'])
-def submit_request():
-    data = request.json  # Get JSON data from frontend
-    print("Received Data:", data)  # Debugging output in Flask console
-
-    if not isinstance(data, list):  # Ensure data is a list
-        flash("❌ Invalid data format. Expected a list of requests.", "error")
-        return render_template("material/material_dashboard.html")
-
-    try:
-        for item in data:  # Process each item in the list
-            spare_request = spare_req(
-                serial_number=item['serial_number'],
-                asset_Description=item['asset_Description'],
-                technician_id=int(item['technician_id']) if item['technician_id'].isdigit() else None,
-                technician_name=item['technician_name'],
-                reading=int(item['reading']) if item['reading'].isdigit() else 0,
-                date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                customer_name=item['customer_name'],
-                service_location=item['service_location'],
-                region=item['region'],
-                contract=item['contract'],
-                contract_expiry_date=item.get('contract_expiry_date', None),
-                product_code=item['product_code'],
-                description=item['description'],
-                yield_achvd=int(item['yield_achvd']) if item['yield_achvd'].isdigit() else 0,
-                qty=int(item['qty']) if item['qty'].isdigit() else 1,
-                spare_type=item['spare_type'],
-                warehouse=item['warehouse'],
-                any_remarks=item.get('any_remarks', ""),
-                warranty_status=item['warranty_status']
-            )
-
-            db.session.add(spare_request)
-
-        db.session.commit()
-        print("✅ All requests saved successfully in DB!")
-
-        # Redirect to the Print Request page after saving
-        return redirect(url_for('material.print_request'))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"❌ Error saving to DB: {str(e)}", "error")
-        print("❌ Error Saving to DB:", str(e))
-
-    return render_template("material/material_dashboard.html")
-
-@material_bp.route('print_request')
-def print_request():
-    return render_template("material/print_request.html")
-
-@material_bp.route('/movement', methods=['GET'])
-def material_movement():
-    return render_template('material/material_movement.html')
-
-@material_bp.route('/history', methods=['GET'])
-def request_history():
-    return render_template('material/request_history.html')
+from math import ceil
 
 @material_bp.route('/fetch_requests', methods=['GET'])
 def fetch_requests():
     """ Fetch paginated requests with filtering options """
-    page = int(request.args.get('page', 1))
+    page = request.args.get('page', 1, type=int)
+    per_page = 500  # ✅ Set pagination to 500 records per page
+
     from_date = request.args.get('fromDate')
     to_date = request.args.get('toDate')
 
+    # Filters for search
     filters = {
         "id": request.args.get("filterId"),
         "serial_number": request.args.get("filterSerial"),
@@ -179,20 +96,31 @@ def fetch_requests():
 
     query = spare_req.query
 
-    if from_date and to_date:
-        query = query.filter(spare_req.date >= from_date, spare_req.date <= to_date)
+    # ✅ Proper Date Filtering
+    if from_date:
+        from_date = datetime.strptime(from_date, "%Y-%m-%d")
+        query = query.filter(spare_req.date >= from_date)
+    if to_date:
+        to_date = datetime.strptime(to_date, "%Y-%m-%d")
+        query = query.filter(spare_req.date <= to_date)
 
+    # ✅ Apply other search filters
     for key, value in filters.items():
         if value:
             query = query.filter(getattr(spare_req, key).ilike(f"%{value}%"))
 
-    requests = query.order_by(spare_req.date.desc()).paginate(page=page, per_page=100).items  # ✅ Fixed Pagination
+    # ✅ Get total record count & calculate total pages
+    total_records = query.count()
+    total_pages = ceil(total_records / per_page)
+
+    # ✅ Paginate the query
+    requests = query.order_by(spare_req.date.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     request_list = [{
         "id": req.id,
-        "date": req.date,  # ✅ Added Date
-        "customer_name": req.customer_name,  # ✅ Added Customer Name
-        "foc_no": req.foc_no,  # ✅ Added FOC Number
+        "date": req.date.strftime('%Y-%m-%d'),  # ✅ Ensure proper date format
+        "customer_name": req.customer_name,
+        "foc_no": req.foc_no,
         "serial_number": req.serial_number,
         "asset_Description": req.asset_Description,
         "technician_name": req.technician_name,
@@ -200,9 +128,144 @@ def fetch_requests():
         "product_code": req.product_code,
         "description": req.description,
         "warranty_status": req.warranty_status
-    } for req in requests]
+    } for req in requests.items]
 
-    return jsonify(request_list)
+    return jsonify({
+        "requests": request_list,
+        "total_pages": total_pages  # ✅ Send total pages to frontend
+
+    })
+@material_bp.route('/submit_request', methods=['POST'])
+def submit_request():
+    """Handles spare request submission and saves data to the database."""
+    data = request.json  # Get JSON data from frontend
+    print("Received Data:", data)  # Debugging output
+
+    if not isinstance(data, list):  # Ensure data is a list
+        flash("❌ Invalid data format. Expected a list of requests.", "error")
+        return render_template("material/material_dashboard.html")
+
+    try:
+        last_inserted_id = None  # To store last request ID
+
+        for item in data:  # Process each item in the list
+            spare_request = spare_req(
+                serial_number=item['serial_number'],
+                asset_Description=item['asset_Description'],
+                technician_id=int(item['technician_id']) if item['technician_id'].isdigit() else None,
+                technician_name=item['technician_name'],
+                reading=int(item['reading']) if item['reading'].isdigit() else 0,
+                date=datetime.now(),
+                customer_name=item['customer_name'],
+                service_location=item['service_location'],
+                region=item['region'],
+                contract=item['contract'],
+                contract_expiry_date=item.get('contract_expiry_date', None),
+                product_code=item['product_code'],
+                description=item['description'],
+                yield_achvd=int(item['yield_achvd']) if item['yield_achvd'].isdigit() else 0,
+                qty=int(item['qty']) if item['qty'].isdigit() else 1,
+                spare_type=item['spare_type'],
+                warehouse=item['warehouse'],
+                any_remarks=item.get('any_remarks', ""),
+                warranty_status=item['warranty_status'],
+                foc_no="Pending",  # ✅ Default to "Pending" if empty
+
+            )
+
+            db.session.add(spare_request)
+            db.session.flush()  # Get ID before commit
+            last_inserted_id = spare_request.id  # Store last inserted request ID
+
+        db.session.commit()
+        print(f"✅ All requests saved successfully! Last Inserted ID: {last_inserted_id}")
+
+        flash("✅ Request submitted successfully!", "success")
+
+        # ✅ Redirect to the Print Request page with correct request ID
+        return redirect(url_for('material.print_request', request_id=last_inserted_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"❌ Error saving to DB: {str(e)}", "error")
+        print("❌ Error Saving to DB:", str(e))
+        return render_template("material/material_dashboard.html")
+@material_bp.route('/print_request/<int:request_id>', methods=['GET'])
+def print_request(request_id):
+    """ Fetches print request details and loads the print page """
+    request_entry = spare_req.query.get(request_id)
+
+    if not request_entry:
+        flash(f"❌ Request ID {request_id} not found!", "error")
+        return redirect(url_for('material.material_dashboard'))
+    # ✅ Count number of warranty pending requests for this technician
+    warranty_pending_count = spare_req.query.filter(
+        spare_req.technician_id == request_entry.technician_id,
+        spare_req.warranty_status == "Pending"
+    ).count()
+
+    # ✅ Count number of FOC pending requests for this technician
+    foc_pending_count = spare_req.query.filter(
+        spare_req.technician_id == request_entry.technician_id,
+        spare_req.foc_no == "Pending"
+    ).count()
+
+    # Convert SQLAlchemy object to a dictionary
+    request_data = {
+        "customer_name": request_entry.customer_name,
+        "service_location": request_entry.service_location,
+        "region": request_entry.region,
+        "contract": request_entry.contract,
+        "contract_expiry_date": request_entry.contract_expiry_date if isinstance(request_entry.contract_expiry_date, str) else request_entry.contract_expiry_date.strftime('%Y-%m-%d') if request_entry.contract_expiry_date else "",
+        "asset_Description": request_entry.asset_Description,
+        "serial_number": request_entry.serial_number,
+        "technician_name": request_entry.technician_name,
+        "warranty_pending":warranty_pending_count,
+        "foc_pending": foc_pending_count,
+
+        "spare_items": [{
+            "product_code": request_entry.product_code,
+            "description": request_entry.description,
+            "previous_reading": request_entry.reading,
+            "current_reading": request_entry.reading,
+            "yield": request_entry.yield_achvd,
+            "qty": request_entry.qty,
+            "spare_type": request_entry.spare_type,
+            "warehouse": request_entry.warehouse,
+            "remarks": request_entry.any_remarks,
+        }]
+    }
+
+    # Fetch spare request history for the same serial number
+    # Fetch spare request history for the same serial number, excluding the latest request
+    history_entries = spare_req.query.filter(
+        spare_req.serial_number == request_entry.serial_number,
+        spare_req.id != request_entry.id  # ✅ Exclude the latest request
+    ).order_by(spare_req.date.desc()).all()
+
+    history_data = [{
+        "date": entry.date.strftime('%Y-%m-%d'),
+        "product_code": entry.product_code,
+        "description": entry.description,
+        "qty": entry.qty,
+        "reading": entry.reading,
+        "yield_achvd": entry.yield_achvd,
+        "warehouse": entry.warehouse,
+        "technician_name": entry.technician_name,
+        "remarks": entry.any_remarks,
+    } for entry in history_entries]
+
+    return render_template("material/print_request.html", request_data=request_data, history=history_data)
+
+@material_bp.route('/movement', methods=['GET'])
+def material_movement():
+    return render_template('material/material_movement.html')
+
+@material_bp.route('/history', methods=['GET'])
+def request_history():
+    return render_template('material/request_history.html')
+
+
 
 # Route to serve the edit request page
 @material_bp.route('/edit_request/<int:id>')
@@ -218,11 +281,43 @@ from flask import send_file  # ✅ Added missing import
 
 @material_bp.route('/export_excel', methods=['GET'])
 def export_excel():
-    """ Export all requests as an Excel file """
-    requests = spare_req.query.all()
+    """ Export filtered requests as an Excel file """
+    from_date = request.args.get('fromDate')
+    to_date = request.args.get('toDate')
+
+    # Filters for search
+    filters = {
+        "id": request.args.get("filterId"),
+        "serial_number": request.args.get("filterSerial"),
+        "asset_Description": request.args.get("filterAsset"),
+        "technician_name": request.args.get("filterTechnician"),
+        "warehouse": request.args.get("filterWarehouse"),
+        "product_code": request.args.get("filterProduct"),
+        "description": request.args.get("filterDescription"),
+        "warranty_status": request.args.get("filterStatus")
+    }
+
+    query = spare_req.query
+
+    # ✅ Apply Date Filtering
+    if from_date:
+        from_date = datetime.strptime(from_date, "%Y-%m-%d")
+        query = query.filter(spare_req.date >= from_date)
+    if to_date:
+        to_date = datetime.strptime(to_date, "%Y-%m-%d")
+        query = query.filter(spare_req.date <= to_date)
+
+    # ✅ Apply Search Filters
+    for key, value in filters.items():
+        if value:
+            query = query.filter(getattr(spare_req, key).ilike(f"%{value}%"))
+
+    # ✅ Fetch Filtered Data
+    requests = query.all()
+
     data = [{
         "ID": req.id,
-        "Date":req.date,
+        "Date": req.date.strftime('%Y-%m-%d'),
         "Serial Number": req.serial_number,
         "Asset Description": req.asset_Description,
         "Technician Name": req.technician_name,
@@ -232,11 +327,9 @@ def export_excel():
         "Warranty Status": req.warranty_status
     } for req in requests]
 
+    # ✅ Generate Excel File
     df = pd.DataFrame(data)
-
-    # ✅ Fix: Use a valid file path
-    file_path = os.path.join(os.getcwd(), "material_requests.xlsx")
-
+    file_path = os.path.join(os.getcwd(), "filtered_material_requests.xlsx")
     df.to_excel(file_path, index=False)
 
     return send_file(file_path, as_attachment=True)
@@ -367,3 +460,26 @@ def update_request(id):
     print("✅ Request updated successfully")  # Debugging Output
     return jsonify({"success": True})  # ✅ Ensure JSON response is correct
 
+@material_bp.route('/fetch_history/<serial_number>', methods=['GET'])
+def fetch_history(serial_number):
+    """ Fetch the spare request history for a given serial number. """
+    history_entries = spare_req.query.filter_by(serial_number=serial_number).order_by(spare_req.date.desc()).all()
+
+    if not history_entries:
+        return jsonify([])  # Return an empty list if no history is found
+
+    history_data = [{
+        "date": entry.date.strftime('%Y-%m-%d'),
+        "product_code": entry.product_code,
+        "description": entry.description,
+        "qty": entry.qty,
+        "reading": entry.reading,
+        "yield_achvd": entry.yield_achvd,
+        "warehouse": entry.warehouse,
+        "technician_name": entry.technician_name,
+        "foc_no": entry.foc_no,
+        "warranty_status": entry.warranty_status,
+        "remarks": entry.any_remarks,
+    } for entry in history_entries]
+
+    return jsonify(history_data)

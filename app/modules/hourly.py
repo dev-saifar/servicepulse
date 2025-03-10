@@ -60,7 +60,7 @@ def get_daily_hourly_report():
     for tech, hour, location, tickets_handled in hourly_query:
         formatted_hour = f"{int(hour)}-00 - {int(hour)+1}-00"
         if tech not in report_data:
-            report_data[tech] = {h: "No Activity" for h in hours}
+            report_data[tech] = {h: " " for h in hours}
             report_data[tech]["total_tickets"] = 0
 
         report_data[tech][formatted_hour] = location

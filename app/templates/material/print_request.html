@@ -88,8 +88,8 @@
             <strong>Technician Name:</strong> <span id="technician"></span>
         </div>
         <div class="pending-info">
-            <strong>Warranty Pending:</strong> <span id="warranty_pending"></span><br><br>
-            <strong>FOC Return Pending:</strong> <span id="foc_pending"></span>
+            <p><strong>Warranty Pending:</strong> <span id="warranty_pending">{{ request_data.warranty_pending }}</span></p>
+            <p><strong>FOC Pending:</strong> <span id="foc_pending">{{ request_data.foc_pending }}</span></p>
         </div>
     </div>
 
@@ -140,58 +140,56 @@
     </div>
 
     <script>
+
         function loadPrintData() {
-            let requestData = JSON.parse(localStorage.getItem("printData"));
+        let requestData = {{ request_data | tojson | safe }};
+        let historyData = {{ history | tojson | safe }};
 
-            if (!requestData) {
-                alert("No data found! Please generate a request first.");
-                return;
-            }
-
-
-            // Fill other machine details
-            document.getElementById("customer_name").textContent = requestData.customer_name;
-            document.getElementById("service_location").textContent = requestData.service_location;
-            document.getElementById("region").textContent = requestData.region;
-            document.getElementById("contract").textContent = requestData.contract;
-            document.getElementById("contract_expiry_date").textContent = requestData.contract_expiry_date;
-            document.getElementById("asset_Description").textContent = requestData.asset_Description;
-            document.getElementById("serial_number").textContent = requestData.serial_number;
-            document.getElementById("technician").textContent = requestData.technician_name;
-            document.getElementById("warranty_pending").textContent = requestData.warranty_pending;
-            document.getElementById("foc_pending").textContent = requestData.foc_pending;
-
-            // Fill requested spare parts
-            let requestedTable = document.getElementById("requested_spares_table");
-            requestData.spare_items.forEach(item => {
-                let row = requestedTable.insertRow();
-                row.innerHTML = `<td>${item.product_code}</td>
-                                 <td>${item.description}</td>
-                                 <td>${item.previous_reading}</td>
-                                 <td>${item.current_reading}</td>
-                                 <td>${item.yield}</td>
-                                 <td>${item.qty}</td>
-                                 <td>${item.spare_type}</td>
-                                 <td>${item.warehouse}</td>
-                                 <td>${item.remarks}</td>`;
-            });
-
-            // Fill spare request history
-            let historyTable = document.getElementById("spare_history_table");
-            requestData.history.forEach(item => {
-                let row = historyTable.insertRow();
-                row.innerHTML = `<td>${item.date}</td>
-                                 <td>${item.description}</td>
-                                 <td>${item.reading}</td>
-                                 <td>${item.product_code}</td>
-                                 <td>${item.yield_achvd}</td>
-                                 <td>${item.qty}</td>
-                                 <td>${item.warehouse}</td>
-                                 <td>${item.technician_name}</td>
-                                 <td>${item.remarks}</td>`;
-            });
+        if (!requestData) {
+            alert("No data found! Please generate a request first.");
+            return;
         }
-    </script>
 
+        document.getElementById("customer_name").textContent = requestData.customer_name;
+        document.getElementById("service_location").textContent = requestData.service_location;
+        document.getElementById("region").textContent = requestData.region;
+        document.getElementById("contract").textContent = requestData.contract;
+        document.getElementById("contract_expiry_date").textContent = requestData.contract_expiry_date;
+        document.getElementById("asset_Description").textContent = requestData.asset_Description;
+        document.getElementById("serial_number").textContent = requestData.serial_number;
+        document.getElementById("technician").textContent = requestData.technician_name;
+
+
+        // Fill requested spare parts
+        let requestedTable = document.getElementById("requested_spares_table");
+        requestData.spare_items.forEach(item => {
+            let row = requestedTable.insertRow();
+            row.innerHTML = `<td>${item.product_code}</td>
+                             <td>${item.description}</td>
+                             <td>${item.previous_reading}</td>
+                             <td>${item.current_reading}</td>
+                             <td>${item.yield}</td>
+                             <td>${item.qty}</td>
+                             <td>${item.spare_type}</td>
+                             <td>${item.warehouse}</td>
+                             <td>${item.remarks}</td>`;
+        });
+
+        // Fill spare request history
+        let historyTable = document.getElementById("spare_history_table");
+        historyData.forEach(item => {
+            let row = historyTable.insertRow();
+            row.innerHTML = `<td>${item.date}</td>
+                             <td>${item.description}</td>
+                             <td>${item.reading}</td>
+                             <td>${item.product_code}</td>
+                             <td>${item.yield_achvd}</td>
+                             <td>${item.qty}</td>
+                             <td>${item.warehouse}</td>
+                             <td>${item.technician_name}</td>
+                             <td>${item.remarks}</td>`;
+        });
+    }
+    </script>
 </body>
 </html>

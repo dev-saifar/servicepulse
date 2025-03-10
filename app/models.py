@@ -2,7 +2,7 @@ from app.extensions import db
 from sqlalchemy import inspect
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from datetime import datetime
 
 # ✅ Technician Model
 class Technician(db.Model):
@@ -22,7 +22,7 @@ class Ticket(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reference_no = db.Column(db.String(200), unique=True, nullable=False)
     title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     customer = db.Column(db.String(200), nullable=False)
     call_type = db.Column(db.String(100), nullable=False)
     technician_id = db.Column(db.Integer, db.ForeignKey("technician.id"), nullable=True)
@@ -96,7 +96,7 @@ class spare_req(db.Model):
     technician_id = db.Column(db.Integer, db.ForeignKey('technician.id'), nullable=False)
     technician_name = db.Column(db.String, nullable=False)
     reading = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.String, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     foc_no = db.Column(db.String, nullable=True)
     customer_name = db.Column(db.String, nullable=False)
     service_location = db.Column(db.String, nullable=False)

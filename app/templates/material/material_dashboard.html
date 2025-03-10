@@ -21,18 +21,15 @@
             table-layout: auto;
         }
 
-        /* Column-wise width adjustments */
         .table th, .table td {
             border: 1px solid black;
             padding: 8px;
-
             text-align: left;
             word-wrap: break-word;
             white-space: normal;
-            font-size:14px;
+            font-size: 14px;
         }
 
-        /* Ensure filter inputs align with columns */
         .table thead input {
             width: 100%;
             box-sizing: border-box;
@@ -40,29 +37,14 @@
             font-size: 12px;
         }
 
-        .table th:nth-child(1), .table td:nth-child(1), .table th:nth-child(1) input { width: 50px; }  /* ID */
-        .table th:nth-child(2), .table td:nth-child(2), .table th:nth-child(2) input { width: 100px; } /* Date */
-        .table th:nth-child(3), .table td:nth-child(3), .table th:nth-child(3) input { width: 180px; } /* Customer */
-        .table th:nth-child(4), .table td:nth-child(4), .table th:nth-child(4) input { width: 60px; } /* FOC */
-        .table th:nth-child(5), .table td:nth-child(5), .table th:nth-child(5) input { width: 70px; } /* Serial Number */
-        .table th:nth-child(6), .table td:nth-child(6), .table th:nth-child(6) input { width: 130px; } /* Asset Description */
-        .table th:nth-child(7), .table td:nth-child(7), .table th:nth-child(7) input { width: 80px; } /* Technician */
-        .table th:nth-child(8), .table td:nth-child(8), .table th:nth-child(8) input { width: 65px; } /* Warehouse */
-        .table th:nth-child(9), .table td:nth-child(9), .table th:nth-child(9) input { width: 70px; } /* Product Code */
-        .table th:nth-child(10), .table td:nth-child(10), .table th:nth-child(10) input { width: 90px; } /* Description */
-        .table th:nth-child(11), .table td:nth-child(11), .table th:nth-child(11) input { width: 80px; } /* Warranty Status */
-        .table th:nth-child(12), .table td:nth-child(12) { width: 50px; } /* Actions (No filter input) */
-
         .pagination { margin-top: 10px; }
         .btn { padding: 8px 12px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
-        .status-pending { background-color: yellow; }
-        .status-approved { background-color: lightgreen; }
-        .status-rejected { background-color: lightcoral; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Material Movement Dashboard</h1>
+
         <div class="filter-section">
             <label>From Date: <input type="date" id="fromDate"></label>
             <label>To Date: <input type="date" id="toDate"></label>
@@ -110,21 +92,34 @@
         </div>
 
         <div class="pagination">
-            <button class="btn" onclick="loadMore()">Load More</button>
+            <p id="paginationText">Page 1 of X</p>
+            <button id="loadMoreBtn" class="btn" onclick="loadMore()">Load More</button>
         </div>
     </div>
 
     <script>
         let currentPage = 1;
+        let totalPages = 1;
+        let isLoading = false;
 
         function fetchRequests(page) {
+            if (isLoading) return;
+            isLoading = true;
+
             const fromDate = document.getElementById("fromDate").value;
             const toDate = document.getElementById("toDate").value;
+
             fetch(`/material/fetch_requests?page=${page}&fromDate=${fromDate}&toDate=${toDate}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (page === 1) document.querySelector("#requestTable tbody").innerHTML = "";
-                    data.forEach(request => {
+                    if (!data.requests || data.requests.length === 0) {
+                        document.getElementById("loadMoreBtn").style.display = "none";
+                        return;
+                    }
+
+                    if (page === 1) document.querySelector("#requestTable tbody").innerHTML = ""; // Clear table on new search
+
+                    data.requests.forEach(request => {
                         let row = document.createElement("tr");
                         row.innerHTML = `
                             <td>${request.id}</td>
@@ -142,7 +137,29 @@
                         `;
                         document.querySelector("#requestTable tbody").appendChild(row);
                     });
+
+                    totalPages = data.total_pages;
+                    document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages}`;
+
+                    if (currentPage >= totalPages) {
+                        document.getElementById("loadMoreBtn").style.display = "none";
+                    } else {
+                        document.getElementById("loadMoreBtn").style.display = "block";
+                    }
+
+                    isLoading = false;
+                })
+                .catch(error => {
+                    console.error("Error loading data:", error);
+                    isLoading = false;
                 });
+        }
+
+        function loadMore() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchRequests(currentPage);
+            }
         }
 
         function filterTable() {
@@ -154,13 +171,34 @@
             });
         }
 
-        window.onload = () => fetchRequests(1);
         function redirectToEditPage(requestId) {
-    window.location.href = `/material/edit_request/${requestId}`;
-}
+            window.location.href = `/material/edit_request/${requestId}`;
+        }
 
-    </script>
-</body>
+        window.onload = () => fetchRequests(1);
+
+    function exportToExcel() {
+        const fromDate = document.getElementById("fromDate").value;
+        const toDate = document.getElementById("toDate").value;
+
+        const filterParams = new URLSearchParams({
+            fromDate: fromDate,
+            toDate: toDate,
+            filterId: document.getElementById("filterId").value,
+            filterSerial: document.getElementById("filterSerial").value,
+            filterAsset: document.getElementById("filterAsset").value,
+            filterTechnician: document.getElementById("filterTechnician").value,
+            filterWarehouse: document.getElementById("filterWarehouse").value,
+            filterProduct: document.getElementById("filterProduct").value,
+            filterDescription: document.getElementById("filterDescription").value,
+            filterStatus: document.getElementById("filterStatus").value
+        });
+
+        window.location.href = `/material/export_excel?${filterParams.toString()}`;
+    }
+</script>
+
+ </body>
 </html>
 
 {% endblock %}
