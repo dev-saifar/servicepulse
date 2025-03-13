@@ -412,48 +412,36 @@ def fetch_print_data(request_id):
     })
 @material_bp.route('/get_request/<int:id>', methods=['GET'])
 def get_request(id):
-    print(f"🔍 Fetching request ID: {id}")  # Debugging Output
-
+    """Fetch request details including UUID for reprint."""
     request_data = spare_req.query.get(id)
     if not request_data:
-        print(f"❌ Request ID {id} NOT found in the database!")  # Debugging Output
         return jsonify({"error": "Request not found"}), 404
 
     return jsonify({
-        # Asset Information (Non-editable)
         "id": request_data.id,
+        "request_id": request_data.request_id,  # ✅ Return UUID for reprinting
         "serial_number": request_data.serial_number,
         "asset_description": request_data.asset_Description,
         "product_code": request_data.product_code,
         "description": request_data.description,
-        "code": request_data.code,  # Editable
-
-        # Technician Details (Non-editable)
+        "code": request_data.code,
         "technician_id": request_data.technician_id,
         "technician_name": request_data.technician_name,
-
-        # Service & Contract Details (Non-editable)
         "customer_name": request_data.customer_name,
         "service_location": request_data.service_location,
         "region": request_data.region,
         "contract": request_data.contract,
         "contract_expiry_date": request_data.contract_expiry_date,
-
-        # Spare Part & Usage Information
         "reading": request_data.reading if request_data.reading is not None else "",
-
         "qty": request_data.qty,
         "spare_type": request_data.spare_type,
-        "warehouse": request_data.warehouse,  # Editable
-
-        # Additional Information
-        "foc_no": request_data.foc_no,  # Editable
-        "any_remarks": request_data.any_remarks,  # Editable
-
-        # Warranty Details
-        "warranty_status": request_data.warranty_status,  # Editable
-        "warranty_remarks": request_data.warranty_remarks  # Editable
+        "warehouse": request_data.warehouse,
+        "foc_no": request_data.foc_no,
+        "any_remarks": request_data.any_remarks,
+        "warranty_status": request_data.warranty_status,
+        "warranty_remarks": request_data.warranty_remarks
     })
+
 @material_bp.route('/update_request/<int:id>', methods=['POST'])
 def update_request(id):
     print(f"✏️ Updating request ID: {id}")  # Debugging Output
@@ -504,3 +492,23 @@ def fetch_history(serial_number):
     } for entry in history_entries]
 
     return jsonify(history_data)
+
+
+@material_bp.route('/delete_request/<int:request_id>', methods=['DELETE'])
+def delete_request(request_id):
+    """Handles deletion of a material request by ID."""
+    try:
+        request_entry = spare_req.query.get(request_id)
+
+        if not request_entry:
+            return jsonify({"error": "Request not found"}), 404  # If ID doesn't exist
+
+        db.session.delete(request_entry)
+        db.session.commit()
+
+        return jsonify({"message": "Request deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500  # Return error response
+

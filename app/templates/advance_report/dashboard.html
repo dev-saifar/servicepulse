@@ -34,22 +34,28 @@
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody>
-            {% for report in scheduled_reports %}
-            <tr>
-                <td>{{ report.report_type }}</td>
-                <td>{{ report.start_date }}</td>
-                <td>{{ report.end_date }}</td>
-                <td>{{ report.schedule }}</td>
-                <td>{{ report.email }}</td>
-                <td>
-                    <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+        <<tbody>
+    {% for report in scheduled_reports %}
+    <tr>
+        <td>{{ report.report_type }}</td>
+        <td>{{ report.start_date }}</td>
+        <td>{{ report.end_date }}</td>
+        <td>{{ report.schedule }}</td>
+        <td>{{ report.email }}</td>
+        <td>
+            <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+        </td>
+        <td>
+            <form method="POST" action="{{ url_for('advance_report.run_scheduled_report', report_id=report.id) }}">
+                <button type="submit" class="btn btn-success btn-sm">Run Now</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
     </table>
 </div>
 

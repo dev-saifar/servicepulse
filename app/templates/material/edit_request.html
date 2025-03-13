@@ -63,6 +63,7 @@
             <label>Service Location:</label>
             <input type="text" id="edit_service_location" class="input-field readonly" readonly>
             <label>Region:</label>
+            <input type="hidden" id="edit_request_uuid">
             <input type="text" id="edit_region" class="input-field readonly" readonly>
             <label>Contract:</label>
             <input type="text" id="edit_contract" class="input-field readonly" readonly>
@@ -94,52 +95,63 @@
             <input type="text" id="edit_warranty_remarks" class="input-field">
 
             <button type="button" class="btn" onclick="saveChanges()">Save Changes</button>
+            <button type="button" class="btn" style="background-color: green;" onclick="reprintRequest()">Reprint</button>
         </form>
     </div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            let requestId = window.location.pathname.split("/").pop(); // Get request ID from URL
+    let requestId = window.location.pathname.split("/").pop(); // Get request ID from URL
 
-            fetch(`/material/get_request/${requestId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert("Request not found!");
-                        return;
-                    }
+    fetch(`/material/get_request/${requestId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert("Request not found!");
+                return;
+            }
 
-                    // Populate form fields
-                    document.getElementById("edit_id").value = data.id;
-                    document.getElementById("edit_serial_number").value = data.serial_number;
-                    document.getElementById("edit_asset_Description").value = data.asset_Description;
-                    document.getElementById("edit_product_code").value = data.product_code;
-                    document.getElementById("edit_description").value = data.description;
-                    document.getElementById("edit_code").value = data.code;
+            // Populate form fields
+            document.getElementById("edit_id").value = data.id;
+            document.getElementById("edit_request_uuid").value = data.request_id; // ✅ Store UUID for reprinting
+            document.getElementById("edit_serial_number").value = data.serial_number;
+            document.getElementById("edit_asset_Description").value = data.asset_description;
+            document.getElementById("edit_product_code").value = data.product_code;
+            document.getElementById("edit_description").value = data.description;
+            document.getElementById("edit_code").value = data.code;
 
-                    document.getElementById("edit_technician_name").value = data.technician_name;
-                    document.getElementById("edit_customer_name").value = data.customer_name;
-                    document.getElementById("edit_service_location").value = data.service_location;
-                    document.getElementById("edit_region").value = data.region;
-                    document.getElementById("edit_contract").value = data.contract;
-                    document.getElementById("edit_contract_expiry_date").value = data.contract_expiry_date;
+            document.getElementById("edit_technician_name").value = data.technician_name;
+            document.getElementById("edit_customer_name").value = data.customer_name;
+            document.getElementById("edit_service_location").value = data.service_location;
+            document.getElementById("edit_region").value = data.region;
+            document.getElementById("edit_contract").value = data.contract;
+            document.getElementById("edit_contract_expiry_date").value = data.contract_expiry_date;
 
-                    document.getElementById("edit_reading").value = data.reading || "";
-                    document.getElementById("edit_warehouse").value = data.warehouse;
-                    document.getElementById("edit_foc_no").value = data.foc_no;
-                    document.getElementById("edit_any_remarks").value = data.any_remarks;
+            document.getElementById("edit_reading").value = data.reading || "";
+            document.getElementById("edit_warehouse").value = data.warehouse;
+            document.getElementById("edit_foc_no").value = data.foc_no;
+            document.getElementById("edit_any_remarks").value = data.any_remarks;
 
-                    let warrantyDropdown = document.getElementById("edit_warranty_status");
-                    if (["Claimed", "Warranty Over", "Non Claimable", "Pending"].includes(data.warranty_status)) {
-                        warrantyDropdown.value = data.warranty_status;
-                    } else {
-                        warrantyDropdown.value = "Pending";  // Default value if no match
-                    }
+            let warrantyDropdown = document.getElementById("edit_warranty_status");
+            if (["Claimed", "Warranty Over", "Non Claimable", "Pending"].includes(data.warranty_status)) {
+                warrantyDropdown.value = data.warranty_status;
+            } else {
+                warrantyDropdown.value = "Pending";  // Default value if no match
+            }
 
-                    document.getElementById("edit_warranty_remarks").value = data.warranty_remarks;
-                })
-                .catch(error => console.error("Error fetching request:", error));
-        });
+            document.getElementById("edit_warranty_remarks").value = data.warranty_remarks;
+        })
+        .catch(error => console.error("Error fetching request:", error));
+});
+
+        function reprintRequest() {
+        let requestId = document.getElementById("edit_request_uuid").value;
+        if (!requestId) {
+            alert("Request ID not found! Cannot reprint.");
+            return;
+        }
+        window.location.href = `/material/print_request/${requestId}`;
+    }
 
         function saveChanges() {
         let requestData = {

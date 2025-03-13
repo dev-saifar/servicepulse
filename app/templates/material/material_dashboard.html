@@ -134,6 +134,7 @@
                             <td>${request.description}</td>
                             <td>${request.warranty_status}</td>
                             <td><button class="btn" onclick="redirectToEditPage(${request.id})">Edit</button></td>
+                            <button class="btn btn-danger" onclick="deleteRequest(${request.id})">Delete</button>
                         `;
                         document.querySelector("#requestTable tbody").appendChild(row);
                     });
@@ -196,6 +197,27 @@
 
         window.location.href = `/material/export_excel?${filterParams.toString()}`;
     }
+
+    function deleteRequest(requestId) {
+        if (confirm("Are you sure you want to delete this request? This action cannot be undone.")) {
+            fetch(`/material/delete_request/${requestId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert("Request deleted successfully!");
+                    fetchRequests(1); // Reload the table
+                } else {
+                    alert("Error deleting the request. Please try again.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    }
+
 </script>
 
  </body>
