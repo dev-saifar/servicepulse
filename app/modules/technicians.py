@@ -13,9 +13,12 @@ def index():
         Technician.name,
         Technician.status,
         func.concat(
-            func.coalesce(Ticket.customer, 'Unknown'),
+            func.coalesce(Ticket.region, ' '),
             ' - ',
-            func.coalesce(Ticket.service_location, 'Unknown')
+            func.coalesce(Ticket.service_location, ' '),
+            ' - ',
+            func.coalesce(Ticket.customer, ' ')
+
         ).label('last_location'),
         db.func.count(Ticket.id).filter(Ticket.created_at >= datetime.utcnow().date()).label('calls_today'),
         db.func.coalesce(Ticket.expected_completion_time, datetime.utcnow()).label('expected_free_time')

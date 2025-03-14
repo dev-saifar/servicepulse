@@ -48,3 +48,26 @@ def delete_user(user_id):
     db.session.commit()
     flash("User deleted successfully!", "success")
     return redirect(url_for('users.user_list'))
+
+from werkzeug.security import generate_password_hash
+
+@users_bp.route('/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def edit_user(user_id):
+    """Edit an existing user, including an optional password change"""
+    user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        user.username = request.form.get('username')
+        user.email = request.form.get('email')
+        user.role = request.form.get('role')
+
+        new_password = request.form.get('new_password')
+        if new_password:  # Update only if a new password is provided
+            user.password_hash = generate_password_hash(new_password)
+
+        db.session.commit()
+        flash("User details updated successfully!", "success")
+        return redirect(url_for('users.user_list'))
+
+    return render_template('users/edit_user.html', user=user)
