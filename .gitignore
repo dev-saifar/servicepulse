@@ -1,0 +1,4 @@
+instance/
+*.sqlite3
+*.db
+instance/techtrack.db
