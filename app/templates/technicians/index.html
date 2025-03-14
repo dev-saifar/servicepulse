@@ -28,11 +28,11 @@
                 <table class="table table-hover table-striped align-middle" id="technicianTable">
                     <thead class="table-dark">
                         <tr>
-                            <th>Name</th>
-                            <th>Status</th>
-                            <th>Last Location</th>
-                            <th>Calls Today</th>
-                            <th>Availability</th>
+                            <th onclick="sortTable(0)">Name &#x25B2;&#x25BC;</th>
+                            <th onclick="sortTable(1)">Status &#x25B2;&#x25BC;</th>
+                            <th onclick="sortTable(2)">Last Location &#x25B2;&#x25BC;</th>
+                            <th onclick="sortTable(3)">Calls Today &#x25B2;&#x25BC;</th>
+                            <th onclick="sortTable(4)">Availability &#x25B2;&#x25BC;</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -62,11 +62,9 @@
                                 </a>
                                 <form method="POST" action="{{ url_for('technicians.delete_technician', tech_id=tech.id) }}" style="display:inline;">
                                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this technician?');">
-                                        <i class="fas fa-trash"></i> Remove
+                                        <i class="fas fa-trash"></i> Del
                                     </button>
                                 </form>
-
-                                </a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -79,10 +77,11 @@
     <style>
         .table th {
             text-align: center;
+            cursor: pointer;
         }
         .table td {
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
         }
         .progress {
             background-color: #f1f1f1;
@@ -94,28 +93,55 @@
             color: white;
         }
         .badge {
-            font-size: 14px;
+            font-size: 12px;
             padding: 8px 12px;
         }
     </style>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    let searchInput = document.getElementById("searchTechnicians");
 
-    searchInput.addEventListener("keyup", function () {
-        let filter = searchInput.value.toLowerCase();
-        let rows = document.querySelectorAll("#technicianTable tbody tr");
-
-        rows.forEach(row => {
-            let nameCell = row.getElementsByTagName("td")[0];  // Get technician name
-            if (nameCell) {
-                let textValue = nameCell.textContent || nameCell.innerText;
-                row.style.display = textValue.toLowerCase().includes(filter) ? "" : "none";
-            }
+    <script>
+        // Search Function
+        document.addEventListener("DOMContentLoaded", function () {
+            let searchInput = document.getElementById("searchTechnicians");
+            searchInput.addEventListener("keyup", function () {
+                let filter = searchInput.value.toLowerCase();
+                let rows = document.querySelectorAll("#technicianTable tbody tr");
+                rows.forEach(row => {
+                    let nameCell = row.getElementsByTagName("td")[0];
+                    if (nameCell) {
+                        let textValue = nameCell.textContent || nameCell.innerText;
+                        row.style.display = textValue.toLowerCase().includes(filter) ? "" : "none";
+                    }
+                });
+            });
         });
-    });
-});
 
-</script>
+        // Sorting Function
+        function sortTable(columnIndex) {
+            let table = document.getElementById("technicianTable");
+            let tbody = table.getElementsByTagName("tbody")[0];
+            let rows = Array.from(tbody.getElementsByTagName("tr"));
+
+            let ascending = table.dataset.sortOrder !== "asc";
+            table.dataset.sortOrder = ascending ? "asc" : "desc";
+
+            rows.sort((a, b) => {
+                let aText = a.getElementsByTagName("td")[columnIndex].textContent.trim();
+                let bText = b.getElementsByTagName("td")[columnIndex].textContent.trim();
+
+                // Handle numeric columns
+                let aNum = parseFloat(aText);
+                let bNum = parseFloat(bText);
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return ascending ? aNum - bNum : bNum - aNum;
+                }
+
+                return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+
+            tbody.innerHTML = "";
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
 
 {% endblock %}
