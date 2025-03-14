@@ -35,15 +35,16 @@
     <div class="mt-4">
         <table class="table table-bordered">
             <thead>
-                <tr>
-                    <th>Technician</th>
-                    <th>Open Tickets</th>
-                    <th>Closed Tickets</th>
-                    <th>Warranty Claimed</th>
-                    <th>Warranty Pending</th>
-                    <th>FOC Pending</th>
-                </tr>
-            </thead>
+            <tr>
+                <th onclick="sortTable(0)">Technician <span>▲▼</span></th>
+                <th onclick="sortTable(1)">Open Tickets <span>▲▼</span></th>
+                <th onclick="sortTable(2)">Closed Tickets <span>▲▼</span></th>
+                <th onclick="sortTable(3)">Warranty Claimed <span>▲▼</span></th>
+                <th onclick="sortTable(4)">Warranty Pending <span>▲▼</span></th>
+                <th onclick="sortTable(5)">FOC Pending <span>▲▼</span></th>
+            </tr>
+           </thead>
+
             <tbody id="reportTable"></tbody>
         </table>
     </div>
@@ -178,5 +179,26 @@
     function downloadReport() {
         window.location.href = `/technician_performance/download_foc_warranty_report`;
     }
+
+    function sortTable(columnIndex) {
+        let table = document.getElementById("reportTable");
+        let rows = Array.from(table.rows);
+        let ascending = table.dataset.sortOrder !== "asc";
+
+        rows.sort((a, b) => {
+            let aText = a.cells[columnIndex].textContent.trim();
+            let bText = b.cells[columnIndex].textContent.trim();
+
+            return isNaN(aText) || isNaN(bText)
+                ? (ascending ? aText.localeCompare(bText) : bText.localeCompare(aText))
+                : (ascending ? aText - bText : bText - aText);
+        });
+
+        table.innerHTML = "";
+        rows.forEach(row => table.appendChild(row));
+        table.dataset.sortOrder = ascending ? "asc" : "desc";
+    }
+
+
 </script>
 {% endblock %}
