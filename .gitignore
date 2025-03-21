@@ -2,3 +2,7 @@ instance/
 *.sqlite3
 *.db
 instance/techtrack.db
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
