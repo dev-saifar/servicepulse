@@ -153,3 +153,61 @@ class ScheduledReport(db.Model):
     email = db.Column(db.String(255), nullable=False)
     schedule = db.Column(db.String(50), nullable=False)  # Daily, Weekly, Monthly
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+from app.extensions import db
+from datetime import datetime
+
+
+# ✅ Customer Model (Matches "cust" table in SQLite)
+class Customer(db.Model):
+    __tablename__ = "cust"  # Ensure the model matches the actual table name in the DB
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    cust_code = db.Column(db.String, nullable=False)  # No global uniqueness, but handled per billing_company
+    cust_name = db.Column(db.String, nullable=False, unique=True)  # Must be globally unique
+    billing_company = db.Column(db.String, nullable=False)
+
+    # Relationship: A customer can have multiple contracts
+    contracts = db.relationship("Contract", backref="customer", lazy=True)
+
+    def __repr__(self):
+        return f"<Customer {self.cust_code} - {self.cust_name}>"
+
+
+# ✅ Contract Model (Matches "contract" table in SQLite)
+class Contract(db.Model):
+    __tablename__ = "contract"  # Ensure the model matches the actual table name in the DB
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    cust_code = db.Column(db.String, db.ForeignKey("cust.cust_code"), nullable=False)  # Linked to Customer
+    cust_name = db.Column(db.String, nullable=False)
+    contract_code = db.Column(db.String, nullable=False, unique=True)  # Unique contract identifier
+    cont_discription = db.Column(db.Text, nullable=True)
+    durations = db.Column(db.Integer, nullable=False)
+
+    # SQLite stores date as TEXT; parse it properly
+    contract_start_date = db.Column(db.String, nullable=False)
+    contract_end_date = db.Column(db.String, nullable=False)
+
+    mono_commitment = db.Column(db.String, nullable=True)
+    mono_charge = db.Column(db.String, nullable=True)
+    mono_excess_charge = db.Column(db.Float, nullable=True)
+    color_commitment = db.Column(db.String, nullable=True)
+    color_charge = db.Column(db.String, nullable=True)
+    color_excess_charge = db.Column(db.String, nullable=True)
+    rental_charges = db.Column(db.String, nullable=True)
+    software_rental = db.Column(db.String, nullable=True)
+    billing_cycle = db.Column(db.String, nullable=True)
+    contract_currency = db.Column(db.String, nullable=True)
+
+    # Fix column name case mismatch in the DB: "Billing currency"
+    billing_currency = db.Column(db.String, nullable=True, name="Billing currency")
+
+    billing_company = db.Column(db.String, nullable=True)
+    sales_person = db.Column(db.String, nullable=True)
+    email = db.Column(db.String, nullable=True)
+
+    def __repr__(self):
+        return f"<Contract {self.contract_code} - {self.cust_code}>"
+

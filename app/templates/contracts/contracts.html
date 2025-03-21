@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Contract Management</h2>
+
+    <!-- Customer Search -->
+    <div class="mb-3">
+        <label for="cust_name" class="form-label">Customer Name</label>
+        <input type="text" id="cust_name" name="cust_name" class="form-control" autocomplete="off" required>
+        <ul id="customer_suggestions" class="list-group mt-2"></ul>
+    </div>
+
+    <!-- Customer Information -->
+    <div class="mb-3">
+        <label for="cust_code" class="form-label">Customer Code</label>
+        <input type="text" id="cust_code" name="cust_code" class="form-control" readonly required>
+    </div>
+    <div class="mb-3">
+        <label for="billing_company" class="form-label">Billing Company</label>
+        <input type="text" id="billing_company" name="billing_company" class="form-control" readonly required>
+    </div>
+
+    <!-- Existing Contracts -->
+    <div id="contract_list_section" class="mb-3" style="display:none;">
+        <h4>Existing Contracts</h4>
+        <ul id="contract_list" class="list-group"></ul>
+        <button id="add_contract_btn" class="btn btn-primary mt-3" style="display:none;">+ Add Contract</button>
+    </div>
+
+    <!-- Contract Form Section -->
+    <div id="contract_form_section" style="display:none;">
+        <h3>Add New Contract</h3>
+        <form id="contract_form">
+            <!-- Basic Section -->
+            <fieldset>
+                <legend>Basic Details</legend>
+                <div class="mb-3">
+                    <label for="contract_code" class="form-label">Contract Code</label>
+                    <input type="text" id="contract_code" name="contract_code" class="form-control" readonly required>
+                    <input type="hidden" id="cust_code_hidden" name="cust_code">
+                    <input type="hidden" id="billing_company_hidden" name="billing_company">
+                    <input type="hidden" id="cust_name_hidden" name="cust_name">
+
+
+                </div>
+                <div class="mb-3">
+                    <label for="cont_discription" class="form-label">Contract Description</label>
+                    <input type="text" id="cont_discription" name="cont_discription" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contract_start_date" class="form-label">Start Date</label>
+                    <input type="date" id="contract_start_date" name="contract_start_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contract_end_date" class="form-label">End Date</label>
+                    <input type="date" id="contract_end_date" name="contract_end_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="sales_person" class="form-label">Sales Person</label>
+                    <input type="text" id="sales_person" name="sales_person" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="durations" class="form-label">Duration (Months)</label>
+                    <input type="text" id="durations" name="durations" class="form-control" readonly>
+                </div>
+            </fieldset>
+
+            <!-- Advanced Section -->
+            <fieldset id="advanced_section" style="display:none;">
+                <legend>Advanced Details</legend>
+                <div class="mb-3">
+                    <label for="mono_commitment" class="form-label">Mono Commitment</label>
+                    <input type="text" id="mono_commitment" name="mono_commitment" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="mono_charge" class="form-label">Mono Charge</label>
+                    <input type="text" id="mono_charge" name="mono_charge" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="mono_excess_charge" class="form-label">Mono Excess Charge</label>
+                    <input type="text" id="mono_excess_charge" name="mono_excess_charge" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="color_commitment" class="form-label">Color Commitment</label>
+                    <input type="text" id="color_commitment" name="color_commitment" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="color_charge" class="form-label">Color Charge</label>
+                    <input type="text" id="color_charge" name="color_charge" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="color_excess_charge" class="form-label">Color Excess Charge</label>
+                    <input type="text" id="color_excess_charge" name="color_excess_charge" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="rental_charges" class="form-label">Rental Charges</label>
+                    <input type="text" id="rental_charges" name="rental_charges" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="software_rental" class="form-label">Software Rental</label>
+                    <input type="text" id="software_rental" name="software_rental" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="billing_cycle" class="form-label">Billing Cycle</label>
+                    <input type="text" id="billing_cycle" name="billing_cycle" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="contract_currency" class="form-label">Contract Currency</label>
+                    <input type="text" id="contract_currency" name="contract_currency" class="form-control">
+                </div>
+            </fieldset>
+
+            <button type="button" class="btn btn-secondary" onclick="toggleAdvanced()">Show Advanced Fields</button>
+            <button type="submit" class="btn btn-success">Save Contract</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Search for customers
+    document.getElementById("cust_name").addEventListener("input", function () {
+        let query = this.value.trim();
+        let suggestions = document.getElementById("customer_suggestions");
+        if (query.length > 1) {
+            fetch(`/contracts/search_customer?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    suggestions.innerHTML = "";
+                    data.forEach(customer => {
+                        let item = document.createElement("li");
+                        item.classList.add("list-group-item");
+                        item.textContent = `${customer.cust_name} (${customer.billing_company})`;
+                        item.onclick = function () {
+                            document.getElementById("cust_name").value = customer.cust_name;
+                            document.getElementById("cust_code").value = customer.cust_code;
+                            document.getElementById("billing_company").value = customer.billing_company;
+                            suggestions.innerHTML = "";
+                            fetchContracts();
+                        };
+                        suggestions.appendChild(item);
+                    });
+                });
+        }
+    });
+
+    // Fetch contracts for the selected customer
+    function fetchContracts() {
+        let cust_code = document.getElementById("cust_code").value;
+        let billing_company = document.getElementById("billing_company").value;
+        fetch(`/contracts/fetch_contracts?cust_code=${cust_code}&billing_company=${billing_company}`)
+            .then(response => response.json())
+            .then(data => {
+                let contractList = document.getElementById("contract_list");
+                let addContractBtn = document.getElementById("add_contract_btn");
+                contractList.innerHTML = "";
+                data.forEach(contract => {
+                    let item = document.createElement("li");
+                    item.classList.add("list-group-item");
+                    item.textContent = `${contract.cont_discription} (Code: ${contract.contract_code})`;
+                    contractList.appendChild(item);
+                });
+                addContractBtn.style.display = "block";
+                document.getElementById("contract_list_section").style.display = "block";
+            });
+    }
+
+    // Show the contract form when "Add Contract" is clicked
+    document.getElementById("add_contract_btn").addEventListener("click", function () {
+        console.log("Add Contract button clicked"); // Debugging
+        document.getElementById("contract_form_section").style.display = "block";
+        updateContractDetails();
+    });
+
+    // Auto-generate contract code and calculate duration
+    function updateContractDetails() {
+        let startDate = document.getElementById("contract_start_date").value;
+        let endDate = document.getElementById("contract_end_date").value;
+        let billingCompany = document.getElementById("billing_company").value;
+
+        if (startDate && endDate && billingCompany) {
+            let start = new Date(startDate);
+            let end = new Date(endDate);
+            let duration = Math.floor((end - start) / (1000 * 60 * 60 * 24 * 30)); // Duration in months
+
+            document.getElementById("durations").value = duration;
+
+            // Generate contract code
+            let yearSigned = start.getFullYear().toString().slice(-2);
+            let yearExpiry = end.getFullYear().toString().slice(-2);
+            let contractCount = 1; // This should be fetched from the server based on existing contracts
+            let contractCode = `${billingCompany.slice(0, 2)}${yearSigned}${yearExpiry}${String(contractCount).padStart(3, '0')}`;
+
+            document.getElementById("contract_code").value = contractCode;
+        }
+    }
+
+    // Handle contract form submission
+ document.getElementById("contract_form").addEventListener("submit", function (e) {
+    document.getElementById("cust_code_hidden").value = document.getElementById("cust_code").value;
+    document.getElementById("billing_company_hidden").value = document.getElementById("billing_company").value;
+    document.getElementById("cust_name_hidden").value = document.getElementById("cust_name").value;
+
+    e.preventDefault();
+
+    let cust_code = document.getElementById("cust_code").value.trim();
+    let billing_company = document.getElementById("billing_company").value.trim();
+
+    if (!cust_code || !billing_company) {
+        alert("❌ Error: Please select a customer before submitting the form.");
+        console.log("Form submission blocked. Missing customer details.");
+        return;
+    }
+
+    let formData = new FormData(this);
+    console.log("📤 Submitting Form Data:", Object.fromEntries(formData.entries()));  // Debugging
+
+    fetch('/contracts/create_contract', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("✅ Contract created successfully!");
+            window.location.href = `/assets/add_asset;
+        } else {
+            alert("❌ Error: " + data.error);
+        }
+    });
+});
+
+
+    // Toggle advanced fields
+    function toggleAdvanced() {
+        let advancedSection = document.getElementById("advanced_section");
+        advancedSection.style.display = advancedSection.style.display === "none" ? "block" : "none";
+    }
+</script>
+{% endblock %}

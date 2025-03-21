@@ -6,6 +6,11 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models import Assets
 
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from app.extensions import db
+from app.models import Customer, Contract, Assets
+from datetime import datetime
+
 assets_bp = Blueprint('assets', __name__, template_folder='../templates/assets')
 
 UPLOAD_FOLDER = 'uploads'
@@ -199,3 +204,118 @@ def delete_asset(asset_id):
         flash(f"Error deleting asset: {str(e)}", "error")
 
     return redirect(url_for('assets.index'))
+
+@assets_bp.route('/customers', methods=['GET', 'POST'])
+def manage_customers():
+    if request.method == 'POST':
+        billing_company = request.form['billing_company']
+        cust_name = request.form['cust_name'].strip()
+        cust_code = request.form['cust_code'].strip()
+
+        # Check if customer already exists
+        existing_customer = Customer.query.filter_by(cust_name=cust_name, billing_company=billing_company).first()
+        if existing_customer:
+            flash(f"Customer '{cust_name}' found. Redirecting to contracts...", "success")
+            return redirect(url_for('assets.manage_contracts', cust_code=existing_customer.cust_code))
+
+        # New customer scenario: Ensure `cust_code` is provided
+        if not cust_code:
+            flash("Customer Code is required for new customers!", "error")
+            return redirect(url_for('assets.manage_customers'))
+
+        # Ensure `cust_code` is unique within the billing company
+        existing_cust_code = Customer.query.filter_by(cust_code=cust_code, billing_company=billing_company).first()
+        if existing_cust_code:
+            flash(f"Customer Code '{cust_code}' already exists for {billing_company}.", "error")
+            return redirect(url_for('assets.manage_customers'))
+
+        # Add new customer
+        new_customer = Customer(cust_code=cust_code, cust_name=cust_name, billing_company=billing_company)
+        db.session.add(new_customer)
+        db.session.commit()
+        flash(f"New Customer '{cust_name}' added successfully! Redirecting to contracts...", "success")
+        return redirect(url_for('assets.manage_contracts', cust_code=cust_code))
+
+    return render_template('customers.html')
+
+@assets_bp.route('/assets', methods=['GET', 'POST'])
+def manage_assets():
+    # Your asset management logic here
+    return render_template("assets.html")  # Ensure this template exists
+@assets_bp.route('/customer/search', methods=['GET'])
+def search_customer():
+    billing_company = request.args.get('billing_company', '').strip()
+    query = request.args.get('query', '').strip()
+
+    if not billing_company or not query:
+        return jsonify([])  # Return an empty list if no input
+
+    # Fetch matching customers from the database
+    customers = Customer.query.filter(
+        Customer.billing_company == billing_company,
+        Customer.cust_name.ilike(f"%{query}%")  # Case-insensitive search
+    ).all()
+
+    return jsonify([
+        {"cust_code": c.cust_code, "cust_name": c.cust_name, "billing_company": c.billing_company}
+        for c in customers
+    ])
+
+@assets_bp.route('/contracts', methods=['GET'])
+def manage_contracts():
+    """Display contract management page"""
+    contracts = Contract.query.all()  # Fetch all contracts
+    return render_template("contracts/contracts.html")  # Correct path to the contract management template
+
+
+# ✅ Route to display asset creation form
+@assets_bp.route('/add_asset/<contract_code>', methods=['GET'])
+def add_asset():
+    """Render asset creation form for a specific contract"""
+    return render_template('contracts/asset_creation.html', contract_code=contract_code)
+
+
+# ✅ Route to handle asset creation
+@assets_bp.route('/create_asset', methods=['POST'])
+def create_asset():
+    """Create a new asset"""
+    required_fields = ['contract', 'account_code', 'customer_name', 'serial_number', 'service_location',
+                       'region', 'technician_name', 'technician_email', 'asset_Description', 'contract_expiry_date',
+                       'last_pm_date', 'pm_freq', 'install_date']
+
+    for field in required_fields:
+        if not request.form.get(field):
+            print(f"❌ Missing required field: {field}")  # Debugging
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+
+    # Convert dates correctly
+    try:
+        contract_expiry_date = datetime.strptime(request.form.get('contract_expiry_date'), '%Y-%m-%d')
+        last_pm_date = datetime.strptime(request.form.get('last_pm_date'), '%Y-%m-%d')
+        install_date = datetime.strptime(request.form.get('install_date'), '%Y-%m-%d')
+    except ValueError:
+        return jsonify({"error": "Invalid date format"}), 400
+
+    # Save to DB
+    new_asset = Assets(
+        account_code=request.form.get('account_code'),
+        customer_name=request.form.get('customer_name'),
+        serial_number=request.form.get('serial_number'),
+        service_location=request.form.get('service_location'),
+        region=request.form.get('region'),
+        technician_name=request.form.get('technician_name'),
+        technician_email=request.form.get('technician_email'),
+        contract=request.form.get('contract'),
+        asset_Description=request.form.get('asset_Description'),
+        contract_expiry_date=contract_expiry_date,
+        last_pm_date=last_pm_date,
+        pm_freq=request.form.get('pm_freq'),
+        install_date=install_date
+    )
+
+    db.session.add(new_asset)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Asset created successfully"})
+
+
