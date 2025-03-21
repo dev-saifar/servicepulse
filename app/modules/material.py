@@ -340,12 +340,15 @@ def export_excel():
         "ID": req.id,
         "Date": req.date.strftime('%Y-%m-%d'),
         "Serial Number": req.serial_number,
+        "Customer Name": req.customer_name,
+        "FOC": req.foc_no,
         "Asset Description": req.asset_Description,
         "Technician Name": req.technician_name,
         "Warehouse": req.warehouse,
         "Product Code": req.product_code,
         "Description": req.description,
         "Warranty Status": req.warranty_status
+
     } for req in requests]
 
     # ✅ Generate Excel File

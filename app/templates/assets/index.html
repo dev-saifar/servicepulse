@@ -1,19 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <div class="container mt-4">
     <h2 class="mb-4 text-primary font-weight-bold">Assets Management</h2>
 
-        <!-- Import Button (Green Box) -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-        <a href="{{ url_for('assets.import_assets') }}" class="btn btn-success btn-lg d-flex align-items-center">
-            <i class="fas fa-upload me-2"></i> Import Assets
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('assets.manage_customers') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-plus"></i> Add Customer
         </a>
-        <a href="{{ url_for('assets.export_to_excel') }}" class="btn btn-success btn-lg d-flex align-items-center">
-            <i class="fas fa-file-excel me-2"></i> Export to Excel
+        <a href="{{ url_for('assets.manage_contracts') }}" class="btn btn-info btn-lg">
+            <i class="fas fa-file-contract"></i> Add Contract
+        </a>
+        <a href="{{ url_for('assets.manage_assets') }}" class="btn btn-warning btn-lg">
+            <i class="fas fa-plus-circle"></i> Add Asset
+        </a>
+        <a href="{{ url_for('assets.import_assets') }}" class="btn btn-success btn-lg">
+            <i class="fas fa-plus-circle"></i> Import Assets
+        </a>
+        <a href="{{ url_for('assets.export_to_excel') }}" class="btn btn-success btn-lg">
+            <i class="fas fa-plus-circle"></i> Export to Excel
         </a>
     </div>
-
 
     <!-- Assets Table -->
     <div class="table-responsive">

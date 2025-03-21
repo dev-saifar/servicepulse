@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Manage Customers</h2>
+
+<form id="customer_form" action="{{ url_for('assets.manage_customers') }}" method="POST">
+    <div class="mb-3">
+        <label for="billing_company" class="form-label">Billing Company</label>
+        <select name="billing_company" class="form-control" required>
+            <option value="MDS">MDS</option>
+            <option value="DS">DS</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="cust_name" class="form-label">Customer Name</label>
+        <input type="text" id="cust_name" name="cust_name" class="form-control" required autocomplete="off">
+        <ul id="customer_suggestions" class="list-group mt-2"></ul>
+    </div>
+
+    <div class="mb-3">
+        <label for="cust_code" class="form-label">Customer Code (Only for New Customers)</label>
+        <input type="text" id="cust_code" name="cust_code" class="form-control">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Proceed</button>
+</form>
+
+
+</div>
+<script>
+    document.getElementById("cust_name").addEventListener("input", function () {
+        let query = this.value.trim();
+        let billingCompany = document.querySelector("select[name='billing_company']").value;
+        let custCodeField = document.getElementById("cust_code");
+
+        if (query.length > 1) {
+            fetch(`/assets/customer/search?query=${query}&billing_company=${billingCompany}`)
+                .then(response => response.json())
+                .then(data => {
+                    let suggestions = document.getElementById("customer_suggestions");
+                    suggestions.innerHTML = "";  // Clear old suggestions
+
+                    if (data.length > 0) {
+                        data.forEach(customer => {
+                            let item = document.createElement("li");
+                            item.classList.add("list-group-item", "clickable");
+                            item.textContent = customer.cust_name;
+                            item.onclick = function () {
+                                document.getElementById("cust_name").value = customer.cust_name;
+                                custCodeField.value = customer.cust_code;
+                                suggestions.innerHTML = "";
+
+                                // Auto-submit for existing customer (redirect to contracts)
+                                let form = document.getElementById("customer_form");
+                                form.action = `/assets/contracts?cust_code=${customer.cust_code}`;
+                                form.submit();
+                            };
+                            suggestions.appendChild(item);
+                        });
+                    } else {
+                        let newItem = document.createElement("li");
+                        newItem.classList.add("list-group-item", "bg-warning", "text-dark");
+                        newItem.textContent = "No existing customer found. Press Proceed to add.";
+                        suggestions.appendChild(newItem);
+                    }
+                })
+                .catch(error => console.error("Error fetching customer data:", error));
+        }
+    });
+
+    // If Enter is pressed, submit the form for a new customer
+    document.getElementById("cust_name").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            document.getElementById("customer_form").submit();
+        }
+    });
+</script>
+
+
+{% endblock %}

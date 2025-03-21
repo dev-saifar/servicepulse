@@ -93,6 +93,7 @@ def create_app():
     from app.modules.advance_report import advance_report_bp
     from app.modules.technician_performance import technician_performance_bp
     from app.tasks import generate_and_email_report
+    from app.modules.contracts import contracts_bp
 
     # ✅ Register Blueprints with correct URL prefixes
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
@@ -108,6 +109,7 @@ def create_app():
     app.register_blueprint(material_bp, url_prefix='/material')
     app.register_blueprint(advance_report_bp, url_prefix='/advance_report')
     app.register_blueprint(technician_performance_bp, url_prefix='/technician_performance')
+    app.register_blueprint(contracts_bp, url_prefix='/contracts')
 
 
 

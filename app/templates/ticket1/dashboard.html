@@ -11,7 +11,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         #ticketTable {
-            margin-left: -80px; /* Moves table 10mm (40px) left */
+            margin-left: -70px; /* Moves table 10mm (40px) left */
             font-size: 12px; /* Decrease font size */
         }
     </style>
@@ -128,7 +128,7 @@
                     <th>Created At</th>
                     <th>Closed At</th>
                     <th>Serial Number</th>
-                    <th>TAT</th>
+
                     <th>Complete</th>
                     <th>Service Location</th>
                     <th>Region</th>
@@ -150,7 +150,7 @@
                     <td>{{ ticket.created_at.strftime('%Y-%m-%d') }}</td>
                     <td>{{ ticket.closed_at or "N/A" }}</td>
                     <td>{{ ticket.serial_number or "N/A" }}</td>
-                    <td>{{ ticket.tat or "N/A" }}</td>
+
                     <td>{{ ticket.complete or "N/A" }}</td>
                     <td>{{ ticket.service_location or "N/A" }}</td>
                     <td>{{ ticket.region or "N/A" }}</td>

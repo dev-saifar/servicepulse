@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Add New Asset</h2>
+
+    <form id="asset_form">
+        <!-- Customer Name (Auto-Suggest) -->
+        <div class="mb-3">
+            <label for="customer_name" class="form-label">Customer Name</label>
+            <input type="text" id="customer_name" name="customer_name" class="form-control" required autocomplete="off">
+            <ul id="customer_suggestions" class="list-group"></ul>
+        </div>
+
+        <!-- Hidden Auto-Filled Fields -->
+        <input type="hidden" id="account_code" name="account_code">
+        <input type="hidden" id="billing_company" name="billing_company">
+
+        <!-- Contract Code (Auto-Filters based on Customer) -->
+        <div class="mb-3">
+            <label for="contract" class="form-label">Contract Code</label>
+            <select id="contract" name="contract" class="form-control" required></select>
+        </div>
+
+        <!-- Serial Number (Validation for Duplicates) -->
+        <div class="mb-3">
+            <label for="serial_number" class="form-label">Serial Number</label>
+            <input type="text" id="serial_number" name="serial_number" class="form-control" required>
+            <div id="serial_error" class="text-danger" style="display: none;">❌ Serial Number already exists!</div>
+        </div>
+
+        <!-- Technician Name (Auto-Suggest) -->
+        <div class="mb-3">
+            <label for="technician_name" class="form-label">Technician Name</label>
+            <input type="text" id="technician_name" name="technician_name" class="form-control" required autocomplete="off">
+            <ul id="technician_suggestions" class="list-group"></ul>
+        </div>
+
+        <!-- Hidden Technician Email (Auto-Fill) -->
+        <input type="hidden" id="technician_email" name="technician_email">
+
+        <!-- Asset Description (Auto-Suggest) -->
+        <div class="mb-3">
+            <label for="asset_Description" class="form-label">Asset Description</label>
+            <input type="text" id="asset_Description" name="asset_Description" class="form-control" required autocomplete="off">
+            <ul id="asset_suggestions" class="list-group"></ul>
+        </div>
+
+        <!-- Hidden Contract Expiry Date (Auto-Fill) -->
+        <input type="hidden" id="contract_expiry_date" name="contract_expiry_date">
+
+        <!-- PM Frequency (Default to 60) -->
+        <input type="hidden" id="pm_freq" name="pm_freq" value="60">
+
+        <button type="submit" class="btn btn-success">Save Asset</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Customer Name Auto-Suggest
+    document.getElementById("customer_name").addEventListener("input", function () {
+        let query = this.value.trim();
+        if (query.length > 1) {
+            fetch(`/customer/search?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    let suggestions = document.getElementById("customer_suggestions");
+                    suggestions.innerHTML = "";
+                    data.forEach(customer => {
+                        let item = document.createElement("li");
+                        item.classList.add("list-group-item");
+                        item.textContent = `${customer.cust_name} (${customer.billing_company})`;
+                        item.onclick = function () {
+                            document.getElementById("customer_name").value = customer.cust_name;
+                            document.getElementById("account_code").value = customer.cust_code;
+                            document.getElementById("billing_company").value = customer.billing_company;
+                            fetchContracts(customer.cust_code, customer.billing_company);
+                            suggestions.innerHTML = "";
+                        };
+                        suggestions.appendChild(item);
+                    });
+                });
+        }
+    });
+
+    // Fetch Contracts Based on Customer Selection
+    function fetchContracts(cust_code, billing_company) {
+        fetch(`/contracts/fetch_contracts?cust_code=${cust_code}&billing_company=${billing_company}`)
+            .then(response => response.json())
+            .then(data => {
+                let contractDropdown = document.getElementById("contract");
+                contractDropdown.innerHTML = "";
+                if (data.length === 1) {
+                    contractDropdown.innerHTML = `<option value="${data[0].contract_code}" selected>${data[0].contract_code}</option>`;
+                    fetchContractExpiry(data[0].contract_code);
+                } else {
+                    data.forEach(contract => {
+                        let option = document.createElement("option");
+                        option.value = contract.contract_code;
+                        option.textContent = contract.contract_code;
+                        contractDropdown.appendChild(option);
+                    });
+                }
+            });
+    }
+
+    // Fetch Contract Expiry Date
+    document.getElementById("contract").addEventListener("change", function () {
+        fetchContractExpiry(this.value);
+    });
+
+    function fetchContractExpiry(contract_code) {
+        fetch(`/contracts/get_contract_details?contract_code=${contract_code}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("contract_expiry_date").value = data.contract.contract_end_date;
+            });
+    }
+
+    // Serial Number Validation
+    document.getElementById("serial_number").addEventListener("input", function () {
+        let serial = this.value.trim();
+        if (serial.length > 3) {
+            fetch(`/assets/check_serial?serial_number=${serial}`)
+                .then(response => response.json())
+                .then(data => {
+                    let errorDiv = document.getElementById("serial_error");
+                    if (data.exists) {
+                        errorDiv.style.display = "block";
+                    } else {
+                        errorDiv.style.display = "none";
+                    }
+                });
+        }
+    });
+
+    // Technician Auto-Suggest
+    document.getElementById("technician_name").addEventListener("input", function () {
+        let query = this.value.trim();
+        if (query.length > 1) {
+            fetch(`/technicians/search?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    let suggestions = document.getElementById("technician_suggestions");
+                    suggestions.innerHTML = "";
+                    data.forEach(tech => {
+                        let item = document.createElement("li");
+                        item.classList.add("list-group-item");
+                        item.textContent = tech.name;
+                        item.onclick = function () {
+                            document.getElementById("technician_name").value = tech.name;
+                            document.getElementById("technician_email").value = tech.email;
+                            suggestions.innerHTML = "";
+                        };
+                        suggestions.appendChild(item);
+                    });
+                });
+        }
+    });
+
+    // Asset Description Auto-Suggest
+    document.getElementById("asset_Description").addEventListener("input", function () {
+        let query = this.value.trim();
+        if (query.length > 1) {
+            fetch(`/assets/search_asset_description?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    let suggestions = document.getElementById("asset_suggestions");
+                    suggestions.innerHTML = "";
+                    data.forEach(asset => {
+                        let item = document.createElement("li");
+                        item.classList.add("list-group-item");
+                        item.textContent = asset.asset_Description;
+                        item.onclick = function () {
+                            document.getElementById("asset_Description").value = asset.asset_Description;
+                            suggestions.innerHTML = "";
+                        };
+                        suggestions.appendChild(item);
+                    });
+                });
+        }
+    });
+});
+</script>
+{% endblock %}
