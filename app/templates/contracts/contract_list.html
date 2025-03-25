@@ -1,10 +1,283 @@
+{% extends 'base.html' %}
+{% block content %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Contract List</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+    <style>
+        body { background-color: #f8f9fa; }
+        .table-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .search-bar { max-width: 300px; }
+        .expired { background-color: #ffcccc !important; }
+        .sortable { cursor: pointer; }
+        .billing-cycle-yearly { background-color: #d1e7dd; padding: 5px; border-radius: 5px; }
+        .billing-cycle-monthly { background-color: #cfe2ff; padding: 5px; border-radius: 5px; }
+        .billing-cycle-weekly { background-color: #ffe69c; padding: 5px; border-radius: 5px; }
+    </style>
 </head>
 <body>
-$END$
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4"><i class="bi bi-journal-text"></i> Contract List</h2>
+
+    <!-- Filters & Actions -->
+    <div class="d-flex justify-content-between mb-3">
+        <input type="text" id="searchInput" class="form-control search-bar" onkeyup="liveSearch()" placeholder="🔍 Search Contract...">
+        <input type="date" id="startDate" class="form-control mx-2" placeholder="Start Date">
+        <input type="date" id="endDate" class="form-control mx-2" placeholder="End Date">
+        <button class="btn btn-primary" onclick="filterContracts()">Filter</button>
+        <button class="btn btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
+        <button class="btn btn-success" onclick="addContract()">
+            <i class="bi bi-plus-circle"></i> Add Contract
+        </button>
+    </div>
+
+    <!-- Contract Table -->
+    <div class="table-container">
+        <table class="table table-hover table-striped table-bordered" id="contractTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th class="sortable" onclick="sortTable(1)">Contract Code ⬍</th>
+                    <th class="sortable" onclick="sortTable(2)">Customer ⬍</th>
+                    <th>Billing Company</th>
+                    <th>Description</th>
+                    <th>Sales Person</th>
+                    <th class="sortable" onclick="sortTable(3)">Start Date ⬍</th>
+                    <th class="sortable" onclick="sortTable(4)">End Date ⬍</th>
+                    <th>Billing Cycle</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="contractTableBody">
+                <!-- Dynamic contract rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center mt-3">
+        <div id="pagination"></div>
+    </div>
+</div>
+
+<!-- Modal for View Contract -->
+<div class="modal fade" id="viewContractModal" tabindex="-1" aria-labelledby="viewContractLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewContractLabel">Contract Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="mb-2"><strong>Contract Code:</strong> <span id="modalContractCode"></span></div>
+            <div class="mb-2"><strong>Customer:</strong> <span id="modalCustomer"></span></div>
+            <div class="mb-2"><strong>Billing Company:</strong> <span id="modalBillingCompany"></span></div>
+            <div class="mb-2"><strong>Contract Description:</strong> <span id="modalDescription"></span></div>
+            <div class="mb-2"><strong>Sales Person:</strong> <span id="modalSalesPerson"></span></div>
+            <div class="mb-2"><strong>Start Date:</strong> <span id="modalStartDate"></span></div>
+            <div class="mb-2"><strong>End Date:</strong> <span id="modalEndDate"></span></div>
+            <div class="mb-2"><strong>Billing Cycle:</strong> <span id="modalBillingCycle"></span></div>
+            <div class="mb-2"><strong>Email:</strong> <span id="modalEmail"></span></div>
+            <div class="mb-2"><strong>Currency:</strong> <span id="modalCurrency"></span></div>
+            <div class="mb-2"><strong>Mono Commitment:</strong> <span id="modalMonoCommit"></span></div>
+            <div class="mb-2"><strong>Mono Charge:</strong> <span id="modalMonoCharge"></span></div>
+            <div class="mb-2"><strong>Mono Excess:</strong> <span id="modalMonoExcess"></span></div>
+            <div class="mb-2"><strong>Color Commitment:</strong> <span id="modalColorCommit"></span></div>
+            <div class="mb-2"><strong>Color Charge:</strong> <span id="modalColorCharge"></span></div>
+            <div class="mb-2"><strong>Color Excess:</strong> <span id="modalColorExcess"></span></div>
+            <div class="mb-2"><strong>Rental Charges:</strong> <span id="modalRental"></span></div>
+            <div class="mb-2"><strong>Software Rental:</strong> <span id="modalSoftware"></span></div>
+            <div class="mb-2"><strong>Duration (Months):</strong> <span id="modalDurations"></span></div>
+            <button class="btn btn-sm btn-outline-primary mt-3" onclick="copyContractDetails()">📋 Copy All</button>
+        </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        loadContracts();
+    });
+
+    function viewContract(code) {
+    fetch(`/contracts/view?code=${code}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) return alert(data.error);
+
+            // Fill in modal content
+            document.getElementById("modalContractCode").innerText = data.contract_code;
+            document.getElementById("modalCustomer").innerText = data.customer;
+            document.getElementById("modalBillingCompany").innerText = data.billing_company;
+            document.getElementById("modalDescription").innerText = data.cont_discription;
+            document.getElementById("modalSalesPerson").innerText = data.sales_person;
+            document.getElementById("modalStartDate").innerText = data.start_date;
+            document.getElementById("modalEndDate").innerText = data.end_date;
+            document.getElementById("modalBillingCycle").innerText = data.billing_cycle;
+
+            // Advanced fields
+            document.getElementById("modalEmail").innerText = data.email;
+            document.getElementById("modalCurrency").innerText = data.contract_currency;
+            document.getElementById("modalMonoCommit").innerText = data.mono_commitment;
+            document.getElementById("modalMonoCharge").innerText = data.mono_charge;
+            document.getElementById("modalMonoExcess").innerText = data.mono_excess_charge;
+            document.getElementById("modalColorCommit").innerText = data.color_commitment;
+            document.getElementById("modalColorCharge").innerText = data.color_charge;
+            document.getElementById("modalColorExcess").innerText = data.color_excess_charge;
+            document.getElementById("modalRental").innerText = data.rental_charges;
+            document.getElementById("modalSoftware").innerText = data.software_rental;
+            document.getElementById("modalDurations").innerText = data.durations;
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('viewContractModal')).show();
+        });
+}
+
+    function editContract(code) {
+        window.location.href = `/contracts/edit?code=${code}`;
+    }
+
+    function deleteContract(code) {
+        if (confirm("Are you sure you want to delete this contract?")) {
+            fetch(`/contracts/delete?code=${code}`, { method: "DELETE" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("✅ Contract deleted!");
+                        loadContracts();
+                    } else {
+                        alert("❌ Error deleting contract.");
+                    }
+                });
+        }
+    }
+
+    function filterContracts() {
+        let startDate = document.getElementById("startDate").value;
+        let endDate = document.getElementById("endDate").value;
+        loadContracts(startDate, endDate);
+    }
+
+    function loadContracts(startDate = "", endDate = "") {
+        fetch(`/contracts/fetch_contracts1?start_date=${startDate}&end_date=${endDate}`)
+            .then(response => response.json())
+            .then(contracts => populateContracts(contracts));
+    }
+
+    function populateContracts(contracts) {
+        const tbody = document.getElementById("contractTableBody");
+        tbody.innerHTML = "";
+        const today = new Date().toISOString().split('T')[0];
+
+        contracts.forEach((contract, index) => {
+            let isExpired = contract.end_date < today ? "expired" : "";
+            let billingClass = contract.billing_cycle.includes("Year") ? "billing-cycle-yearly" :
+                               contract.billing_cycle.includes("Month") ? "billing-cycle-monthly" :
+                               "billing-cycle-weekly";
+
+            const row = document.createElement("tr");
+            row.className = isExpired;
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${contract.contract_code}</td>
+                <td>${contract.customer}</td>
+                <td>${contract.billing_company}</td>
+                <td>${contract.cont_discription}</td>
+                <td>${contract.sales_person}</td>
+                <td>${contract.start_date}</td>
+                <td>${contract.end_date}</td>
+                <td class="${billingClass}">${contract.billing_cycle}</td>
+                <td>
+                    <button class="btn btn-info btn-sm" onclick="viewContract('${contract.contract_code}')">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="editContract('${contract.contract_code}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContract('${contract.contract_code}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function sortTable(columnIndex) {
+        let table = document.querySelector("table tbody");
+        let rows = Array.from(table.rows);
+        let isAscending = table.getAttribute("data-sort") === "asc";
+
+        rows.sort((a, b) => {
+            let valA = a.cells[columnIndex].innerText;
+            let valB = b.cells[columnIndex].innerText;
+            return isAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+
+        table.innerHTML = "";
+        rows.forEach(row => table.appendChild(row));
+        table.setAttribute("data-sort", isAscending ? "desc" : "asc");
+    }
+
+    function exportExcel() {
+        window.location.href = "/contracts/export_excel";
+    }
+
+    function addContract() {
+    window.location.href = "{{ url_for('assets.manage_contracts') }}";
+    }
+
+    function liveSearch() {
+        let input = document.getElementById("searchInput").value.toLowerCase();
+        let rows = document.getElementById("contractTableBody").getElementsByTagName("tr");
+        for (let i = 0; i < rows.length; i++) {
+            let cells = rows[i].getElementsByTagName("td");
+            let found = false;
+            for (let j = 1; j < cells.length - 1; j++) {
+                if (cells[j].innerText.toLowerCase().includes(input)) {
+                    found = true;
+                    break;
+                }
+            }
+            rows[i].style.display = found ? "" : "none";
+        }
+    }
+    function copyContractDetails() {
+    const fields = [
+        "modalContractCode", "modalCustomer", "modalBillingCompany", "modalDescription",
+        "modalSalesPerson", "modalStartDate", "modalEndDate", "modalBillingCycle",
+        "modalEmail", "modalCurrency", "modalMonoCommit", "modalMonoCharge", "modalMonoExcess",
+        "modalColorCommit", "modalColorCharge", "modalColorExcess",
+        "modalRental", "modalSoftware", "modalDurations"
+    ];
+
+    let output = '';
+    fields.forEach(id => {
+        const label = document.querySelector(`#${id}`).previousSibling?.textContent?.trim() || id;
+        const value = document.getElementById(id).innerText;
+        output += `${label}: ${value}\n`;
+    });
+
+    navigator.clipboard.writeText(output)
+        .then(() => alert("✅ Contract details copied to clipboard!"))
+        .catch(() => alert("❌ Copy failed"));
+}
+
+</script>
+
 </body>
 </html>
+{% endblock %}

@@ -3,185 +3,218 @@
 {% block title %}Ticket Dashboard{% endblock %}
 
 {% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Ticket Dashboard</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        #ticketTable {
-            margin-left: -70px; /* Moves table 10mm (40px) left */
-            font-size: 12px; /* Decrease font size */
-        }
-    </style>
-</head>
-<body>
-    <div class="container mt-4">
-        <h2>Ticket Dashboard</h2>
+<div class="container mt-4">
+    <h2 class="text-primary fw-bold mb-4">🎫 Ticket Dashboard</h2>
 
-        <!-- Control Panel -->
-        <div class="d-flex justify-content-between mb-3">
-            <div>
-                <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
-                <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
-                <button class="btn btn-success" onclick="exportToExcel()">Export</button>
-                <!-- Import CSV Form -->
-                <form action="{{ url_for('ticket1.import_tickets') }}" method="post" enctype="multipart/form-data" class="mb-3">
-                    <input type="file" name="file" accept=".csv" class="form-control" required>
-                    <button type="submit" class="btn btn-primary mt-2">Import Tickets</button>
-                </form>
-
-            </div>
-            <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
-
-
-        <script>
-
-        function exportToExcel() {
-            let startDate = $("#start_date").val();
-            let endDate = $("#end_date").val();
-            let status = $("#status_filter").val();
-            let customer = $("#customer_filter").val();
-            let serial = $("#serial_filter").val();
-            let technician = $("#technician_filter").val();
-            let region = $("#region_filter").val();
-            let callType = $("#call_type_filter").val();
-
-            let url = "{{ url_for('ticket1.export_tickets') }}" +
-                      "?start_date=" + startDate +
-                      "&end_date=" + endDate +
-                      "&status=" + status +
-                      "&customer=" + customer +
-                      "&serial=" + serial +
-                      "&technician=" + technician +
-                      "&region=" + region +
-                      "&callType=" + callType;
-
-            window.location.href = url;
-        }
-</script>
-
+    <!-- Control Panel -->
+    <div class="d-flex justify-content-between mb-3">
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
+            <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
         </div>
+        <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+    </div>
 
-        <!-- Filter Options -->
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <label for="start_date">Start Date:</label>
-                <input type="date" id="start_date" class="form-control">
-            </div>
-            <div class="col-md-3">
-                <label for="end_date">End Date:</label>
-                <input type="date" id="end_date" class="form-control">
+    <!-- Filter Options -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">Filter Tickets</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" id="start_date" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" id="end_date" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="status_filter">Status:</label>
+                    <select id="status_filter" class="form-select">
+                        <option value="">All</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="customer_filter">Customer:</label>
+                    <input type="text" id="customer_filter" class="form-control" placeholder="Search by Customer">
+                </div>
+                <div class="col-md-3">
+                    <label for="serial_filter">Serial Number:</label>
+                    <input type="text" id="serial_filter" class="form-control" placeholder="Search by Serial No">
+                </div>
+                <div class="col-md-3">
+                    <label for="technician_filter">Technician:</label>
+                    <input type="text" id="technician_filter" class="form-control" placeholder="Search by Technician">
+                </div>
+                <div class="col-md-3">
+                    <label for="region_filter">Region:</label>
+                    <input type="text" id="region_filter" class="form-control" placeholder="Search by Region">
+                </div>
+                <div class="col-md-3">
+                    <label for="call_type_filter">Call Type:</label>
+                    <input type="text" id="call_type_filter" class="form-control" placeholder="Search by Call Type">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-info mt-4" onclick="applyFilters()">Apply Filters</button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary mt-4" onclick="resetFilters()">Reset</button>
+                </div>
             </div>
         </div>
+    </div>
 
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <label for="status_filter">Status:</label>
-                <select id="status_filter" class="form-control">
-                    <option value="">All</option>
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Closed">Closed</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="customer_filter">Customer:</label>
-                <input type="text" id="customer_filter" class="form-control" placeholder="Search by Customer">
-            </div>
-            <div class="col-md-3">
-                <label for="serial_filter">Serial Number:</label>
-                <input type="text" id="serial_filter" class="form-control" placeholder="Search by Serial No">
-            </div>
-            <div class="col-md-3">
-                <label for="technician_filter">Technician:</label>
-                <input type="text" id="technician_filter" class="form-control" placeholder="Search by Technician">
-            </div>
-        </div>
-
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <label for="region_filter">Region:</label>
-                <input type="text" id="region_filter" class="form-control" placeholder="Search by Region">
-            </div>
-            <div class="col-md-3">
-                <label for="call_type_filter">Call Type:</label>
-                <input type="text" id="call_type_filter" class="form-control" placeholder="Search by Call Type">
-            </div>
-            <div class="col-md-3 mt-3">
-                <button class="btn btn-info" onclick="applyFilters()">Apply Filters</button>
-            </div>
-        </div>
-
-        <!-- Ticket Table -->
-        <table id="ticketTable" class="table table-bordered">
-            <thead>
+    <!-- Ticket Table -->
+    <div class="table-responsive" style="overflow-x: auto; max-height: 70vh; margin-left: -80px;">
+        <table id="ticketTable" class="table table-bordered table-hover table-sm" style="font-size: 12px;">
+            <thead class="table-light sticky-top">
                 <tr>
-                    <th>Reference No</th>
-                    <th>Title</th>
-                    <th>Customer</th>
-                    <th>Call Type</th>
-                    <th>Technician</th>
-                    <th>Expected Completion Time</th>
-                    <th>Status</th>
-                    <th>Created At</th>
-                    <th>Closed At</th>
-                    <th>Serial Number</th>
+                    <th onclick="sortTable(0)">Reference No</th>
+                    <th onclick="sortTable(1)">Title</th>
+                    <th onclick="sortTable(2)">Customer</th>
+                    <th onclick="sortTable(3)">Call Type</th>
+                    <th onclick="sortTable(4)">Technician</th>
+                    <th onclick="sortTable(5)">Expected Completion Time</th>
+                    <th onclick="sortTable(6)">Status</th>
+                    <th onclick="sortTable(7)">Created At</th>
+                    <th onclick="sortTable(8)">Closed At</th>
+                    <th onclick="sortTable(9)">Serial No</th>
+                    <th onclick="sortTable(10)">Complete</th>
+                    <th onclick="sortTable(11)">Service Location</th>
+                    <th onclick="sortTable(12)">Region</th>
+                    <th onclick="sortTable(13)">Asset Description</th>
+                    <th onclick="sortTable(14)">Called By</th>
 
-                    <th>Complete</th>
-                    <th>Service Location</th>
-                    <th>Region</th>
-                    <th>Asset Description</th>
-                    <th>Called By</th>
-                    <th>Action</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="ticketBody">
                 {% for ticket in tickets %}
                 <tr>
-                    <td>{{ ticket.reference_no }}</td>
+                    <td><a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}">{{ ticket.reference_no }}</a></td>
                     <td>{{ ticket.title }}</td>
                     <td>{{ ticket.customer }}</td>
                     <td>{{ ticket.call_type }}</td>
                     <td>{{ ticket.technician_name or "Unassigned" }}</td>
                     <td>{{ ticket.expected_completion_time }}</td>
-                    <td>{{ ticket.status }}</td>
+                    <td>
+                        <span class="badge {% if ticket.status == 'Closed' %}bg-success{% elif ticket.status == 'In Progress' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ ticket.status }}</span>
+                    </td>
                     <td>{{ ticket.created_at.strftime('%Y-%m-%d') }}</td>
                     <td>{{ ticket.closed_at or "N/A" }}</td>
-                    <td>{{ ticket.serial_number or "N/A" }}</td>
-
+                    <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ticket.serial_number or "N/A" }}</td>
                     <td>{{ ticket.complete or "N/A" }}</td>
                     <td>{{ ticket.service_location or "N/A" }}</td>
                     <td>{{ ticket.region or "N/A" }}</td>
-                    <td>{{ ticket.asset_Description or "N/A" }}</td>
+                    <td title="{{ ticket.asset_Description or 'N/A' }}">{{ ticket.asset_Description[:20] if ticket.asset_Description else 'N/A' }}</td>
                     <td>{{ ticket.called_by or "N/A" }}</td>
-                    <td>
-                        <a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}" class="btn btn-warning btn-sm">Edit</a>
-                    </td>
+
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-    <script>
+    <div class="text-center mt-3">
+        <button id="loadMoreBtn" class="btn btn-outline-primary" onclick="loadMoreTickets()">Load More</button>
+    </div>
+</div>
 
-        function applyFilters() {
-            let startDate = $("#start_date").val();
-            let endDate = $("#end_date").val();
-            let status = $("#status_filter").val();
-            let customer = $("#customer_filter").val();
-            let serial = $("#serial_filter").val();
-            let technician = $("#technician_filter").val();
-            let region = $("#region_filter").val();
-            let callType = $("#call_type_filter").val();
+<script>
+    let currentPage = 1;
 
-            let url = "{{ url_for('ticket1.ticket_dashboard') }}?start_date=" + startDate + "&end_date=" + endDate + "&status=" + status + "&customer=" + customer + "&serial=" + serial + "&technician=" + technician + "&region=" + region + "&callType=" + callType;
-            window.location.href = url;
+    function exportToExcel() {
+        window.location.href = "{{ url_for('ticket1.export_tickets') }}";
+    }
+
+    function applyFilters() {
+        let params = new URLSearchParams();
+        params.set("start_date", document.getElementById("start_date").value);
+        params.set("end_date", document.getElementById("end_date").value);
+        params.set("status", document.getElementById("status_filter").value);
+        params.set("customer", document.getElementById("customer_filter").value);
+        params.set("serial", document.getElementById("serial_filter").value);
+        params.set("technician", document.getElementById("technician_filter").value);
+        params.set("region", document.getElementById("region_filter").value);
+        params.set("callType", document.getElementById("call_type_filter").value);
+        window.location.href = `{{ url_for('ticket1.ticket_dashboard') }}?${params.toString()}`;
+    }
+
+    function resetFilters() {
+        document.getElementById("start_date").value = "";
+        document.getElementById("end_date").value = "";
+        document.getElementById("status_filter").value = "";
+        document.getElementById("customer_filter").value = "";
+        document.getElementById("serial_filter").value = "";
+        document.getElementById("technician_filter").value = "";
+        document.getElementById("region_filter").value = "";
+        document.getElementById("call_type_filter").value = "";
+        applyFilters();
+    }
+
+    function loadMoreTickets() {
+        currentPage++;
+        const params = new URLSearchParams();
+        params.set("page", currentPage);
+        params.set("start_date", document.getElementById("start_date").value);
+        params.set("end_date", document.getElementById("end_date").value);
+        params.set("status", document.getElementById("status_filter").value);
+        params.set("customer", document.getElementById("customer_filter").value);
+        params.set("serial", document.getElementById("serial_filter").value);
+        params.set("technician", document.getElementById("technician_filter").value);
+        params.set("region", document.getElementById("region_filter").value);
+        params.set("callType", document.getElementById("call_type_filter").value);
+
+        fetch(`/ticket1/load_tickets?${params.toString()}`)
+            .then(response => response.text())
+            .then(data => {
+                if (data.trim() === '') {
+                    const btn = document.getElementById('loadMoreBtn');
+                    btn.textContent = 'No More Tickets';
+                    btn.disabled = true;
+                } else {
+                    document.getElementById('ticketBody').insertAdjacentHTML('beforeend', data);
+                }
+            });
+    }
+
+    function sortTable(n) {
+        const table = document.getElementById("ticketTable");
+        let switching = true;
+        let dir = "asc";
+        let switchcount = 0;
+        while (switching) {
+            switching = false;
+            const rows = table.rows;
+            for (let i = 1; i < (rows.length - 1); i++) {
+                let shouldSwitch = false;
+                let x = rows[i].getElementsByTagName("TD")[n];
+                let y = rows[i + 1].getElementsByTagName("TD")[n];
+                if (dir === "asc") {
+                    if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir === "desc") {
+                    if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            } else {
+                if (switchcount === 0 && dir === "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
         }
-
-    </script>
-</body>
-</html>
+    }
+</script>
 {% endblock %}

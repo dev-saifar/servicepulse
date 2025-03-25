@@ -5,10 +5,10 @@
     <h2>Contract Management</h2>
 
     <!-- Customer Search -->
-    <div class="mb-3">
+    <div class="mb-3 position-relative">
         <label for="cust_name" class="form-label">Customer Name</label>
         <input type="text" id="cust_name" name="cust_name" class="form-control" autocomplete="off" required>
-        <ul id="customer_suggestions" class="list-group mt-2"></ul>
+        <ul id="customer_suggestions" class="list-group mt-1" style="display: none; position: absolute; z-index: 1000;"></ul>
     </div>
 
     <!-- Customer Information -->
@@ -41,8 +41,6 @@
                     <input type="hidden" id="cust_code_hidden" name="cust_code">
                     <input type="hidden" id="billing_company_hidden" name="billing_company">
                     <input type="hidden" id="cust_name_hidden" name="cust_name">
-
-
                 </div>
                 <div class="mb-3">
                     <label for="cont_discription" class="form-label">Contract Description</label>
@@ -118,33 +116,54 @@
 </div>
 
 <script>
-    // Search for customers
-    document.getElementById("cust_name").addEventListener("input", function () {
-        let query = this.value.trim();
-        let suggestions = document.getElementById("customer_suggestions");
-        if (query.length > 1) {
-            fetch(`/contracts/search_customer?query=${query}`)
-                .then(response => response.json())
-                .then(data => {
-                    suggestions.innerHTML = "";
-                    data.forEach(customer => {
-                        let item = document.createElement("li");
-                        item.classList.add("list-group-item");
+    document.addEventListener("DOMContentLoaded", function () {
+        const custInput = document.getElementById("cust_name");
+        const suggestionsList = document.getElementById("customer_suggestions");
+
+        custInput.addEventListener("input", function () {
+            const query = custInput.value.trim();
+            if (query.length < 2) {
+                suggestionsList.innerHTML = "";
+                suggestionsList.style.display = "none";
+                return;
+            }
+
+            fetch(`/contracts/search_customer?query=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(customers => {
+                    suggestionsList.innerHTML = "";
+                    if (customers.length === 0) {
+                        suggestionsList.style.display = "none";
+                        return;
+                    }
+
+                    customers.forEach(customer => {
+                        const item = document.createElement("li");
+                        item.classList.add("list-group-item", "list-group-item-action");
+                        item.style.cursor = "pointer";
                         item.textContent = `${customer.cust_name} (${customer.billing_company})`;
-                        item.onclick = function () {
-                            document.getElementById("cust_name").value = customer.cust_name;
+                        item.addEventListener("click", function () {
+                            custInput.value = customer.cust_name;
                             document.getElementById("cust_code").value = customer.cust_code;
                             document.getElementById("billing_company").value = customer.billing_company;
-                            suggestions.innerHTML = "";
+                            suggestionsList.innerHTML = "";
+                            suggestionsList.style.display = "none";
                             fetchContracts();
-                        };
-                        suggestions.appendChild(item);
+                        });
+                        suggestionsList.appendChild(item);
                     });
+                    suggestionsList.style.display = "block";
                 });
-        }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!custInput.contains(event.target) && !suggestionsList.contains(event.target)) {
+                suggestionsList.innerHTML = "";
+                suggestionsList.style.display = "none";
+            }
+        });
     });
 
-    // Fetch contracts for the selected customer
     function fetchContracts() {
         let cust_code = document.getElementById("cust_code").value;
         let billing_company = document.getElementById("billing_company").value;
@@ -165,14 +184,11 @@
             });
     }
 
-    // Show the contract form when "Add Contract" is clicked
     document.getElementById("add_contract_btn").addEventListener("click", function () {
-        console.log("Add Contract button clicked"); // Debugging
         document.getElementById("contract_form_section").style.display = "block";
         updateContractDetails();
     });
 
-    // Auto-generate contract code and calculate duration
     function updateContractDetails() {
         let startDate = document.getElementById("contract_start_date").value;
         let endDate = document.getElementById("contract_end_date").value;
@@ -181,57 +197,40 @@
         if (startDate && endDate && billingCompany) {
             let start = new Date(startDate);
             let end = new Date(endDate);
-            let duration = Math.floor((end - start) / (1000 * 60 * 60 * 24 * 30)); // Duration in months
-
+            let duration = Math.floor((end - start) / (1000 * 60 * 60 * 24 * 30));
             document.getElementById("durations").value = duration;
 
-            // Generate contract code
             let yearSigned = start.getFullYear().toString().slice(-2);
             let yearExpiry = end.getFullYear().toString().slice(-2);
-            let contractCount = 1; // This should be fetched from the server based on existing contracts
+            let contractCount = 1; // Static here; actual value is assigned on backend
             let contractCode = `${billingCompany.slice(0, 2)}${yearSigned}${yearExpiry}${String(contractCount).padStart(3, '0')}`;
-
             document.getElementById("contract_code").value = contractCode;
         }
     }
 
-    // Handle contract form submission
- document.getElementById("contract_form").addEventListener("submit", function (e) {
-    document.getElementById("cust_code_hidden").value = document.getElementById("cust_code").value;
-    document.getElementById("billing_company_hidden").value = document.getElementById("billing_company").value;
-    document.getElementById("cust_name_hidden").value = document.getElementById("cust_name").value;
+    document.getElementById("contract_form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        document.getElementById("cust_code_hidden").value = document.getElementById("cust_code").value;
+        document.getElementById("billing_company_hidden").value = document.getElementById("billing_company").value;
+        document.getElementById("cust_name_hidden").value = document.getElementById("cust_name").value;
 
-    e.preventDefault();
+        let formData = new FormData(this);
 
-    let cust_code = document.getElementById("cust_code").value.trim();
-    let billing_company = document.getElementById("billing_company").value.trim();
-
-    if (!cust_code || !billing_company) {
-        alert("❌ Error: Please select a customer before submitting the form.");
-        console.log("Form submission blocked. Missing customer details.");
-        return;
-    }
-
-    let formData = new FormData(this);
-    console.log("📤 Submitting Form Data:", Object.fromEntries(formData.entries()));  // Debugging
-
-    fetch('/contracts/create_contract', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert("✅ Contract created successfully!");
-            window.location.href = `/assets/add_asset;
-        } else {
-            alert("❌ Error: " + data.error);
-        }
+        fetch('/contracts/create_contract', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("✅ Contract created successfully!");
+                window.location.href = `/assets/add_asset`;
+            } else {
+                alert("❌ Error: " + data.error);
+            }
+        });
     });
-});
 
-
-    // Toggle advanced fields
     function toggleAdvanced() {
         let advancedSection = document.getElementById("advanced_section");
         advancedSection.style.display = advancedSection.style.display === "none" ? "block" : "none";

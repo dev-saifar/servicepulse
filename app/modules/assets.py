@@ -241,7 +241,8 @@ def manage_customers():
 @assets_bp.route('/assets', methods=['GET', 'POST'])
 def manage_assets():
     # Your asset management logic here
-    return render_template("assets.html")  # Ensure this template exists
+    return render_template("assets_add/assets_Add.html")
+
 @assets_bp.route('/customer/search', methods=['GET'])
 def search_customer():
     billing_company = request.args.get('billing_company', '').strip()
@@ -318,4 +319,87 @@ def create_asset():
 
     return jsonify({"success": True, "message": "Asset created successfully"})
 
+@assets_bp.route('/customers/list', methods=['GET'])
+def customer_list():
+    from sqlalchemy import func
+
+    customers = db.session.query(
+        Customer,
+        func.count(Contract.id).label("contract_count"),
+        func.count(Assets.id).label("asset_count")
+    ).outerjoin(Contract, (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)) \
+     .outerjoin(Assets, Customer.cust_name == Assets.customer_name) \
+     .group_by(Customer.id).all()
+
+    return render_template("assets/customer_list.html", customers=customers)
+
+
+@assets_bp.route('/customers/edit/<int:customer_id>', methods=['GET', 'POST'])
+def edit_customer(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+
+    if request.method == 'POST':
+        customer.cust_name = request.form['cust_name'].strip()
+        customer.cust_code = request.form['cust_code'].strip()
+        customer.billing_company = request.form['billing_company'].strip()
+
+        db.session.commit()
+        flash("✅ Customer updated successfully!", "success")
+        return redirect(url_for('assets.customer_list'))
+
+    return render_template('assets/edit_customer.html', customer=customer)
+
+@assets_bp.route('/customers/delete/<int:customer_id>', methods=['POST'])
+def delete_customer(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
+    try:
+        db.session.delete(customer)
+        db.session.commit()
+        flash("🗑️ Customer deleted successfully!", "success")
+    except Exception as e:
+        flash(f"❌ Error deleting customer: {str(e)}", "error")
+    return redirect(url_for('assets.customer_list'))
+@assets_bp.route('/customers/export')
+def export_customers():
+    from sqlalchemy import func
+
+    # Join and count contracts and assets
+    data = db.session.query(
+        Customer.cust_code,
+        Customer.cust_name,
+        Customer.billing_company,
+        func.count(func.distinct(Contract.id)).label("contract_count"),
+        func.count(func.distinct(Assets.id)).label("asset_count")
+    ).outerjoin(Contract, (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)) \
+     .outerjoin(Assets, Customer.cust_name == Assets.customer_name) \
+     .group_by(Customer.cust_code, Customer.cust_name, Customer.billing_company).all()
+
+    # Prepare data for export
+    export_data = []
+    for row in data:
+        export_data.append({
+            "Customer Code": row.cust_code,
+            "Customer Name": row.cust_name,
+            "Billing Company": row.billing_company,
+            "No. of Contracts": row.contract_count,
+            "No. of Assets": row.asset_count,
+        })
+
+    # Convert to Excel using pandas
+    import pandas as pd
+    import io
+
+    df = pd.DataFrame(export_data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Customers')
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        download_name="customers.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 

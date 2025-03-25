@@ -69,6 +69,10 @@ class Assets(db.Model):
     last_pm_date= db.Column(db.String(100), nullable=True)
     pm_freq = db.Column(db.String(100), nullable=True)
     install_date = db.Column(db.String(100), nullable=True)
+    asset_code = db.Column(db.String(50), nullable=True)
+    asset_status = db.Column(db.String(50), nullable=True)
+
+
 
 
 

@@ -1,0 +1,26 @@
+{% for ticket in tickets %}
+<tr>
+    <td>{{ ticket.reference_no }}</td>
+    <td>{{ ticket.title }}</td>
+    <td>{{ ticket.customer }}</td>
+    <td>{{ ticket.call_type }}</td>
+    <td>{{ ticket.technician_name or "Unassigned" }}</td>
+    <td>{{ ticket.expected_completion_time }}</td>
+    <td>
+        <span class="badge {% if ticket.status == 'Closed' %}bg-success{% elif ticket.status == 'In Progress' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+            {{ ticket.status }}
+        </span>
+    </td>
+    <td>{{ ticket.created_at.strftime('%Y-%m-%d') }}</td>
+    <td>{{ ticket.closed_at or "N/A" }}</td>
+    <td style="width: 45px; white-space: nowrap;">{{ ticket.serial_number or "N/A" }}</td>
+    <td>{{ ticket.complete or "N/A" }}</td>
+    <td>{{ ticket.service_location or "N/A" }}</td>
+    <td>{{ ticket.region or "N/A" }}</td>
+    <td title="{{ ticket.asset_Description or 'N/A' }}">{{ ticket.asset_Description[:20] if ticket.asset_Description else 'N/A' }}</td>
+    <td>{{ ticket.called_by or "N/A" }}</td>
+    <td>
+        <a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}" class="btn btn-warning btn-sm">Edit</a>
+    </td>
+</tr>
+{% endfor %}

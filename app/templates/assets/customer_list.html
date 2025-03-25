@@ -1,10 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+
+
+    <!-- Bootstrap & DataTables CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 </head>
 <body>
-$END$
+
+<div class="container mt-5">
+    <h2 class="text-primary mb-4 text-center">📋 Customer List</h2>
+
+
+    <div class="d-flex justify-content-between mb-3">
+    <h4>  </h4>
+    <div>
+        <a href="{{ url_for('assets.export_customers') }}" class="btn btn-outline-success me-2">📥 Export to Excel</a>
+        <a href="{{ url_for('assets.manage_customers') }}" class="btn btn-success">➕ Add Customer</a>
+
+    </div>
+</div>
+
+</div>
+
+<table id="customerTable" class="table table-striped table-bordered">
+    <thead>
+<tr>
+    <th>Customer Code</th>
+    <th>Customer Name</th>
+    <th>Billing Company</th>
+    <th>Contracts</th>
+    <th>Assets</th>
+    <th>Actions</th>
+</tr>
+</thead>
+
+    <tbody>
+    {% for customer, contract_count, asset_count in customers %}
+    {% if customer %}
+    <tr>
+        <td>{{ customer.cust_code }}</td>
+        <td>{{ customer.cust_name }}</td>
+        <td>{{ customer.billing_company }}</td>
+        <td>{{ contract_count }}</td>
+        <td>{{ asset_count }}</td>
+        <td>
+            <a href="{{ url_for('assets.edit_customer', customer_id=customer.id) }}" class="btn btn-sm btn-warning">Edit</a>
+            <form action="{{ url_for('assets.delete_customer', customer_id=customer.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this customer?');">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+</tbody>
+
+
+</table>
+
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#customerTable').DataTable({
+            paging: true,
+            ordering: true,
+            searching: true,
+            responsive: true
+        });
+    });
+</script>
+
 </body>
 </html>
+{% endblock %}

@@ -1,10 +1,171 @@
+{% extends 'base.html' %}
+{% block content %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>$Title$</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Contract</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    body { background-color: #f8f9fa; }
+    .container {
+      max-width: 900px;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-top: 40px;
+    }
+    .form-section { margin-bottom: 20px; }
+    .collapse-toggle { cursor: pointer; color: #0d6efd; text-decoration: underline; }
+  </style>
 </head>
 <body>
-$END$
+<div class="container">
+  <h2 class="text-primary text-center">✏️ Edit Contract</h2>
+  <form method="POST">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Contract Code</label>
+        <input type="text" class="form-control" value="{{ contract.contract_code }}" readonly>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Customer Code</label>
+        <input type="text" name="cust_code" class="form-control" value="{{ contract.cust_code }}">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Customer Name</label>
+        <input type="text" name="cust_name" class="form-control" value="{{ contract.cust_name }}" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Billing Company</label>
+        <input type="text" name="billing_company" class="form-control" value="{{ contract.billing_company }}" required>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Contract Description</label>
+        <input type="text" name="cont_discription" class="form-control" value="{{ contract.cont_discription }}">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="contract_start_date" class="form-control" id="start_date"
+       value="{{ contract.contract_start_date | datetimeformat }}">
+
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">End Date</label>
+        <input type="date" name="contract_end_date" class="form-control" id="end_date"
+       value="{{ contract.contract_end_date | datetimeformat }}">
+
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Durations (Months)</label>
+        <input type="text" name="durations" class="form-control" id="durations" value="{{ contract.durations }}" readonly>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Sales Person</label>
+        <input type="text" name="sales_person" class="form-control" value="{{ contract.sales_person }}">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Billing Cycle</label>
+        <select name="billing_cycle" class="form-select">
+          <option value="Monthly" {% if contract.billing_cycle == 'Monthly' %}selected{% endif %}>Monthly</option>
+          <option value="Quarterly" {% if contract.billing_cycle == 'Quarterly' %}selected{% endif %}>Quarterly</option>
+          <option value="Yearly" {% if contract.billing_cycle == 'Yearly' %}selected{% endif %}>Yearly</option>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Currency</label>
+        <input type="text" name="contract_currency" class="form-control" value="{{ contract.contract_currency }}">
+      </div>
+
+      <div class="col-12">
+        <p class="collapse-toggle" data-bs-toggle="collapse" data-bs-target="#advancedFields" aria-expanded="false">
+          ➕ Show Advanced Fields
+        </p>
+      </div>
+
+      <div class="collapse" id="advancedFields">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Mono Commitment</label>
+            <input type="text" name="mono_commitment" class="form-control" value="{{ contract.mono_commitment }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mono Charge</label>
+            <input type="text" name="mono_charge" class="form-control" value="{{ contract.mono_charge }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mono Excess Charge</label>
+            <input type="text" name="mono_excess_charge" class="form-control" value="{{ contract.mono_excess_charge }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Color Commitment</label>
+            <input type="text" name="color_commitment" class="form-control" value="{{ contract.color_commitment }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Color Charge</label>
+            <input type="text" name="color_charge" class="form-control" value="{{ contract.color_charge }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Color Excess Charge</label>
+            <input type="text" name="color_excess_charge" class="form-control" value="{{ contract.color_excess_charge }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Rental Charges</label>
+            <input type="text" name="rental_charges" class="form-control" value="{{ contract.rental_charges }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Software Rental</label>
+            <input type="text" name="software_rental" class="form-control" value="{{ contract.software_rental }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Billing Currency</label>
+            <input type="text" name="billing_currency" class="form-control" value="{{ contract.billing_currency }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" value="{{ contract.email }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 text-center mt-4">
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-save me-1"></i> Save Changes
+        </button>
+        <a href="{{ url_for('contracts.list_contracts') }}" class="btn btn-secondary ms-2">
+          <i class="bi bi-arrow-left me-1"></i> Cancel
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  function calculateDuration() {
+    const start = document.getElementById('start_date').value;
+    const end = document.getElementById('end_date').value;
+    if (start && end) {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth());
+      document.getElementById('durations').value = months > 0 ? months : 0;
+    }
+  }
+  document.getElementById('start_date').addEventListener('change', calculateDuration);
+  document.getElementById('end_date').addEventListener('change', calculateDuration);
+</script>
 </body>
 </html>
+{% endblock %}

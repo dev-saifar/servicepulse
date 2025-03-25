@@ -6,7 +6,9 @@
     <title>Serv-Pulse</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .logo {
             width: 100px;
@@ -35,7 +37,7 @@
         .sidebar a {
             display: block;
             color: white;
-            padding: 15px;
+            padding: 12px 20px;
             text-decoration: none;
             transition: background 0.3s;
         }
@@ -46,46 +48,102 @@
             margin-left: 260px;
             padding: 20px;
         }
-        .dark-mode {
-            background-color: #212529 !important;
-            color: white !important;
-        }
-        .toggle-dark {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            cursor: pointer;
-            color: white;
-        }
         .sidebar-footer {
             text-align: center;
             padding: 10px;
             background: #2c3034;
             color: white;
             margin-top: auto;
+            width: 100%;
+        }
+        .nav-link {
+            padding-left: 30px !important;
         }
     </style>
 </head>
 <body>
-    <div class="sidebar text-center">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Serv-Pulse Logo" class="logo">
-        <h3>Serv-Pulse</h3>
-        <a href="{{ url_for('dashboard.index') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-        <a href="{{ url_for('technicians.index') }}"><i class="fas fa-user-cog"></i> Technicians</a>
-        <a href="{{ url_for('assets.index') }}"><i class="fas fa-box"></i> Assets</a>
-        <a href="{{ url_for('users.user_list') }}"><i class="fas fa-users"></i> Users</a>
-        <a href="{{ url_for('ticket1.ticket_dashboard') }}"><i class="fas fa-ticket-alt"></i> Tickets</a>
-        <a href="{{ url_for('report.report_dashboard') }}"><i class="fas fa-chart-bar"></i> Report</a>
-        <a href="{{ url_for('material.material_dashboard') }}"><i class="fas fa-warehouse"></i> Material Dashboard</a>
-        <a href="{{ url_for('about.about') }}"><i class="fas fa-info-circle"></i> About</a>
+    <div class="sidebar text-start">
+        <div class="text-center">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Serv-Pulse Logo" class="logo">
+            <h5 class="text-white">Serv-Pulse</h5>
+        </div>
 
-        <!-- Sidebar Footer for Logged-in User and Logout/Login -->
+        <ul class="nav flex-column w-100">
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('dashboard.index') }}">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('technicians.index') }}">
+                    <i class="fas fa-user-cog me-2"></i> Technicians
+                </a>
+            </li>
+
+            <!-- Assets Collapsible Menu -->
+            <li class="nav-item">
+                <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#assetsSubMenu" aria-expanded="false">
+                    <i class="fas fa-box me-2"></i> Assets
+                </a>
+                <div class="collapse ps-2" id="assetsSubMenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('assets.customer_list') }}">
+                                <i class="bi bi-person-lines-fill me-1"></i> Customer List
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('contracts.list_contracts') }}">
+                                <i class="bi bi-file-earmark-text me-1"></i> Contract List
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('assets.index') }}">
+                                <i class="bi bi-hdd-network me-1"></i> Asset Index
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('users.user_list') }}">
+                    <i class="fas fa-users me-2"></i> Users
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard') }}">
+                    <i class="fas fa-ticket-alt me-2"></i> Tickets
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('report.report_dashboard') }}">
+                    <i class="fas fa-chart-bar me-2"></i> Report
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('material.material_dashboard') }}">
+                    <i class="fas fa-warehouse me-2"></i> Material Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('about.about') }}">
+                    <i class="fas fa-info-circle me-2"></i> About
+                </a>
+            </li>
+        </ul>
+
+        <!-- Footer -->
         <div class="sidebar-footer">
             {% if current_user.is_authenticated %}
-                <p>Logged in as: <strong>{{ current_user.username }}</strong></p>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <p class="mb-1">Logged in as: <strong>{{ current_user.username }}</strong></p>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             {% else %}
-                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm"><i class="fas fa-sign-in-alt"></i> Login</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
             {% endif %}
         </div>
     </div>
@@ -93,10 +151,5 @@
     <div class="main-content">
         {% block content %}{% endblock %}
     </div>
-
-    <script>
-        <!-- Bootstrap JS (Required for Tabs to Work) -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </script>
 </body>
 </html>

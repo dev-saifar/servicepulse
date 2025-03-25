@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add New Asset</title>
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .form-label {
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4"><i class="bi bi-tools"></i> Add New Asset</h2>
+
+    <form id="asset_form" class="form-section">
+        <!-- Customer & Contract -->
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label for="customer_name" class="form-label">🔍 Customer Name</label>
+                <input type="text" id="customer_name" name="customer_name" class="form-control" placeholder="Start typing..." autocomplete="off" required>
+                <ul id="customer_suggestions" class="list-group position-absolute w-100 mt-1"></ul>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">📜 Contract Code</label>
+                <input type="text" id="contract" name="contract" class="form-control" readonly required>
+                <select id="contract_dropdown" class="form-select mt-2" style="display:none;"></select>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Machine Details -->
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">🔢 Serial Number</label>
+                <input type="text" id="serial_number" name="serial_number" class="form-control" required>
+                <div id="serial_alert" class="text-danger mt-1" style="display: none;"></div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">🌍 Area/Type</label>
+                <select id="location" name="location" class="form-select" required>
+                    <option value="">Select Location</option>
+                    <option value="kampala">Kampala</option>
+                    <option value="upcountry">Upcountry</option>
+                    <option value="used">Used</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">🏷️ Asset Code</label>
+                <input type="text" id="asset_code" name="asset_code" class="form-control" readonly required>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Technician & Service -->
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">🛠️ Technician</label>
+                <select id="technician_name" name="technician_name" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">📧 Technician Email</label>
+                <input type="text" id="technician_email" name="technician_email" class="form-control" readonly>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">📍 Service Location</label>
+                <input type="text" id="service_location" name="service_location" class="form-control" placeholder="e.g., Kampala Office">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">🗺️ Region</label>
+                <input type="text" id="region" name="region" class="form-control" placeholder="e.g., Central">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">📆 PM Frequency</label>
+                <input type="text" id="pm_freq" name="pm_freq" class="form-control" value="60 days">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">🔄 Asset Status</label>
+                <select name="asset_status" class="form-control" required>
+                    <option value="Active" selected>Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Under Maintenance">Under Maintenance</option>
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">📅 Install Date</label>
+                <input type="date" id="install_date" name="install_date" class="form-control">
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Asset Description -->
+        <div class="mb-3 position-relative">
+            <label class="form-label">📝 Asset Description/Machine Model</label>
+            <textarea name="asset_Description" class="form-control" rows="3" required></textarea>
+            <ul id="asset_desc_suggestions" class="list-group mt-1 position-absolute z-3"></ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary px-5 py-2"><i class="bi bi-save"></i> Save Asset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Bootstrap Icons CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+
+<!-- JavaScript block remains unchanged and continues to function -->
+
+<script>
+    const assetDescInput = document.querySelector("textarea[name='asset_Description']");
+const assetDescList = document.getElementById("asset_desc_suggestions");
+
+assetDescInput.addEventListener("input", function () {
+    const query = this.value.trim();
+    if (query.length < 2) {
+        assetDescList.innerHTML = "";
+        assetDescList.style.display = "none";
+        return;
+    }
+
+    fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(descriptions => {
+            assetDescList.innerHTML = "";
+            if (descriptions.length === 0) {
+                assetDescList.style.display = "none";
+                return;
+            }
+
+            descriptions.forEach(desc => {
+                const item = document.createElement("li");
+                item.classList.add("list-group-item", "list-group-item-action");
+                item.style.cursor = "pointer";
+                item.textContent = desc;
+                item.onclick = () => {
+                    assetDescInput.value = desc;
+                    assetDescList.innerHTML = "";
+                    assetDescList.style.display = "none";
+                };
+                assetDescList.appendChild(item);
+            });
+
+            assetDescList.style.display = "block";
+        });
+});
+
+document.addEventListener("click", function (e) {
+    if (!assetDescInput.contains(e.target) && !assetDescList.contains(e.target)) {
+        assetDescList.innerHTML = "";
+        assetDescList.style.display = "none";
+    }
+});
+
+    document.getElementById("install_date").valueAsDate = new Date();
+
+    fetch("/assets_add/get_technicians")
+        .then(res => res.json())
+        .then(techs => {
+            const techSelect = document.getElementById("technician_name");
+            techs.forEach(t => {
+                const opt = document.createElement("option");
+                opt.value = t;
+                opt.textContent = t;
+                techSelect.appendChild(opt);
+            });
+        });
+
+    document.getElementById("technician_name").addEventListener("change", function () {
+        const name = this.value;
+        fetch(`/assets_add/get_technician_email?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("technician_email").value = data.email || "";
+            });
+    });
+
+    document.getElementById("location").addEventListener("change", function () {
+        const location = this.value;
+        fetch(`/assets_add/generate_asset_code?location=${location}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("asset_code").value = data.asset_code;
+            });
+    });
+
+    document.getElementById("serial_number").addEventListener("blur", function () {
+        const serial = this.value.trim();
+        if (!serial) return;
+
+        fetch(`/assets_add/check_serial_number?serial=${encodeURIComponent(serial)}`)
+            .then(res => res.json())
+            .then(data => {
+                const alertDiv = document.getElementById("serial_alert");
+                if (data.exists) {
+                    alertDiv.textContent = `❌ Serial number already exists for customer: ${data.customer_name}`;
+                    alertDiv.style.display = "block";
+                } else {
+                    alertDiv.textContent = "";
+                    alertDiv.style.display = "none";
+                }
+            });
+    });
+
+    document.getElementById("customer_name").addEventListener("input", function () {
+        const query = this.value.trim();
+        const suggestionsList = document.getElementById("customer_suggestions");
+        if (query.length < 2) {
+            suggestionsList.innerHTML = "";
+            return;
+        }
+        fetch(`/assets_add/search_customer?query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(customers => {
+                suggestionsList.innerHTML = "";
+                customers.forEach(customer => {
+                    const item = document.createElement("li");
+                    item.classList.add("list-group-item", "list-group-item-action");
+                    item.textContent = `${customer.cust_name} (${customer.billing_company})`;
+                    item.addEventListener("click", function () {
+                        document.getElementById("customer_name").value = customer.cust_name;
+                        suggestionsList.innerHTML = "";
+                        fetchContractsForCustomer(customer.cust_name);
+                    });
+                    suggestionsList.appendChild(item);
+                });
+            });
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!document.getElementById("customer_name").contains(e.target)) {
+            document.getElementById("customer_suggestions").innerHTML = "";
+        }
+    });
+
+    function fetchContractsForCustomer(cust_name) {
+        fetch(`/assets_add/get_contracts_by_customer?cust_name=${encodeURIComponent(cust_name)}`)
+            .then(res => res.json())
+            .then(contracts => {
+                const input = document.getElementById("contract");
+                const dropdown = document.getElementById("contract_dropdown");
+                if (contracts.length === 0) {
+                    input.value = "";
+                    dropdown.style.display = "none";
+                    return;
+                }
+                if (contracts.length === 1) {
+                    input.value = contracts[0].contract_code;
+                    dropdown.style.display = "none";
+                } else {
+                    input.value = "";
+                    dropdown.innerHTML = "";
+                    contracts.forEach(contract => {
+                        const opt = document.createElement("option");
+                        opt.value = contract.contract_code;
+                        opt.textContent = `${contract.contract_code} (Exp: ${contract.contract_expiry_date})`;
+                        dropdown.appendChild(opt);
+                    });
+                    dropdown.style.display = "block";
+                    dropdown.addEventListener("change", function () {
+                        input.value = this.value;
+                    });
+                }
+            });
+    }
+
+    document.getElementById("asset_form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch("/assets_add/create", {
+            method: "POST",
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("✅ Asset added!");
+                    this.reset();
+                    document.getElementById("install_date").valueAsDate = new Date();
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            });
+    });
+
+</script>
+{% endblock %}

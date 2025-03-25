@@ -438,3 +438,40 @@ def check_serial(serial_number):
         })
     else:
         return jsonify({"error": "Serial Number not found"}), 404
+@ticket1_bp.route('/load_tickets')
+def load_tickets():
+    page = request.args.get('page', 1, type=int)
+    per_page = 100
+
+    # Apply filters
+    query = Ticket.query
+
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    status = request.args.get('status')
+    customer = request.args.get('customer')
+    serial = request.args.get('serial')
+    technician = request.args.get('technician')
+    region = request.args.get('region')
+    call_type = request.args.get('callType')
+
+    if start_date:
+        query = query.filter(Ticket.created_at >= start_date)
+    if end_date:
+        query = query.filter(Ticket.created_at <= end_date)
+    if status:
+        query = query.filter_by(status=status)
+    if customer:
+        query = query.filter(Ticket.customer.ilike(f'%{customer}%'))
+    if serial:
+        query = query.filter(Ticket.serial_number.ilike(f'%{serial}%'))
+    if technician:
+        query = query.filter(Ticket.technician_name.ilike(f'%{technician}%'))
+    if region:
+        query = query.filter(Ticket.region.ilike(f'%{region}%'))
+    if call_type:
+        query = query.filter(Ticket.call_type.ilike(f'%{call_type}%'))
+
+    # Paginate and render ticket rows only
+    tickets = query.order_by(Ticket.created_at.desc()).paginate(page=page, per_page=per_page)
+    return render_template('ticket1/ticket_rows.html', tickets=tickets.items)
