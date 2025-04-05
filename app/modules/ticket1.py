@@ -475,3 +475,115 @@ def load_tickets():
     # Paginate and render ticket rows only
     tickets = query.order_by(Ticket.created_at.desc()).paginate(page=page, per_page=per_page)
     return render_template('ticket1/ticket_rows.html', tickets=tickets.items)
+
+from flask import jsonify
+from datetime import datetime, timedelta
+from collections import defaultdict
+from app.models import Ticket  # or however you import it
+
+@ticket1_bp.route('/ticket_dashboard_summary_page')
+def ticket_dashboard_summary_page():
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+    technician = request.args.get('technician')
+
+    query = Ticket.query.join(Technician, isouter=True)
+
+    if from_date:
+        query = query.filter(Ticket.created_at >= from_date)
+    if to_date:
+        query = query.filter(Ticket.created_at <= to_date)
+    if technician:
+        query = query.filter(Technician.name.ilike(f"%{technician}%"))
+
+    tickets = query.all()
+    now = datetime.utcnow()
+
+    summary = {
+        'open': sum(1 for t in tickets if t.status == 'Open'),
+        'in_process': sum(1 for t in tickets if t.status == 'In Process'),
+        'closed': sum(1 for t in tickets if t.status == 'Closed'),
+        'overdue': sum(1 for t in tickets if t.status == 'Open' and (now - t.created_at).days > 3),
+        'avg_resolution': round(
+            sum((t.closed_at - t.created_at).total_seconds() for t in tickets if t.closed_at) / 3600 / max(1, len([t for t in tickets if t.closed_at])),
+            1
+        )
+    }
+
+    # 🔸 Trends
+    trend = defaultdict(lambda: {'opened': 0, 'closed': 0})
+    for t in tickets:
+        created_day = t.created_at.strftime('%Y-%m-%d')
+        trend[created_day]['opened'] += 1
+        if t.closed_at:
+            closed_day = t.closed_at.strftime('%Y-%m-%d')
+            trend[closed_day]['closed'] += 1
+
+    sorted_days = sorted(trend.keys())
+    trend_data = {
+        'labels': sorted_days,
+        'opened': [trend[day]['opened'] for day in sorted_days],
+        'closed': [trend[day]['closed'] for day in sorted_days]
+    }
+
+    # 🔸 Alarming serials (≥3 in last 90 days)
+    recent_cutoff = now - timedelta(days=90)
+    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
+
+    counter = defaultdict(list)
+    for t in recent_tickets:
+        if t.serial_number:
+            counter[t.serial_number].append(t)
+
+    alarming = []
+    for serial, t_list in counter.items():
+        if len(t_list) >= 3:
+            last = sorted(t_list, key=lambda x: x.created_at, reverse=True)[0]
+            alarming.append({
+                'serial_number': serial,
+                'customer_name': last.customer,
+                'location': last.service_location,
+                'region': last.region,
+                'count': len(t_list),
+                'last_date': last.created_at.strftime('%Y-%m-%d')
+            })
+
+    return render_template(
+        'ticket1/ticket_dashboard.html',
+        summary=summary,
+        trend=trend_data,
+        alarming=alarming
+    )
+@ticket1_bp.route('/export_alarming_cases')
+def export_alarming_cases():
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    recent_cutoff = now - timedelta(days=90)
+
+    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
+    counter = defaultdict(list)
+
+    for t in recent_tickets:
+        if t.serial_number:
+            counter[t.serial_number].append(t)
+
+    alarming = []
+    for serial, t_list in counter.items():
+        if len(t_list) >= 3:
+            last = sorted(t_list, key=lambda x: x.created_at, reverse=True)[0]
+            alarming.append({
+                'Serial Number': serial,
+                'Customer Name': last.customer,
+                'Location': last.service_location,
+                'Region': last.region,
+                'Ticket Count': len(t_list),
+                'Last Ticket Date': last.created_at.strftime('%Y-%m-%d')
+            })
+
+    df = pd.DataFrame(alarming)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Alarming Cases")
+
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name="alarming_cases.xlsx")

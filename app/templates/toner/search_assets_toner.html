@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center text-primary mb-4">Search Assets for Toner Request</h2>
+
+    <div class="card p-4 shadow mb-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label>Serial No</label>
+                <input type="text" id="serial_number" class="form-control" placeholder="Enter serial no">
+            </div>
+            <div class="col-md-3">
+                <label>Customer Name</label>
+                <input type="text" id="customer_name" class="form-control" placeholder="Enter customer name">
+            </div>
+            <div class="col-md-3">
+                <label>Service Location</label>
+                <input type="text" id="service_location" class="form-control" placeholder="Enter service location">
+            </div>
+            <div class="col-md-3">
+                <label>Region</label>
+                <input type="text" id="region" class="form-control" placeholder="Enter region">
+            </div>
+        </div>
+        <div class="text-center mt-3">
+            <button class="btn btn-primary px-5" onclick="searchAssets()">Search</button>
+        </div>
+    </div>
+
+    <div class="card p-3 shadow">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Serial No</th>
+                        <th>Customer</th>
+                        <th>Service Location</th>
+                        <th>Region</th>
+                        <th>Asset Description</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="assetResults">
+                    <!-- Results go here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function searchAssets() {
+    let data = {
+        serial_number: document.getElementById("serial_number").value,
+        customer_name: document.getElementById("customer_name").value,
+        service_location: document.getElementById("service_location").value,
+        region: document.getElementById("region").value
+    };
+
+    fetch("/toner/search_assets", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(res => res.json())
+    .then(results => {
+        let tbody = document.getElementById("assetResults");
+        tbody.innerHTML = "";
+
+        results.forEach(asset => {
+            let row = `<tr>
+                <td>${asset.serial_number}</td>
+                <td>${asset.customer_name}</td>
+                <td>${asset.service_location}</td>
+                <td>${asset.region}</td>
+                <td>${asset.asset_description}</td>
+                <td class="text-center">
+                    <button class="btn btn-success btn-sm" onclick="requestToner('${asset.serial_number}')">
+                        Request Toner
+                    </button>
+                </td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    });
+}
+
+function requestToner(serial) {
+    window.open(`/toner/request/${serial}`, '_blank');
+}
+</script>
+{% endblock %}

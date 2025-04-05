@@ -1,226 +1,232 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Material Movement Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .container { width: 100%; margin: auto; }
-        .filter-section { margin-bottom: 8px; }
-        .table-container { overflow-x: auto; max-width: 100%; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Material Movement Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .container { width: 100%; margin: auto; }
+    .filter-section { margin-bottom: 8px; }
+    .table-container { overflow-x: auto; max-width: 100%; }
 
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            table-layout: auto;
-        }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
 
-        .table th, .table td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-            word-wrap: break-word;
-            white-space: normal;
-            font-size: 14px;
-        }
+    .table th, .table td {
+      border: 1px solid black;
+      padding: 6px;
+      text-align: left;
+      font-size: 13px;
+    }
 
-        .table thead input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 5px;
-            font-size: 12px;
-        }
+    .table thead input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px;
+      font-size: 12px;
+    }
 
-        .pagination { margin-top: 10px; }
-        .btn { padding: 8px 12px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
-    </style>
+    .table thead tr:nth-child(2) {
+      background-color: #f9f9f9;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    .pagination { margin-top: 10px; }
+    .btn {
+      padding: 6px 10px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+
+    .btn-danger {
+      background-color: #dc3545;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Material Movement Dashboard</h1>
+  <div class="container">
+    <h1>Material Movement Dashboard</h1>
 
-        <div class="filter-section">
-            <label>From Date: <input type="date" id="fromDate"></label>
-            <label>To Date: <input type="date" id="toDate"></label>
-            <button class="btn" onclick="fetchRequests(1)">Filter</button>
-            <button class="btn" onclick="exportToExcel()">Export to Excel</button>
-            <button class="btn" onclick="window.location.href='/material/movement'">Make a Request</button>
-        </div>
-
-        <div class="table-container">
-            <table class="table" id="requestTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>FOC</th>
-                        <th>Serial Number</th>
-                        <th>Asset Description</th>
-                        <th>Technician</th>
-                        <th>Warehouse</th>
-                        <th>Product Code</th>
-                        <th>Description</th>
-                        <th>Warranty Status</th>
-                        <th>Actions</th>
-                    </tr>
-                    <tr>
-                        <th><input type="text" id="filterId" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterDate" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterCustomer" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterFOC" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterSerial" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterAsset" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterTechnician" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterWarehouse" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterProduct" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterDescription" onkeyup="filterTable()"></th>
-                        <th><input type="text" id="filterStatus" onkeyup="filterTable()"></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Data will be loaded here dynamically -->
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination">
-            <p id="paginationText">Page 1 of X</p>
-            <button id="loadMoreBtn" class="btn" onclick="loadMore()">Load More</button>
-        </div>
+    <div class="filter-section">
+      <label>From Date: <input type="date" id="fromDate" /></label>
+      <label>To Date: <input type="date" id="toDate" /></label>
+      <button class="btn" onclick="fetchRequests(1)">Filter</button>
+      <button class="btn" onclick="exportToExcel()">Export</button>
+      <button class="btn" onclick="window.location.href='/material/movement'">New Request</button>
     </div>
 
-    <script>
-        let currentPage = 1;
-        let totalPages = 1;
-        let isLoading = false;
+    <div class="table-container">
+      <table class="table" id="requestTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">ID</th>
+            <th onclick="sortTable(1)">Date</th>
+            <th onclick="sortTable(2)">Customer</th>
+            <th>FOC</th>
+            <th>Serial Number</th>
+            <th>Asset Description</th>
+            <th>Technician</th>
+            <th>Warehouse</th>
+            <th>Product Code</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+          <tr>
+            <th><input type="text" id="filterId" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterDate" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterCustomer" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterFOC" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterSerial" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterAsset" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterTechnician" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterWarehouse" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterProduct" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterDescription" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterStatus" onkeyup="filterTable()"/></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-        function fetchRequests(page) {
-            if (isLoading) return;
-            isLoading = true;
+    <div class="pagination">
+      <p id="paginationText">Page 1 of X</p>
+      <button id="loadMoreBtn" class="btn" onclick="loadMore()">Load More</button>
+    </div>
+  </div>
 
-            const fromDate = document.getElementById("fromDate").value;
-            const toDate = document.getElementById("toDate").value;
+  <script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let isLoading = false;
 
-            fetch(`/material/fetch_requests?page=${page}&fromDate=${fromDate}&toDate=${toDate}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.requests || data.requests.length === 0) {
-                        document.getElementById("loadMoreBtn").style.display = "none";
-                        return;
-                    }
+    function fetchRequests(page) {
+      if (isLoading) return;
+      isLoading = true;
+      const fromDate = document.getElementById("fromDate").value;
+      const toDate = document.getElementById("toDate").value;
 
-                    if (page === 1) document.querySelector("#requestTable tbody").innerHTML = ""; // Clear table on new search
+      fetch(`/material/fetch_requests?page=${page}&fromDate=${fromDate}&toDate=${toDate}`)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.querySelector("#requestTable tbody");
+          if (page === 1) tbody.innerHTML = "";
 
-                    data.requests.forEach(request => {
-                        let row = document.createElement("tr");
-                        row.innerHTML = `
-                            <td>${request.id}</td>
-                            <td>${request.date}</td>
-                            <td>${request.customer_name}</td>
-                            <td>${request.foc_no}</td>
-                            <td>${request.serial_number}</td>
-                            <td>${request.asset_Description}</td>
-                            <td>${request.technician_name}</td>
-                            <td>${request.warehouse}</td>
-                            <td>${request.product_code}</td>
-                            <td>${request.description}</td>
-                            <td>${request.warranty_status}</td>
-                            <td><button class="btn" onclick="redirectToEditPage(${request.id})">Edit</button></td>
-                            <button class="btn btn-danger" onclick="deleteRequest(${request.id})">Delete</button>
-                        `;
-                        document.querySelector("#requestTable tbody").appendChild(row);
-                    });
+          data.requests.forEach(req => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${req.id}</td>
+              <td>${req.date}</td>
+              <td>${req.customer_name}</td>
+              <td>${req.foc_no}</td>
+              <td>${req.serial_number}</td>
+              <td>${req.asset_Description}</td>
+              <td>${req.technician_name}</td>
+              <td>${req.warehouse}</td>
+              <td>${req.product_code}</td>
+              <td>${req.description}</td>
+              <td>${req.warranty_status}</td>
+              <td>
+                <button class="btn" onclick="redirectToEditPage(${req.id})">Edit</button>
+                <button class="btn btn-danger" onclick="deleteRequest(${req.id})">Delete</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
 
-                    totalPages = data.total_pages;
-                    document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages}`;
+          totalPages = data.total_pages;
+          document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages}`;
+          document.getElementById("loadMoreBtn").style.display = currentPage >= totalPages ? "none" : "inline-block";
+          isLoading = false;
+        })
+        .catch(err => {
+          console.error("Error fetching data:", err);
+          isLoading = false;
+        });
+    }
 
-                    if (currentPage >= totalPages) {
-                        document.getElementById("loadMoreBtn").style.display = "none";
-                    } else {
-                        document.getElementById("loadMoreBtn").style.display = "block";
-                    }
+    function filterTable() {
+      const filters = Array.from(document.querySelectorAll("thead input")).map(input => input.value.toLowerCase());
+      document.querySelectorAll("#requestTable tbody tr").forEach(row => {
+        const cells = Array.from(row.getElementsByTagName("td"));
+        const match = filters.every((filter, i) => !filter || cells[i].textContent.toLowerCase().includes(filter));
+        row.style.display = match ? "" : "none";
+      });
+    }
 
-                    isLoading = false;
-                })
-                .catch(error => {
-                    console.error("Error loading data:", error);
-                    isLoading = false;
-                });
-        }
+    function redirectToEditPage(id) {
+      window.location.href = `/material/edit_request/${id}`;
+    }
 
-        function loadMore() {
-            if (currentPage < totalPages) {
-                currentPage++;
-                fetchRequests(currentPage);
-            }
-        }
-
-        function filterTable() {
-            const filters = Array.from(document.querySelectorAll("thead input")).map(input => input.value.toLowerCase());
-            document.querySelectorAll("#requestTable tbody tr").forEach(row => {
-                const cells = Array.from(row.getElementsByTagName("td"));
-                const match = filters.every((filter, index) => !filter || cells[index].textContent.toLowerCase().includes(filter));
-                row.style.display = match ? "" : "none";
-            });
-        }
-
-        function redirectToEditPage(requestId) {
-            window.location.href = `/material/edit_request/${requestId}`;
-        }
-
-        window.onload = () => fetchRequests(1);
+    function loadMore() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        fetchRequests(currentPage);
+      }
+    }
 
     function exportToExcel() {
-        const fromDate = document.getElementById("fromDate").value;
-        const toDate = document.getElementById("toDate").value;
+      const filters = new URLSearchParams({
+        fromDate: document.getElementById("fromDate").value,
+        toDate: document.getElementById("toDate").value,
+        filterId: document.getElementById("filterId").value,
+        filterCustomer: document.getElementById("filterCustomer").value,
+        filterSerial: document.getElementById("filterSerial").value,
+        filterAsset: document.getElementById("filterAsset").value,
+        filterTechnician: document.getElementById("filterTechnician").value,
+        filterWarehouse: document.getElementById("filterWarehouse").value,
+        filterProduct: document.getElementById("filterProduct").value,
+        filterDescription: document.getElementById("filterDescription").value,
+        filterStatus: document.getElementById("filterStatus").value
+      });
+      window.location.href = `/material/export_excel?${filters.toString()}`;
+    }
 
-        const filterParams = new URLSearchParams({
-            fromDate: fromDate,
-            toDate: toDate,
-            filterId: document.getElementById("filterId").value,
-            filterSerial: document.getElementById("filterSerial").value,
-            filterAsset: document.getElementById("filterAsset").value,
-            filterTechnician: document.getElementById("filterTechnician").value,
-            filterWarehouse: document.getElementById("filterWarehouse").value,
-            filterProduct: document.getElementById("filterProduct").value,
-            filterDescription: document.getElementById("filterDescription").value,
-            filterStatus: document.getElementById("filterStatus").value
+    function deleteRequest(id) {
+      if (confirm("Delete this request?")) {
+        fetch(`/material/delete_request/${id}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" }
+        }).then(res => {
+          if (res.ok) {
+            alert("Deleted successfully");
+            fetchRequests(1);
+          } else {
+            alert("Failed to delete");
+          }
         });
-
-        window.location.href = `/material/export_excel?${filterParams.toString()}`;
+      }
     }
 
-    function deleteRequest(requestId) {
-        if (confirm("Are you sure you want to delete this request? This action cannot be undone.")) {
-            fetch(`/material/delete_request/${requestId}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    alert("Request deleted successfully!");
-                    fetchRequests(1); // Reload the table
-                } else {
-                    alert("Error deleting the request. Please try again.");
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        }
+    function sortTable(column) {
+      const rows = Array.from(document.querySelector("#requestTable tbody").rows);
+      const sorted = rows.sort((a, b) =>
+        a.cells[column].innerText.localeCompare(b.cells[column].innerText)
+      );
+      document.querySelector("#requestTable tbody").append(...sorted);
     }
 
-</script>
-
- </body>
+    window.onload = () => fetchRequests(1);
+  </script>
+</body>
 </html>
-
 {% endblock %}

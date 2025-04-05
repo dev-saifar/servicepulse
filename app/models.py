@@ -128,19 +128,6 @@ class spares(db.Model):
     currency = db.Column(db.String, nullable=False)
     price = db.Column(db.Float, nullable=False)
 
-
-# ✅ Ensure Tables Exist and Create Them If Missing
-def create_tables_if_not_exist():
-    """Check if tables exist, and create them if missing"""
-    with db.engine.connect() as connection:
-        inspector = inspect(db.engine)
-
-        tables = inspector.get_table_names()
-
-        if "technician" not in tables or "ticket" not in tables or "assets" not in tables or "user" not in tables:
-            print("📌 Creating missing tables...")
-            db.create_all()
-            print("✅ Tables created successfully!")
 from app import db
 from datetime import datetime
 class ScheduledReport(db.Model):
@@ -214,4 +201,122 @@ class Contract(db.Model):
 
     def __repr__(self):
         return f"<Contract {self.contract_code} - {self.cust_code}>"
+class toner_request(db.Model):
+    __tablename__ = 'toner_request'
 
+    id = db.Column(db.Integer, primary_key=True)
+    date_issued = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Asset & Customer Info (auto-fetched)
+    serial_number = db.Column(db.String(100), nullable=False)
+    asset_code = db.Column(db.String(50), nullable=True)
+    asset_description = db.Column(db.String(255), nullable=True)
+    cust_code = db.Column(db.String(100), nullable=True)
+    customer_name = db.Column(db.String(255), nullable=True)
+    billing_company = db.Column(db.String(100), nullable=True)
+    contract_code = db.Column(db.String(100), nullable=True)
+    service_location = db.Column(db.String(255), nullable=True)
+    region = db.Column(db.String(100), nullable=True)
+
+
+    # Toner Details
+    toner_type = db.Column(db.String(10), nullable=False)  # K / C / M / Y
+    toner_model = db.Column(db.String(50), nullable=False)
+    toner_source = db.Column(db.String(50), nullable=True)  # Kyocera / HK / Refilled
+    toner_life = db.Column(db.Integer, nullable=True)  # Yield
+    issued_qty = db.Column(db.Integer, default=1)
+    unit_cost = db.Column(db.Float, nullable=True)
+    total_cost = db.Column(db.Float, nullable=True)
+
+    # Meter & Delivery Info
+    meter_reading = db.Column(db.Integer, nullable=True)
+    actual_coverage = db.Column(db.Float, nullable=True)
+    previous_reading = db.Column(db.Integer)
+
+    delivery_boy = db.Column(db.String(100), nullable=True)
+    delivery_date = db.Column(db.DateTime, nullable=True)
+    receiver_name = db.Column(db.String(100), nullable=True)
+    delivery_status = db.Column(db.String(50), default='Pending')  # Pending / Delivered / Cancelled
+
+    # System Fields
+    requested_by = db.Column(db.String(100), nullable=True)
+    issued_by = db.Column(db.String(100), nullable=True)
+    comments = db.Column(db.Text, nullable=True)
+    request_type = db.Column(db.String(50), nullable=True)
+    foc = db.Column(db.String(50), nullable=True)
+    request_group= db.Column(db.String(50), nullable=True)
+    dispatch_time = db.Column(db.DateTime, nullable=True)
+
+    # TAT is a calculated field (date_issued to delivery_date), not stored in DB but can be exposed in a property
+    @property
+    def tat(self):
+        if self.delivery_date:
+            return (self.delivery_date - self.date_issued).days
+        return None
+class TonerModel(db.Model):
+    __tablename__ = 'toner_models'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    asset_model = db.Column(db.String(255), nullable=False)
+    machine_type = db.Column(db.String(50), nullable=False)  # MONO / COLOR / SCANNER
+
+    # Black
+    tk_k = db.Column(db.String(50), nullable=True)
+    k_life = db.Column(db.Integer, nullable=True)
+
+    # Cyan
+    tk_c = db.Column(db.String(50), nullable=True)
+    c_life = db.Column(db.Integer, nullable=True)
+
+    # Magenta
+    tk_m = db.Column(db.String(50), nullable=True)
+    m_life = db.Column(db.Integer, nullable=True)
+
+    # Yellow
+    tk_y = db.Column(db.String(50), nullable=True)
+    y_life = db.Column(db.Integer, nullable=True)
+
+    def __repr__(self):
+        return f"<TonerModel {self.asset_description}>"
+
+class TonerCosting(db.Model):
+    __tablename__ = 'toner_costing'
+
+    id = db.Column(db.Integer, primary_key=True)
+    toner_model = db.Column(db.String(50), nullable=False)
+    toner_type = db.Column(db.String(10), nullable=False)  # K / C / M / Y
+    source = db.Column(db.String(50), nullable=False)  # Kyocera / HK / Refilled
+    unit_cost = db.Column(db.Float, nullable=False)
+
+    def __repr__(self):
+        return f"<TonerCosting {self.toner_model} - {self.source}>"
+
+def create_tables_if_not_exist():
+    """Check if tables exist, and create them if missing"""
+    with db.engine.connect() as connection:
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        required_tables = [
+            "technician", "ticket", "assets", "user",
+            "toner_request", "toner_models", "toner_costing"
+        ]
+
+        missing_tables = [table for table in required_tables if table not in tables]
+
+        if missing_tables:
+            print("📌 Creating missing tables...")
+            db.create_all()
+            print(f"✅ Created tables: {', '.join(missing_tables)}")
+        else:
+            print("✅ All required tables already exist.")
+
+
+class DeliveryTeam(db.Model):
+    __tablename__ = 'Delivery_Team'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+
+    def __repr__(self):
+        return f'<DeliveryTeam {self.name}>'

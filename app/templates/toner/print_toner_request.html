@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Toner Request Print</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 1mm;
+    }
+
+    @media print {
+      body {
+        font-size: 10px;
+        margin: 0;
+        padding: 0;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      margin: 10mm 5mm 5mm 5mm;
+    }
+
+    table, th, td {
+      border: 1px solid #000;
+      border-collapse: collapse;
+      padding: 4px;
+    }
+
+    th {
+      background-color: #eee;
+    }
+
+    .header-logos {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-logos img {
+      height: 48px;
+    }
+
+    .section-title {
+      font-weight: bold;
+      margin: 10px 0 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #000;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .info-col {
+      width: 49%;
+    }
+
+    .note-warning {
+      border: 1px dashed #c00;
+      background: #fbeaea;
+      color: #a00;
+      padding: 6px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print d-flex justify-content-end gap-2 mb-3" style="padding: 10px;">
+  <a href="{{ url_for('toner.toner_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left"></i> Back to Dashboard
+  </a>
+  <button onclick="window.print()" class="btn btn-outline-primary btn-sm">
+    <i class="fas fa-print"></i> Print
+  </button>
+</div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<div class="header-logos">
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Left">
+  <div style="text-align:center;">
+    <h2 style="margin:0; font-weight: 800;">TONER REQUEST FORM</h2>
+    <strong style="font-size: 14px;">MFI DOCUMENT SOLUTIONS</strong><br>
+    <small>Plot No. 43, Lumumba Avenue, Kampala, Uganda</small>
+  </div>
+  <img src="/static/images/logo2.png" alt="Logo Right">
+</div>
+
+<div style="text-align: right; font-size: 9px; margin-top: 4px;">
+  Printed: {{ now.strftime('%b %d, %Y - %I:%M %p') }}
+</div>
+
+<div class="section-title">Machine & Customer Details</div>
+<div class="info-row">
+  <div class="info-col">
+    <strong>Customer Name:</strong> {{ asset.customer_name }}<br>
+    <strong>Region:</strong> {{ asset.region }}<br>
+    <strong>Service Location:</strong> {{ asset.service_location }}<br>
+    <strong>Billing Company:</strong> {{ asset.billing_company }}<br>
+    <strong>Contract Code:</strong> {{ asset.contract }}
+  </div>
+
+  <div class="info-col">
+    <strong>Serial Number:</strong> {{ asset.serial_number }}<br>
+    <strong>Asset Code:</strong> {{ asset.asset_code }}<br>
+    <strong>Asset Description:</strong> {{ asset.asset_Description }}<br>
+    <strong>Requested By:</strong> {{ requests[0].requested_by }}<br>
+    <strong>Request Type:</strong> {{ requests[0].request_type }}
+  </div>
+</div>
+
+{% set show_yield_warning = false %}
+{% for r in requests %}
+  {% if r.toner_life and r.previous_reading is not none %}
+    {% set yield_val = (r.meter_reading or 0) - (r.previous_reading or 0) %}
+    {% if yield_val / r.toner_life < 0.6 %}
+      {% set show_yield_warning = true %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% if show_yield_warning %}
+  <div class="note-warning">⚠️ Yield Low – Secondary Approval Required</div>
+{% endif %}
+
+<div class="section-title">Approvals</div>
+<table width="100%">
+  <tr>
+    <th>First Level Approval</th>
+    <th>Second Level Approval</th>
+  </tr>
+  <tr>
+    <td>Signature: ..................................</td>
+    <td>Signature: ..................................</td>
+  </tr>
+</table>
+
+<div class="section-title">Toner Request Details</div>
+<table width="100%">
+  <thead>
+    <tr>
+      <th>Toner</th>
+      <th>Model</th>
+      <th>Life</th>
+      <th>Qty</th>
+      <th>Previous</th>
+      <th>Current</th>
+      <th>Yield</th>
+      <th>Status</th>
+      <th>Source</th>
+      <th>Remarks</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in requests %}
+      {% set prev = r.previous_reading or 0 %}
+      {% set yield_val = (r.meter_reading or 0) - prev %}
+      <tr>
+        <td>{{ r.toner_type }}</td>
+        <td>{{ r.toner_model }}</td>
+        <td>{{ r.toner_life }}</td>
+        <td>{{ r.issued_qty }}</td>
+        <td>{{ prev }}</td>
+        <td>{{ r.meter_reading or 'N/A' }}</td>
+        <td>{{ yield_val }}</td>
+        <td>
+          {% if r.toner_life and yield_val / r.toner_life < 0.6 %}
+            LOW
+          {% else %}
+            OK
+          {% endif %}
+        </td>
+        <td>{{ r.toner_source }}</td>
+        <td>{{ r.comments or '-' }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if history %}
+<div class="section-title">Toner Delivery History</div>
+<table width="100%">
+  <thead>
+    <tr>
+      <th>Toner</th>
+      <th>Model</th>
+      <th>Life</th>
+      <th>Qty</th>
+      <th>Previous</th>
+      <th>Current</th>
+      <th>Yield</th>
+      <th>Status</th>
+      <th>Source</th>
+      <th>Remarks</th>
+      <th>Delivery</th>
+      <th>Receiver</th>
+      <th>FOC</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for h in history %}
+      {% set prev = h.previous_reading or 0 %}
+      {% set y = (h.meter_reading or 0) - prev %}
+      <tr>
+        <td>{{ h.toner_type }}</td>
+        <td>{{ h.toner_model }}</td>
+        <td>{{ h.toner_life }}</td>
+        <td>{{ h.issued_qty }}</td>
+        <td>{{ prev }}</td>
+        <td>{{ h.meter_reading or 'N/A' }}</td>
+        <td>{{ y }}</td>
+        <td>
+          {% if h.toner_life and y / h.toner_life < 0.6 %}
+            LOW
+          {% else %}
+            OK
+          {% endif %}
+        </td>
+        <td>{{ h.toner_source }}</td>
+        <td>{{ h.comments or '-' }}</td>
+        <td>{{ h.delivery_boy or '' }}</td>
+        <td>{{ h.receiver_name or '' }}</td>
+        <td>{{ h.foc or '' }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</body>
+</html>

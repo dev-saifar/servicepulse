@@ -71,22 +71,21 @@ def index():
 @assets_bp.route('/export-to-excel')
 def export_to_excel():
     """Exports asset data to an Excel file."""
-
-    # Fetch asset data from the database
     assets = Assets.query.all()
 
-    # Convert database records to a list of dictionaries
-    assets_data = [
-        {
+    # Convert database records to a list of dictionaries safely
+    assets_data = []
+    for asset in assets:
+        if asset is None:
+            continue
+        assets_data.append({
             'Customer Name': asset.customer_name,
             'Serial Number': asset.serial_number,
             'Location': asset.service_location,
             'Region': asset.region,
             'Technician': asset.technician_name,
             'Asset Description': asset.asset_Description
-        }
-        for asset in assets
-    ]
+        })
 
     # Convert data to Pandas DataFrame
     df = pd.DataFrame(assets_data)
@@ -98,10 +97,10 @@ def export_to_excel():
 
     output.seek(0)
 
-    # Send file as a response
-    return send_file(output, download_name="assets.xlsx", as_attachment=True,
+    return send_file(output,
+                     download_name="assets.xlsx",
+                     as_attachment=True,
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
 
 # ✅ Import assets from an Excel/CSV file
 @assets_bp.route('/import', methods=['GET', 'POST'])
@@ -321,15 +320,16 @@ def create_asset():
 
 @assets_bp.route('/customers/list', methods=['GET'])
 def customer_list():
-    from sqlalchemy import func
+    from sqlalchemy import func, distinct
 
     customers = db.session.query(
         Customer,
-        func.count(Contract.id).label("contract_count"),
-        func.count(Assets.id).label("asset_count")
-    ).outerjoin(Contract, (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)) \
-     .outerjoin(Assets, Customer.cust_name == Assets.customer_name) \
-     .group_by(Customer.id).all()
+        func.count(distinct(Contract.id)).label("contract_count"),
+        func.count(distinct(Assets.id)).label("asset_count")
+    ).outerjoin(Contract,
+                (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)) \
+        .outerjoin(Assets, Customer.cust_name == Assets.customer_name) \
+        .group_by(Customer.id).all()
 
     return render_template("assets/customer_list.html", customers=customers)
 
@@ -361,18 +361,23 @@ def delete_customer(customer_id):
     return redirect(url_for('assets.customer_list'))
 @assets_bp.route('/customers/export')
 def export_customers():
-    from sqlalchemy import func
+    from sqlalchemy import func, distinct
 
     # Join and count contracts and assets
     data = db.session.query(
         Customer.cust_code,
         Customer.cust_name,
         Customer.billing_company,
-        func.count(func.distinct(Contract.id)).label("contract_count"),
-        func.count(func.distinct(Assets.id)).label("asset_count")
-    ).outerjoin(Contract, (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)) \
-     .outerjoin(Assets, Customer.cust_name == Assets.customer_name) \
-     .group_by(Customer.cust_code, Customer.cust_name, Customer.billing_company).all()
+        func.count(distinct(Contract.id)).label("contract_count"),
+        func.count(distinct(Assets.id)).label("asset_count")
+    ).outerjoin(
+        Contract,
+        (Customer.cust_code == Contract.cust_code) & (Customer.billing_company == Contract.billing_company)
+    ).outerjoin(
+        Assets, Customer.cust_name == Assets.customer_name
+    ).group_by(
+        Customer.cust_code, Customer.cust_name, Customer.billing_company
+    ).all()
 
     # Prepare data for export
     export_data = []
@@ -384,6 +389,24 @@ def export_customers():
             "No. of Contracts": row.contract_count,
             "No. of Assets": row.asset_count,
         })
+
+    # Convert to Excel using pandas
+    import pandas as pd
+    import io
+
+    df = pd.DataFrame(export_data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Customers')
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        download_name="customers.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
     # Convert to Excel using pandas
     import pandas as pd

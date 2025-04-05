@@ -5,6 +5,10 @@ from datetime import datetime
 from sqlalchemy import extract  # Add this import
 from app.models import Customer
 from flask import jsonify
+from sqlalchemy import func
+from datetime import date
+
+
 
 contracts_bp = Blueprint('contracts', __name__, template_folder='../templates/contracts')
 @contracts_bp.route('/search_customer', methods=['GET'])
@@ -304,3 +308,148 @@ def export_excel():
 
     output.seek(0)
     return send_file(output, download_name="contracts.xlsx", as_attachment=True, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+from flask import jsonify, request
+from collections import defaultdict
+from datetime import datetime, date
+from sqlalchemy import extract
+from app.models import Contract
+from app.modules.contracts import contracts_bp
+from flask import jsonify, request, render_template
+from collections import defaultdict
+from datetime import datetime, date
+from sqlalchemy import extract, func
+from app.models import Contract
+from app.modules.contracts import contracts_bp
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads/contracts')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+@contracts_bp.route('/contracts/dashboard')
+def contract_dashboard_page():
+    billing_companies = [b[0] for b in db.session.query(Contract.billing_company).distinct()]
+    years = sorted(set(int(y[0]) for y in db.session.query(extract('year', Contract.contract_start_date)).distinct() if y[0]))
+    return render_template("contract_dashboard.html", billing_companies=billing_companies, years=years)
+
+
+@contracts_bp.route('/contracts/dashboard-data')
+def contract_dashboard_data():
+    today = date.today()
+    billing_filter = request.args.get('billing_company', '').strip()
+    year_filter = request.args.get('year', '').strip()
+
+    contracts_query = Contract.query
+    if billing_filter:
+        contracts_query = contracts_query.filter(Contract.billing_company == billing_filter)
+    if year_filter and year_filter.isdigit():
+        contracts_query = contracts_query.filter(extract('year', Contract.contract_start_date) == int(year_filter))
+
+    contracts = contracts_query.all()
+
+    # Counters and structures
+    total, active, expiring, expired = 0, 0, 0, 0
+    sales_total = defaultdict(int)
+    sales_active = defaultdict(int)
+    sales_expiring = defaultdict(int)
+    sales_expired = defaultdict(int)
+    trends = defaultdict(int)
+
+    active_list, expiring_list, expired_list = [], [], []
+
+    def parse_date(d):
+        if isinstance(d, date):
+            return d
+        if isinstance(d, str) and d.strip():
+            try:
+                return datetime.strptime(d.strip(), "%Y-%m-%d").date()
+            except Exception:
+                return None
+        return None
+
+    for c in contracts:
+        start_date = parse_date(c.contract_start_date)
+        end_date = parse_date_safe(c.contract_end_date)
+        if not end_date:
+            continue  # skip invalid date entries
+
+        if not start_date or not end_date:
+            continue  # skip if dates are invalid
+
+        total += 1
+        trends[start_date.year] += 1
+
+        salesperson = c.sales_person or "Unassigned"
+        sales_total[salesperson] += 1
+
+        row = {
+            "contract_code": c.contract_code,
+            "cust_name": c.cust_name,
+            "end": end_date.strftime('%Y-%m-%d')
+        }
+
+        if end_date < today:
+            expired += 1
+            sales_expired[salesperson] += 1
+            expired_list.append(row)
+        elif (end_date - today).days <= 60:
+            expiring += 1
+            sales_expiring[salesperson] += 1
+            expiring_list.append(row)
+        else:
+            active += 1
+            sales_active[salesperson] += 1
+            active_list.append(row)
+
+    return jsonify({
+        "summary": {
+            "total": total,
+            "active": active,
+            "expired": expired,
+            "expiring": expiring
+        },
+        "sales_donut": {
+            "total": {"labels": list(sales_total.keys()), "data": list(sales_total.values())},
+            "active": {"labels": list(sales_active.keys()), "data": list(sales_active.values())},
+            "expiring": {"labels": list(sales_expiring.keys()), "data": list(sales_expiring.values())},
+            "expired": {"labels": list(sales_expired.keys()), "data": list(sales_expired.values())}
+        },
+        "trends": {
+            "labels": list(trends.keys()),
+            "data": list(trends.values())
+        },
+        # 🔁 Rename here:
+        "contract_lists": {
+            "active": active_list,
+            "expiring": expiring_list,
+            "expired": expired_list
+        }
+    })
+
+
+@contracts_bp.route('/contracts/upload/<contract_code>', methods=['POST'])
+def upload_contract_file(contract_code):
+    file = request.files.get('contract_file')
+    if not file:
+        return jsonify({'success': False, 'error': 'No file uploaded'}), 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(UPLOAD_FOLDER, f"{contract_code}_{filename}")
+    file.save(filepath)
+
+    contract = Contract.query.filter_by(contract_code=contract_code).first()
+    contract.document_path = filepath
+    db.session.commit()
+    return jsonify({'success': True})
+
+from datetime import datetime
+
+def parse_date_safe(d):
+    if not d or not isinstance(d, str) or d.strip() == "":
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%d/%m %H:%M:%S"):  # Add more as needed
+        try:
+            return datetime.strptime(d.strip(), fmt).date()
+        except ValueError:
+            continue
+    return None  # return None if nothing works

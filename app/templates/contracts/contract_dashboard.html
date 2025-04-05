@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .list-group li {
+    font-size: 0.8rem; /* Or try 0.8rem or 12px */
+  }
+  .list-group li a {
+    font-size: 0.8rem;
+  }
+  .list-group .badge {
+    font-size: 0.75rem;
+  }
+</style>
+
+<div class="container-fluid py-4">
+  <h4 class="mb-4"><i class="fas fa-file-contract me-2"></i>Contract Dashboard</h4>
+
+  <!-- Summary Cards -->
+  <div class="row" id="summary-cards"></div>
+
+  <!-- Charts -->
+  <div class="row mt-4">
+    <div class="col-md-3">
+      <canvas id="donutTotal"></canvas>
+    </div>
+    <div class="col-md-3">
+      <canvas id="donutActive"></canvas>
+    </div>
+    <div class="col-md-3">
+      <canvas id="donutExpiring"></canvas>
+    </div>
+    <div class="col-md-3">
+      <canvas id="donutExpired"></canvas>
+    </div>
+  </div>
+
+  <!-- Line Chart -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <h6>📈 Contracts Added Per Year</h6>
+      <canvas id="lineTrends" height="90"></canvas>
+    </div>
+  </div>
+
+  <!-- Contract Tables -->
+  <div class="row mt-5">
+    <div class="col-md-4">
+      <h6>🟢 Active Contracts</h6>
+      <table class="table table-sm table-bordered table-hover">
+        <thead><tr><th>Code</th><th>Customer</th><th>End</th></tr></thead>
+        <tbody id="active-table"></tbody>
+      </table>
+    </div>
+    <div class="col-md-4">
+      <h6>🟡 Expiring Soon(in 60 Days)</h6>
+      <table class="table table-sm table-bordered table-hover">
+        <thead><tr><th>Code</th><th>Customer</th><th>End</th></tr></thead>
+        <tbody id="expiring-table"></tbody>
+      </table>
+    </div>
+    <div class="col-md-4">
+      <h6>🔴 Expired Contracts</h6>
+      <table class="table table-sm table-bordered table-hover">
+        <thead><tr><th>Code</th><th>Customer</th><th>End</th></tr></thead>
+        <tbody id="expired-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  fetch("/contracts/contracts/dashboard-data")
+
+    .then(res => res.json())
+    .then(data => {
+      // Summary Cards
+      const summary = data.summary;
+      const cards = `
+        <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body">
+          <h6>Total</h6><h4>${summary.total}</h4>
+        </div></div></div>
+        <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body">
+          <h6>Active</h6><h4>${summary.active}</h4>
+        </div></div></div>
+        <div class="col-md-3"><div class="card text-dark bg-warning"><div class="card-body">
+          <h6>Expiring Soon</h6><h4>${summary.expiring}</h4>
+        </div></div></div>
+        <div class="col-md-3"><div class="card text-white bg-danger"><div class="card-body">
+          <h6>Expired</h6><h4>${summary.expired}</h4>
+        </div></div></div>`;
+      document.getElementById("summary-cards").innerHTML = cards;
+
+      // Donut Charts
+      const makeDonut = (id, labels, data) => {
+        new Chart(document.getElementById(id), {
+          type: 'doughnut',
+          data: { labels, datasets: [{ data }] },
+          options: { plugins: { legend: { position: 'bottom' } } }
+        });
+      };
+
+      makeDonut("donutTotal", data.sales_donut.total.labels, data.sales_donut.total.data);
+makeDonut("donutActive", data.sales_donut.active.labels, data.sales_donut.active.data);
+makeDonut("donutExpiring", data.sales_donut.expiring.labels, data.sales_donut.expiring.data);
+makeDonut("donutExpired", data.sales_donut.expired.labels, data.sales_donut.expired.data);
+
+
+      // Line Chart - Trends
+      new Chart(document.getElementById("lineTrends"), {
+        type: 'line',
+        data: {
+          labels: data.trends.labels,
+          datasets: [{
+            label: "Contracts/Year",
+            data: data.trends.data,
+            fill: true,
+            borderColor: "#3e95cd",
+            tension: 0.3
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Tables
+      const fillTable = (id, rows) => {
+  document.getElementById(id).innerHTML = rows.map(r =>
+    `<tr>
+      <td><a href="#" onclick="viewContract('${r.contract_code}')" class="text-primary">${r.contract_code}</a></td>
+      <td>${r.cust_name}</td>
+      <td>${r.end}</td>
+    </tr>`
+  ).join('');
+};
+
+      fillTable("active-table", data.contract_lists.active);
+fillTable("expiring-table", data.contract_lists.expiring);
+fillTable("expired-table", data.contract_lists.expired);
+    });
+});
+
+
+function viewContract(code) {
+  fetch(`/contracts/view/${code}`)
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById("contractModalBody").innerHTML = html;
+      new bootstrap.Modal(document.getElementById("contractViewModal")).show();
+    });
+}
+
+  $(document).on("click", ".contract-link", function (e) {
+    e.preventDefault();
+    const code = $(this).data("code");
+
+    fetch(`/contracts/view?code=${code}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          alert("Contract not found.");
+          return;
+        }
+
+        $("#viewModal .modal-title").text(`Contract: ${data.contract_code}`);
+        $("#viewModal .modal-body").html(`
+          <p><strong>Customer:</strong> ${data.customer}</p>
+          <p><strong>Billing Company:</strong> ${data.billing_company}</p>
+          <p><strong>Description:</strong> ${data.cont_discription}</p>
+          <p><strong>Sales Person:</strong> ${data.sales_person}</p>
+          <p><strong>Start Date:</strong> ${data.start_date}</p>
+          <p><strong>End Date:</strong> ${data.end_date}</p>
+          <p><strong>Duration:</strong> ${data.durations} months</p>
+          <hr>
+          <p><strong>Cycle:</strong> ${data.billing_cycle}</p>
+          <p><strong>Currency:</strong> ${data.contract_currency}</p>
+          <hr>
+          <p><strong>Mono:</strong> ${data.mono_commitment} @ ${data.mono_charge} UGX (+${data.mono_excess_charge} Excess)</p>
+          <p><strong>Color:</strong> ${data.color_commitment} @ ${data.color_charge} UGX (+${data.color_excess_charge} Excess)</p>
+          <p><strong>Rental:</strong> ${data.rental_charges}</p>
+          <p><strong>Software:</strong> ${data.software_rental}</p>
+        `);
+
+        $("#viewModal").modal("show");
+      });
+  });
+</script>
+
+
+<!-- Modal for View Contract -->
+<div class="modal fade" id="viewContractModal" tabindex="-1" aria-labelledby="viewContractLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewContractLabel">Contract Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            <div class="mb-2"><strong>Contract Code:</strong> <span id="modalContractCode"></span></div>
+            <div class="mb-2"><strong>Customer:</strong> <span id="modalCustomer"></span></div>
+            <div class="mb-2"><strong>Billing Company:</strong> <span id="modalBillingCompany"></span></div>
+            <div class="mb-2"><strong>Contract Description:</strong> <span id="modalDescription"></span></div>
+            <div class="mb-2"><strong>Sales Person:</strong> <span id="modalSalesPerson"></span></div>
+            <div class="mb-2"><strong>Start Date:</strong> <span id="modalStartDate"></span></div>
+            <div class="mb-2"><strong>End Date:</strong> <span id="modalEndDate"></span></div>
+            <div class="mb-2"><strong>Billing Cycle:</strong> <span id="modalBillingCycle"></span></div>
+            <div class="mb-2"><strong>Email:</strong> <span id="modalEmail"></span></div>
+            <div class="mb-2"><strong>Currency:</strong> <span id="modalCurrency"></span></div>
+            <div class="mb-2"><strong>Mono Commitment:</strong> <span id="modalMonoCommit"></span></div>
+            <div class="mb-2"><strong>Mono Charge:</strong> <span id="modalMonoCharge"></span></div>
+            <div class="mb-2"><strong>Mono Excess:</strong> <span id="modalMonoExcess"></span></div>
+            <div class="mb-2"><strong>Color Commitment:</strong> <span id="modalColorCommit"></span></div>
+            <div class="mb-2"><strong>Color Charge:</strong> <span id="modalColorCharge"></span></div>
+            <div class="mb-2"><strong>Color Excess:</strong> <span id="modalColorExcess"></span></div>
+            <div class="mb-2"><strong>Rental Charges:</strong> <span id="modalRental"></span></div>
+            <div class="mb-2"><strong>Software Rental:</strong> <span id="modalSoftware"></span></div>
+            <div class="mb-2"><strong>Duration (Months):</strong> <span id="modalDurations"></span></div>
+            <button class="btn btn-sm btn-outline-primary mt-3" onclick="copyContractDetails()">📋 Copy All</button>
+        </div>
+
+
+{% endblock %}

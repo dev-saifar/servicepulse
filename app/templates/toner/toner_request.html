@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-primary mb-3">Toner Request Form</h2>
+
+    <div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label for="serial_number">Serial Number</label>
+        <input type="text" id="serial_number" class="form-control" value="{{ asset.serial_number }}" readonly>
+    </div>
+    <div class="col-md-6">
+        <label for="asset_description">Asset Description</label>
+        <input type="text" id="asset_description" class="form-control" value="{{ asset.asset_Description }}" readonly>
+    </div>
+</div>
+
+
+    <div class="card p-4 shadow mb-3">
+        <h5 class="text-muted">📌 Machine & Customer Details</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label>Asset Code</label>
+                <input type="text" class="form-control" value="{{ asset.asset_code }}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label>Customer Name</label>
+                <input type="text" class="form-control" value="{{ asset.customer_name }}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label>Service Location</label>
+                <input type="text" class="form-control" value="{{ asset.service_location }}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label>Region</label>
+                <input type="text" class="form-control" value="{{ asset.region }}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label>Billing Company</label>
+                <input type="text" class="form-control" id="billing_company" value="{{ billing_company }}" readonly>
+            </div>
+            <div class="col-md-4">
+                <label>Contract Code</label>
+                <input type="text" class="form-control" value="{{ asset.contract }}" readonly>
+            </div>
+            <div class="col-md-6 mt-2">
+                <label>Requested By</label>
+                <input type="text" id="requested_by" name="requested_by" class="form-control" value="{{ requested_by or '' }}">
+
+            </div>
+
+            <div class="col-md-6 mt-2">
+                <label>Request Type</label>
+                <select id="request_type" name="request_type" class="form-control">
+                <option value="Alert">Alert</option>
+                <option value="Call">Call</option>
+                <option value="Email">Email</option>
+            </select>
+
+            </div>
+        <div class="mb-3">
+            <label><strong>Current Meter Reading</strong></label>
+            <input type="number" id="shared_current_reading" class="form-control" onblur="fillAllCurrentReadings(this.value)">
+
+        </div>
+</div>
+    </div>
+
+    <div class="card p-4 shadow mb-3">
+        <h5 class="text-muted">🧾 Toner Request Table</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered text-center" id="tonerRequestTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Toner</th>
+                        <th>Model</th>
+                        <th>Life</th>
+                        <th>Issued Qty</th>
+                        <th>Previous</th>
+                        <th>Current</th>
+                        <th>Yield</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in toner_types %}
+                    <tr data-type="{{ t }}">
+                        <td>{{ t }}</td>
+                        <td><input type="text" class="form-control model" readonly></td>
+                        <td><input type="text" class="form-control life" readonly></td>
+                        <td><input type="number" class="form-control qty" value="1" min="1"></td>
+                        <td><input type="number" class="form-control prev" readonly></td>
+                        <td><input type="number" class="form-control curr" oninput="calcYield(this)"></td>
+                        <td><input type="number" class="form-control yield" readonly></td>
+                        <td><input type="text" class="form-control status" readonly></td>
+                        <td>
+                            <select class="form-control source">
+                                <option value="HK">HK</option>
+                                <option value="Kyocera">Kyocera</option>
+
+                                <option value="Refilled">Refilled</option>
+                            </select>
+                        </td>
+                        <td><input type="text" class="form-control remarks"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button class="btn btn-success" onclick="submitTonerRequest()">Submit Request</button>
+    </div>
+</div>
+<div class="card p-4 shadow mb-3">
+    <h5 class="mt-4">🕘 Toner Request History</h5>
+<table class="table table-bordered table-sm table-hover">
+    <thead class="table-light text-center">
+        <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Model</th>
+            <th>Source</th>
+            <th>Qty</th>
+            <th>Reading</th>
+            <th>Delivery</th>
+            <th>Receiver</th>
+            <th>FOC</th>
+        </tr>
+    </thead>
+    <tbody class="text-center">
+        {% for h in history %}
+        <tr>
+            <td>{{ h.date_issued.strftime('%Y-%m-%d %H:%M') if h.date_issued else '' }}</td>
+            <td>{{ h.toner_type }}</td>
+            <td>{{ h.toner_model }}</td>
+            <td>{{ h.toner_source }}</td>
+            <td>{{ h.issued_qty }}</td>
+            <td>{{ h.meter_reading }}</td>
+            <td>{{ h.delivery_boy or '' }}</td>
+            <td>{{ h.receiver_name or '' }}</td>
+            <td>{{ h.foc or '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const serial = document.getElementById("serial_number").value;
+    const machine = document.getElementById("asset_description").value;
+    const rows = document.querySelectorAll("#tonerRequestTable tbody tr");
+
+    rows.forEach(row => {
+        const type = row.getAttribute("data-type");
+
+        // Fetch model + life
+        fetch("/toner/get_toner_model_and_life", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ machine_model: machine, toner_type: type })
+        })
+        .then(res => res.json())
+        .then(data => {
+            row.querySelector(".model").value = data.model || "";
+            row.querySelector(".life").value = data.life || "";
+        });
+
+        // Fetch previous reading
+        fetch(`/toner/fetch_previous_reading/${serial}/${type}`)
+        .then(res => res.json())
+        .then(data => {
+            row.querySelector(".prev").value = data.previous || 0;
+        });
+    });
+});
+
+function calcYield(input) {
+    const row = input.closest("tr");
+    const prev = parseInt(row.querySelector(".prev").value) || 0;
+    const curr = parseInt(row.querySelector(".curr").value) || 0;
+    const life = parseInt(row.querySelector(".life").value) || 0;
+
+    const yieldVal = curr - prev;
+    row.querySelector(".yield").value = yieldVal > 0 ? yieldVal : 0;
+
+    const statusField = row.querySelector(".status");
+    if (yieldVal >= life) {
+        statusField.value = "OK";
+        statusField.classList.add("text-success");
+        statusField.classList.remove("text-danger");
+    } else {
+        statusField.value = "LOW";
+        statusField.classList.add("text-danger");
+        statusField.classList.remove("text-success");
+    }
+
+}
+function submitTonerRequest() {
+    const serial = document.getElementById("serial_number").value;
+    const machine = document.getElementById("asset_description").value;
+
+    let data = [];
+
+    document.querySelectorAll("#tonerRequestTable tbody tr").forEach(row => {
+        const qty = parseInt(row.querySelector(".qty").value) || 0;
+        if (qty > 0) {
+    const requestedBy = document.getElementById("requested_by").value;
+    const requestType = document.getElementById("request_type").value;
+    const billingCompany = document.getElementById("billing_company").value;
+
+
+    data.push({
+        toner_type: row.getAttribute("data-type"),
+        toner_model: row.querySelector(".model").value,
+        toner_life: row.querySelector(".life").value,
+        issued_qty: qty,
+        previous_reading: row.querySelector(".prev").value,
+        current_reading: row.querySelector(".curr").value,
+        yield: row.querySelector(".yield").value,
+        status: row.querySelector(".status").value,
+        toner_source: row.querySelector(".source").value,
+        remarks: row.querySelector(".remarks").value,
+        serial_number: serial,
+        machine_model: machine,
+        requested_by: requestedBy,
+        request_type: requestType,
+        billing_company: billingCompany
+    });
+
+        }
+    });
+
+    console.log("Submitting toner request:", data);
+
+    // ✅ FIXED: Enable fetch call
+    fetch('/toner/submit_bulk_request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+    if (result.success && result.request_group) {
+        window.location.href = `/toner/print_request/${result.request_group}`;  // ✅ go to print page
+    } else {
+        alert("Error: " + result.error || "Unknown error");
+    }
+})
+
+    .catch(error => {
+        alert("Submission failed: " + error);
+    });
+}
+    function fillAllCurrentReadings(val) {
+    const current = parseInt(val) || 0;
+    let hasError = false;
+
+    document.querySelectorAll("#tonerRequestTable tbody tr").forEach(row => {
+        const prev = parseInt(row.querySelector(".prev").value) || 0;
+        const currField = row.querySelector(".curr");
+
+        if (current < prev) {
+            hasError = true;
+            currField.classList.add("is-invalid");
+            currField.classList.remove("is-valid");
+        } else {
+            currField.value = current;
+            currField.classList.remove("is-invalid");
+            currField.classList.add("is-valid");
+            calcYield(currField);
+        }
+    });
+
+    if (hasError) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Meter Reading',
+            text: 'Current reading cannot be less than previous reading. Please adjust it.',
+        });
+    }
+}
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h3 class="mb-4">Ticket Summary Dashboard</h3>
+
+<!-- 🔍 Filters -->
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-2">
+    <input type="date" class="form-control" name="from_date" value="{{ request.args.get('from_date', '') }}">
+  </div>
+  <div class="col-md-2">
+    <input type="date" class="form-control" name="to_date" value="{{ request.args.get('to_date', '') }}">
+  </div>
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="technician" placeholder="Technician" value="{{ request.args.get('technician', '') }}">
+  </div>
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="customer" placeholder="Customer" value="{{ request.args.get('customer', '') }}">
+  </div>
+  <div class="col-md-4 d-flex gap-2">
+    <button type="submit" class="btn btn-primary w-100">Filter</button>
+    <a href="{{ url_for('ticket1.ticket_dashboard') }}" class="btn btn-outline-secondary">Refresh</a>
+    <a href="?from_date=&to_date=&technician=&customer=" class="btn btn-outline-danger">Clear</a>
+  </div>
+</form>
+
+{% if filter_feedback %}
+  <p class="text-muted">🔍 Showing results for {{ filter_feedback }}</p>
+{% endif %}
+
+<a href="{{ url_for('ticket1.export_alarming_cases') }}" class="btn btn-sm btn-success mb-3">📥 Export Alarming Cases</a>
+
+<!-- 🎯 Summary -->
+<div class="row text-center mb-4">
+  <div class="col"><div class="card p-3 bg-warning text-dark">Open<br><strong>{{ summary.open }}</strong></div></div>
+  <div class="col"><div class="card p-3 bg-info text-dark">In Process<br><strong>{{ summary.in_process }}</strong></div></div>
+  <div class="col"><div class="card p-3 bg-success text-white">Closed<br><strong>{{ summary.closed }}</strong></div></div>
+  <div class="col"><div class="card p-3 bg-danger text-white">Overdue<br><strong>{{ summary.overdue }}</strong></div></div>
+  <div class="col"><div class="card p-3 bg-secondary text-white">Avg Resolution (hrs)<br><strong>{{ summary.avg_resolution }}</strong></div></div>
+  <div class="col"><div class="card p-3 bg-light border">Avg Tickets/Day<br><strong>{{ summary.avg_per_day }}</strong></div></div>
+</div>
+
+<!-- 📈 Charts -->
+<div class="row mb-5">
+  <div class="col-md-8">
+    <canvas id="trendChart" height="100"></canvas>
+  </div>
+  <div class="col-md-4">
+    <canvas id="donutChart" height="100"></canvas>
+  </div>
+</div>
+
+<!-- 📛 Alarming Table -->
+<h5 class="mt-4">📛 Alarming Cases (≥3 Tickets in 90 Days)</h5>
+<table class="table table-bordered table-sm mt-2 table-hover" id="alarmingTable">
+  <thead class="table-secondary">
+    <tr>
+      <th>Serial Number</th>
+      <th>Customer Name</th>
+      <th>Location</th>
+      <th>Region</th>
+      <th>Ticket Count</th>
+      <th>Last Ticket Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in alarming %}
+    <tr>
+      <td>{{ a.serial_number }}</td>
+      <td>{{ a.customer_name }}</td>
+      <td>{{ a.location }}</td>
+      <td>{{ a.region }}</td>
+      <td>{{ a.count }}</td>
+      <td>{{ a.last_date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- 📊 Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<script>
+  // 📈 Line Chart
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: {{ trend.labels | tojson }},
+      datasets: [
+        {
+          label: 'Opened',
+          data: {{ trend.opened | tojson }},
+          borderColor: 'orange',
+          fill: false,
+          tension: 0.3
+        },
+        {
+          label: 'Closed',
+          data: {{ trend.closed | tojson }},
+          borderColor: 'green',
+          fill: false,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      plugins: {
+        tooltip: { enabled: true },
+        title: {
+          display: true,
+          text: 'Ticket Trends (Opened vs Closed)'
+        }
+      }
+    }
+  });
+
+  // 🍩 Donut Chart
+  new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Open', 'In Process', 'Closed'],
+      datasets: [{
+        label: 'Status Distribution',
+        data: [{{ summary.open }}, {{ summary.in_process }}, {{ summary.closed }}],
+        backgroundColor: ['#ffc107', '#0dcaf0', '#198754']
+      }]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: 'Ticket Status Distribution'
+        }
+      }
+    }
+  });
+
+  // 📛 Sortable Table
+  $(document).ready(function () {
+    $('#alarmingTable').DataTable({
+      pageLength: 10,
+      order: [[4, 'desc']]
+    });
+  });
+</script>
+
+{% endblock %}

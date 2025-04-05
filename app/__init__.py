@@ -94,7 +94,9 @@ def create_app():
     from app.tasks import generate_and_email_report
     from app.modules.contracts import contracts_bp
     from app.modules.assets_add import assets_add_bp
+    from app.modules.toner import toner_bp
 
+    app.register_blueprint(toner_bp, url_prefix='/toner')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(technicians_bp, url_prefix='/technicians')
     app.register_blueprint(tickets_bp, url_prefix='/tickets')

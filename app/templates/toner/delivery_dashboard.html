@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  tfoot {
+    position: sticky;
+    bottom: 0;
+    background-color: #f8f9fa;
+  }
+</style>
+
+<div class="container mt-4">
+  <h4>Delivery Team Performance</h4>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+      <input type="text" name="delivery_boy" class="form-control" placeholder="Search Delivery Boy" value="{{ request.args.get('delivery_boy', '') }}">
+    </div>
+    <div class="col-md-4">
+      <input type="date" name="filter_date" class="form-control" value="{{ request.args.get('filter_date', '') }}">
+    </div>
+    <div class="col-md-4">
+      <button type="submit" class="btn btn-primary">Apply Filters</button>
+    </div>
+  </form>
+
+  <table id="deliveryStats" class="table display nowrap" style="width:100%">
+    <thead class="table-dark">
+      <tr>
+        <th>Name</th>
+        <th>Delivered Today</th>
+        <th>Pending</th>
+        <th>In Transit</th>
+        <th>Avg Delivery Time (mins)</th>
+        <th>Avg Transit Time (mins)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set max_delivered = stats | max(attribute='delivered_today') %}
+      {% for s in stats %}
+      <tr>
+        <td>
+          {{ s.name }}
+          {% if s.delivered_today == max_delivered and max_delivered > 0 %}
+            <i class="fas fa-trophy text-warning ms-1" title="Top Performer"></i>
+          {% endif %}
+        </td>
+        <td><span class="badge bg-success">{{ s.delivered_today }}</span></td>
+        <td><span class="badge bg-warning text-dark">{{ s.pending }}</span></td>
+        <td><span class="badge bg-info text-white">{{ s.in_transit }}</span></td>
+        <td>
+          {% if s.avg_time > 60 %}
+            <span class="badge bg-danger">{{ s.avg_time }}</span>
+          {% elif s.avg_time > 30 %}
+            <span class="badge bg-warning text-dark">{{ s.avg_time }}</span>
+          {% else %}
+            <span class="badge bg-success">{{ s.avg_time }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if s.avg_transit > 60 %}
+            <span class="badge bg-danger">{{ s.avg_transit }}</span>
+          {% elif s.avg_transit > 30 %}
+            <span class="badge bg-warning text-dark">{{ s.avg_transit }}</span>
+          {% else %}
+            <span class="badge bg-success">{{ s.avg_transit }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot class="table-light fw-bold">
+      <tr>
+        <td>Total</td>
+        <td>{{ stats | sum(attribute='delivered_today') }}</td>
+        <td>{{ stats | sum(attribute='pending') }}</td>
+        <td>{{ stats | sum(attribute='in_transit') }}</td>
+        <td>
+          {{
+            (
+              stats | map(attribute='avg_time') | sum
+            ) // (stats|length) if stats|length > 0 else 0
+          }}
+        </td>
+        <td>
+          {{
+            (
+              stats | map(attribute='avg_transit') | sum
+            ) // (stats|length) if stats|length > 0 else 0
+          }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Delivery Trend Chart -->
+  <div class="mt-5">
+    <h5>Deliveries Over Time</h5>
+    <canvas id="trendChart"></canvas>
+  </div>
+</div>
+
+<!-- DataTables & Chart JS -->
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.pdfmake.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/pdfmake.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/vfs_fonts.js"></script>
+<script>
+  $(document).ready(function () {
+    $('#deliveryStats').DataTable({
+      dom: 'Bfrtip',
+      buttons: ['excel', 'pdf'],
+      responsive: true
+    });
+  });
+
+  const trendLabels = {{ trend_labels | safe }};
+  const trendData = {{ trend_data | safe }};
+
+  const datasets = Object.entries(trendData).map(([name, data]) => ({
+    label: name,
+    data: data,
+    borderWidth: 2,
+    fill: false,
+    tension: 0.3
+  }));
+
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: trendLabels,
+      datasets: datasets
+    },
+    options: {
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { enabled: true }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+{% endblock %}

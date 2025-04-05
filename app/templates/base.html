@@ -10,6 +10,13 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+
+    .is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.15rem rgba(220,53,69,.25);
+    }
+
+
         .logo {
             width: 100px;
             height: auto;
@@ -69,11 +76,38 @@
         </div>
 
         <ul class="nav flex-column w-100">
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('dashboard.index') }}">
-                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-                </a>
-            </li>
+            <!-- Dashboard Collapsible Menu -->
+<li class="nav-item">
+  <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#dashboardSubMenu" aria-expanded="false">
+    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+  </a>
+  <div class="collapse ps-2" id="dashboardSubMenu">
+    <ul class="nav flex-column">
+      <li class="nav-item">
+        <a class="nav-link text-white" href="{{ url_for('dashboard.index') }}">
+          <i class="bi bi-house-door me-1"></i> Technician Dashboard
+        </a>
+      </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{{ url_for('contracts.contract_dashboard_page') }}">
+            <i class="fas fa-file-contract me-1"></i> Contracts Dashboard
+          </a>
+        </li>
+      <li class="nav-item">
+        <a class="nav-link text-white" href="{{ url_for('toner.delivery_dashboard') }}">
+          <i class="fas fa-truck me-1"></i> Toner Delivery Dashboard
+        </a>
+      </li>
+        </li>
+      <li class="nav-item">
+        <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard_summary_page') }}">
+          <i class="fa-ticket-alt me-1"></i> Ticket Dashboard
+        </a>
+      </li>
+    </ul>
+  </div>
+</li>
+
             <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('technicians.index') }}">
                     <i class="fas fa-user-cog me-2"></i> Technicians
@@ -83,7 +117,7 @@
             <!-- Assets Collapsible Menu -->
             <li class="nav-item">
                 <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#assetsSubMenu" aria-expanded="false">
-                    <i class="fas fa-box me-2"></i> Assets
+                    <i class="fas fa-box me-2"></i> Customer/Contract/Asset
                 </a>
                 <div class="collapse ps-2" id="assetsSubMenu">
                     <ul class="nav flex-column">
@@ -121,11 +155,27 @@
                     <i class="fas fa-chart-bar me-2"></i> Report
                 </a>
             </li>
+            <!-- Material Movement Collapsible Menu -->
+<li class="nav-item">
+    <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#materialSubMenu" aria-expanded="false">
+        <i class="fas fa-warehouse me-2"></i> Material Movement
+    </a>
+    <div class="collapse ps-2" id="materialSubMenu">
+        <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('material.material_dashboard') }}">
-                    <i class="fas fa-warehouse me-2"></i> Material Dashboard
+                <a class="nav-link text-white" href="{{ url_for('toner.toner_dashboard') }}">
+                    <i class="fas fa-tint me-1"></i> Toner
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('material.material_dashboard') }}">
+                    <i class="fas fa-tools me-1"></i> Spare
+                </a>
+            </li>
+        </ul>
+    </div>
+</li>
+
             <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('about.about') }}">
                     <i class="fas fa-info-circle me-2"></i> About

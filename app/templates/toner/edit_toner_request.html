@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="fas fa-edit"></i> Edit Toner Request</h3>
+    <a href="{{ url_for('toner.toner_dashboard') }}" class="btn btn-secondary">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <form id="editForm">
+    <!-- Section: Request Meta Info -->
+    <h5 class="section-title"><i class="fas fa-info-circle"></i> Request Meta Info</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label>ID</label>
+        <input class="form-control readonly" name="id" value="{{ req.id }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Date Issued</label>
+        <input type="date" class="form-control" name="date_issued" value="{{ req.date_issued.strftime('%Y-%m-%d') if req.date_issued }}">
+      </div>
+      <div class="col-md-4">
+        <label>Request Group</label>
+        <input class="form-control readonly" value="{{ req.request_group }}" readonly>
+      </div>
+    </div>
+
+    <!-- Section: Asset & Customer Info -->
+    <h5 class="section-title"><i class="fas fa-desktop"></i> Asset & Customer Info</h5>
+    <div class="row g-3">
+      {% for field in [('Serial Number', 'serial_number'), ('Asset Code', 'asset_code'), ('Asset Description', 'asset_description'),
+                       ('Customer Name', 'customer_name'), ('Region', 'region'), ('Cust Code', 'cust_code'),
+                       ('Billing Company', 'billing_company'), ('Contract Code', 'contract_code'), ('Service Location', 'service_location')] %}
+        <div class="col-md-4">
+          <label>{{ field[0] }}</label>
+          <input class="form-control readonly" value="{{ req[field[1]] }}" readonly>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Section: Toner Details -->
+    <h5 class="section-title"><i class="fas fa-tint"></i> Toner Details</h5>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label>Toner Type</label>
+        <input class="form-control readonly" value="{{ req.toner_type }}" readonly>
+      </div>
+      <div class="col-md-3">
+        <label>Toner Model</label>
+        <input class="form-control readonly" value="{{ req.toner_model }}" readonly>
+      </div>
+      <div class="col-md-2">
+        <label>Issued Qty</label>
+        <input class="form-control readonly" value="{{ req.issued_qty }}" readonly>
+      </div>
+      <div class="col-md-2">
+        <label>Toner Source</label>
+        <select class="form-control" name="toner_source">
+          {% for src in ['Kyocera', 'HK', 'Refilled'] %}
+          <option value="{{ src }}" {% if req.toner_source == src %}selected{% endif %}>{{ src }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label>FOC</label>
+        <input class="form-control" name="foc" value="{{ req.foc or '' }}">
+      </div>
+    </div>
+
+    <!-- Section: Meter & Coverage -->
+    <h5 class="section-title"><i class="fas fa-gauge"></i> Meter & Coverage</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label>Meter Reading</label>
+        <input class="form-control" name="meter_reading" type="number" value="{{ req.meter_reading or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label>Previous Reading</label>
+        <input class="form-control readonly" value="{{ req.previous_reading or '' }}" readonly>
+      </div>
+    </div>
+
+    <!-- Section: Delivery Info -->
+    <h5 class="section-title"><i class="fas fa-truck"></i> Delivery Info</h5>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label>Delivery Boy</label>
+        <select class="form-control" name="delivery_boy">
+  <option value="">-- Select Delivery Boy --</option>
+  {% for person in delivery_team %}
+    <option value="{{ person.name }}" {% if req.delivery_boy == person.name %}selected{% endif %}>
+      {{ person.name }}
+    </option>
+  {% endfor %}
+</select>
+
+
+      </div>
+      <div class="col-md-3">
+        <label>Receiver Name</label>
+        <input class="form-control" name="receiver_name" value="{{ req.receiver_name or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label>Delivery Status</label>
+        <select class="form-control" name="delivery_status" id="delivery_status">
+          {% for status in ['Pending', 'In Transit', 'Delivered'] %}
+          <option value="{{ status }}" {% if req.delivery_status == status %}selected{% endif %}>{{ status }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label>Delivery Date</label>
+        <input type="date" class="form-control" name="delivery_date" id="delivery_date" value="{{ req.delivery_date.strftime('%Y-%m-%d') if req.delivery_date }}">
+      <input type="hidden" name="dispatch_time" id="dispatch_time" value="{{ req.dispatch_time.strftime('%Y-%m-%dT%H:%M') if req.dispatch_time }}">
+
+      </div>
+    </div>
+
+    <!-- Section: Request & Comments -->
+    <h5 class="section-title"><i class="fas fa-comment-dots"></i> Request & System Info</h5>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label>Requested By</label>
+        <input class="form-control" name="requested_by" value="{{ req.requested_by or '' }}">
+      </div>
+      <div class="col-md-4">
+        <label>Request Type</label>
+        <input class="form-control readonly" value="{{ req.request_type }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Comments</label>
+        <textarea class="form-control" name="comments">{{ req.comments or '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-success">
+        <i class="fas fa-save"></i> Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function getLocalDateTimeString() {
+  const now = new Date();
+  return now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, '0') + "-" +
+    String(now.getDate()).padStart(2, '0') + "T" +
+    String(now.getHours()).padStart(2, '0') + ":" +
+    String(now.getMinutes()).padStart(2, '0');
+}
+
+document.getElementById("delivery_status").addEventListener("change", function () {
+  const status = this.value;
+  const deliveryDateInput = document.getElementById("delivery_date");
+  if (status === "Delivered" && !deliveryDateInput.value) {
+    deliveryDateInput.value = getLocalDateTimeString();
+  }
+});
+
+// Submit Form via Fetch
+const form = document.getElementById("editForm");
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  const formData = new FormData(form);
+  const data = {};
+  formData.forEach((value, key) => { data[key] = value });
+
+  // ✅ Add full current datetime when status is Delivered
+  if (data.delivery_status === "Delivered" && !data.delivery_date) {
+    data.delivery_date = getLocalDateTimeString();
+  }
+
+  // ✅ Add full current datetime when status is In Transit
+  if (data.delivery_status === "In Transit" && !data.dispatch_time) {
+    data.dispatch_time = getLocalDateTimeString();
+  }
+
+  // ✅ Fallback: If status is Delivered but no dispatch_time (skip In Transit)
+  if (data.delivery_status === "Delivered" && !data.dispatch_time) {
+    data.dispatch_time = getLocalDateTimeString();
+  }
+
+  fetch("/toner/update_request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        toastr.success("Toner request updated successfully.");
+        setTimeout(() => window.location.href = "/toner/dashboard", 1500);
+      } else {
+        toastr.error("Update failed: " + res.error);
+      }
+    })
+    .catch(err => toastr.error("An error occurred: " + err));
+});
+</script>
+
+{% endblock %}
