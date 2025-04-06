@@ -21,6 +21,8 @@
             <div class="col-md-4">
                 <label>Asset Code</label>
                 <input type="text" class="form-control" value="{{ asset.asset_code }}" readonly>
+                <input type="hidden" id="part_number" value="{{ asset.part_no }}">
+
             </div>
             <div class="col-md-4">
                 <label>Customer Name</label>
@@ -153,7 +155,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const serial = document.getElementById("serial_number").value;
-    const machine = document.getElementById("asset_description").value;
+    const machine = document.getElementById("part_number").value;
     const rows = document.querySelectorAll("#tonerRequestTable tbody tr");
 
     rows.forEach(row => {
@@ -203,7 +205,8 @@ function calcYield(input) {
 }
 function submitTonerRequest() {
     const serial = document.getElementById("serial_number").value;
-    const machine = document.getElementById("asset_description").value;
+    const machine = document.getElementById("part_number").value;
+
 
     let data = [];
 

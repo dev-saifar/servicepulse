@@ -55,7 +55,8 @@ def load_toner_request(serial_number):
     request_type = "Alert"
 
     # Determine toner types from model
-    toner_model = TonerModel.query.filter_by(asset_model=asset.asset_Description).first()
+    toner_model = TonerModel.query.filter_by(part_number=asset.part_no).first()
+
     toner_types = []
     if toner_model:
         if toner_model.machine_type == 'MONO':
@@ -297,11 +298,11 @@ def toner_dashboard_data():
 @toner_bp.route('/get_toner_model_and_life', methods=['POST'])
 def get_toner_model_and_life():
     data = request.get_json()
-    model = data.get('machine_model')
+    model = data.get('machine_model')  # match what JS sends
     ttype = data.get('toner_type')
 
     # Try to fetch matching toner model without machine_type filter
-    toner = TonerModel.query.filter_by(asset_model=model).first()
+    toner = TonerModel.query.filter_by(part_number=model).first()
 
     if not toner:
         return jsonify({"model": "", "life": ""})

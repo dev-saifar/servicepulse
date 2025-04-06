@@ -71,6 +71,7 @@ class Assets(db.Model):
     install_date = db.Column(db.String(100), nullable=True)
     asset_code = db.Column(db.String(50), nullable=True)
     asset_status = db.Column(db.String(50), nullable=True)
+    part_no = db.Column(db.String(50), nullable=True)
 
 
 
@@ -258,6 +259,7 @@ class TonerModel(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     asset_model = db.Column(db.String(255), nullable=False)
+    part_number = db.Column(db.String(255), nullable=False)
     machine_type = db.Column(db.String(50), nullable=False)  # MONO / COLOR / SCANNER
 
     # Black
@@ -320,3 +322,15 @@ class DeliveryTeam(db.Model):
 
     def __repr__(self):
         return f'<DeliveryTeam {self.name}>'
+
+class McModel(db.Model):
+    __tablename__ = "mc_model"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    asset_description = db.Column(db.Text, nullable=True)
+    part_no = db.Column(db.Text, nullable=True)
+    type = db.Column(db.Text, nullable=True)
+    price = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<McModel {self.asset_description}>"

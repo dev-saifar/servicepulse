@@ -95,8 +95,13 @@
         <div class="pending-info">
             <p><strong>Warranty Pending:</strong> <span id="warranty_pending">{{ request_data.warranty_pending }}</span></p>
             <p><strong>FOC Pending:</strong> <span id="foc_pending">{{ request_data.foc_pending }}</span></p>
+            <p><strong>Printed On:</strong> <span id="printed_on"></span></p>
+
+
+
         </div>
-    </div>
+
+        </div>
 
     <h3>Approval Section</h3>
     <table class="table">
@@ -163,6 +168,8 @@
             document.getElementById("asset_Description").textContent = requestData.asset_Description;
             document.getElementById("serial_number").textContent = requestData.serial_number;
             document.getElementById("technician").textContent = requestData.technician_name;
+            document.getElementById("printed_on").textContent = new Date().toLocaleString();
+
 
             // ✅ Check if contract code starts with "MDS" or "DS" and update title
             let contractCode = requestData.contract.trim();
