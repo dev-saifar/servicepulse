@@ -221,6 +221,7 @@ def toner_dashboard():
     region_filter = request.args.get("region", "").strip()
     status_filter = request.args.get("status", "").strip()
     delivery_boy_filter = request.args.get("delivery_boy", "").strip()
+    foc_filter = request.args.get("foc", "").strip()  # ✅ New FOC filter
 
     # Base query
     query = toner_request.query
@@ -238,11 +239,14 @@ def toner_dashboard():
         query = query.filter(toner_request.delivery_status == status_filter)
     if delivery_boy_filter:
         query = query.filter(toner_request.delivery_boy.ilike(f"%{delivery_boy_filter}%"))
+    if foc_filter:  # ✅ Apply FOC filter
+        query = query.filter(toner_request.foc == foc_filter)
 
     # Count summary before pagination
     delivered_count = query.filter(toner_request.delivery_status == 'Delivered').count()
     pending_count = query.filter(toner_request.delivery_status == 'Pending').count()
     in_transit_count = query.filter(toner_request.delivery_status == 'In Transit').count()
+    foc_pending_count = query.filter(toner_request.foc == 'Pending').count()
 
     # Pagination
     query = query.order_by(toner_request.date_issued.desc())
@@ -253,21 +257,27 @@ def toner_dashboard():
     region_list = db.session.query(toner_request.region).distinct().all()
     regions = [r[0] for r in region_list if r[0]]
 
-    return render_template('toner/toner_dashboard.html',
-                           requests=requests,
-                           pagination=pagination,
-                           delivered_count=delivered_count,
-                           pending_count=pending_count,
-                           in_transit_count=in_transit_count,
-                           regions=regions,
-                           filters={
-                               "customer": customer_filter,
-                               "region": region_filter,
-                               "status": status_filter,
-                               "delivery_boy": delivery_boy_filter,
-                               "from_date": from_date,
-                               "to_date": to_date
-                           })
+    # ✅ Return corrected
+    return render_template(
+        'toner/toner_dashboard.html',
+        requests=requests,
+        pagination=pagination,
+        delivered_count=delivered_count,
+        pending_count=pending_count,
+        in_transit_count=in_transit_count,
+        foc_pending_count=foc_pending_count,
+        regions=regions,
+        filters={
+            "customer": customer_filter,
+            "region": region_filter,
+            "status": status_filter,
+            "delivery_boy": delivery_boy_filter,
+            "from_date": from_date,
+            "to_date": to_date,
+            "foc": foc_filter  # ✅ pass filter to template
+        }
+    )
+
 
 # 📦 Load Dashboard Data
 @toner_bp.route('/dashboard_data')
@@ -363,7 +373,9 @@ def submit_bulk_request():
                 requested_by=item.get("requested_by") or "Web User",
                 request_type=item.get("request_type") or "Call",
                 comments=item['remarks'],
-                date_issued=datetime.now()
+                date_issued=datetime.now(),
+                foc = item.get("foc") or "Pending"
+
             )
 
 

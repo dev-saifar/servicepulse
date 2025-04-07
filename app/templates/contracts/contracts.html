@@ -223,9 +223,16 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert("✅ Contract created successfully!");
-                window.location.href = `/assets/add_asset`;
-            } else {
+    document.getElementById("toastBody").textContent = data.message || "Contract created successfully!";
+    const toast = new bootstrap.Toast(document.getElementById('contractToast'));
+    toast.show();
+
+    // Redirect after 3 seconds
+    setTimeout(() => {
+        window.location.href = "/contracts/list";
+    }, 3000);
+}
+ else {
                 alert("❌ Error: " + data.error);
             }
         });
@@ -235,5 +242,16 @@
         let advancedSection = document.getElementById("advanced_section");
         advancedSection.style.display = advancedSection.style.display === "none" ? "block" : "none";
     }
-</script>
+   </script>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+  <div id="contractToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastBody">
+        Contract created successfully!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

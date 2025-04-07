@@ -46,17 +46,20 @@
             </div>
             <div class="col-md-6 mt-2">
                 <label>Requested By</label>
-                <input type="text" id="requested_by" name="requested_by" class="form-control" value="{{ requested_by or '' }}">
+                <input type="text" id="requested_by" name="requested_by" class="form-control" value="{{ requested_by or '' }}" required>
+
 
             </div>
 
             <div class="col-md-6 mt-2">
                 <label>Request Type</label>
-                <select id="request_type" name="request_type" class="form-control">
-                <option value="Alert">Alert</option>
-                <option value="Call">Call</option>
-                <option value="Email">Email</option>
-            </select>
+                <<select id="request_type" name="request_type" class="form-control">
+                  <option value="">-- Select Type --</option>  <!-- Blank option -->
+                  <option value="Alert">Alert</option>
+                  <option value="Call">Call</option>
+                  <option value="Email">Email</option>
+                </select>
+
 
             </div>
         <div class="mb-3">
