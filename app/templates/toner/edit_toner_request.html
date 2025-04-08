@@ -21,7 +21,8 @@
       </div>
       <div class="col-md-4">
         <label>Date Issued</label>
-        <input type="date" class="form-control" name="date_issued" value="{{ req.date_issued.strftime('%Y-%m-%d') if req.date_issued }}">
+        <input type="datetime-local" class="form-control" name="date_issued" value="{{ req.date_issued.strftime('%Y-%m-%dT%H:%M') if req.date_issued }}">
+
       </div>
       <div class="col-md-4">
         <label>Request Group</label>
@@ -115,8 +116,11 @@
 
       <div class="col-md-3">
         <label>Delivery Date</label>
-        <input type="date" class="form-control" name="delivery_date" id="delivery_date" value="{{ req.delivery_date.strftime('%Y-%m-%d') if req.delivery_date }}">
-      <input type="hidden" name="dispatch_time" id="dispatch_time" value="{{ req.dispatch_time.strftime('%Y-%m-%dT%H:%M') if req.dispatch_time }}">
+        <input type="datetime-local" class="form-control" name="delivery_date" id="delivery_date" value="{{ req.delivery_date.strftime('%Y-%m-%dT%H:%M') if req.delivery_date }}">
+<input type="hidden" name="dispatch_time" id="dispatch_time"
+       value="{{ req.dispatch_time.strftime('%Y-%m-%dT%H:%M') if req.dispatch_time }}">
+
+
 
       </div>
     </div>
@@ -137,6 +141,13 @@
         <textarea class="form-control" name="comments">{{ req.comments or '' }}</textarea>
       </div>
     </div>
+<!-- Optional section near bottom -->
+<div class="alert alert-info mt-4">
+  <strong>Status History:</strong><br>
+  Pending: {{ req.date_issued }}<br>
+  In Transit: {{ req.dispatch_time }}<br>
+  Delivered: {{ req.delivery_date }}
+</div>
 
     <!-- Buttons -->
     <div class="d-flex justify-content-end mt-4">
@@ -204,6 +215,8 @@ form.addEventListener("submit", function (e) {
     })
     .catch(err => toastr.error("An error occurred: " + err));
 });
+
+
 </script>
 
 {% endblock %}

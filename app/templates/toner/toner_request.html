@@ -53,15 +53,13 @@
 
             <div class="col-md-6 mt-2">
                 <label>Request Type</label>
-                <<select id="request_type" name="request_type" class="form-control">
-                  <option value="">-- Select Type --</option>  <!-- Blank option -->
-                  <option value="Alert">Alert</option>
-                  <option value="Call">Call</option>
-                  <option value="Email">Email</option>
-                </select>
-
-
-            </div>
+                <select id="request_type" name="request_type" class="form-control" required>
+    <option value="">-- Select Type --</option>
+    <option value="Alert">Alert</option>
+    <option value="Call">Call</option>
+    <option value="Email">Email</option>
+</select>
+                     </div>
         <div class="mb-3">
             <label><strong>Current Meter Reading</strong></label>
             <input type="number" id="shared_current_reading" class="form-control" onblur="fillAllCurrentReadings(this.value)">
@@ -207,6 +205,14 @@ function calcYield(input) {
 
 }
 function submitTonerRequest() {
+const requestedBy = document.getElementById("requested_by").value.trim();
+const requestType = document.getElementById("request_type").value;
+
+if (!requestedBy || !requestType) {
+    alert("Please fill both 'Requested By' and 'Request Type'.");
+    return;
+}
+
     const serial = document.getElementById("serial_number").value;
     const machine = document.getElementById("part_number").value;
 

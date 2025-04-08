@@ -2,6 +2,8 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.models import Assets, Technician
 from app.extensions import db
+from app.models import McModel  # Make sure the spelling matches your models.py exactly
+
 
 assets_add_bp = Blueprint(
     'assets_add', __name__,
@@ -60,7 +62,9 @@ def create_asset():
             pm_freq=request.form.get("pm_freq") or "Quarterly",
             install_date=request.form.get("install_date"),
             asset_code=request.form.get("asset_code"),
-            asset_status=request.form.get("asset_status") or "Active"
+            asset_status=request.form.get("asset_status") or "Active",
+            part_no=request.form.get("partnumber"),  # ✅ CORRECT FIELD NAME in model
+            department=request.form.get("department")
         )
         db.session.add(asset)
         db.session.commit()
@@ -108,3 +112,12 @@ def search_asset_description():
     )
 
     return jsonify([desc[0] for desc in descriptions])
+@assets_add_bp.route('/get_partnumber', methods=['GET'])
+def get_partnumber():
+      # Make sure MC_Model is imported
+    model_name = request.args.get('model')
+    model = McModel.query.filter_by(asset_description=model_name).first()
+
+    if model:
+        return jsonify({"part_no": model.part_no})
+    return jsonify({"part_no": ""})

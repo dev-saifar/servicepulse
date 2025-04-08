@@ -62,35 +62,78 @@
 
   <!-- Filters -->
   <form id="filterForm" method="get" class="row g-2 mb-3">
-    <div class="col-md-2">
-      <input type="text" class="form-control" name="customer" placeholder="Customer" value="{{ filters.customer }}">
-    </div>
-    <div class="col-md-2">
-      <select name="region" class="form-control">
-        <option value="">All Regions</option>
-        {% for region in regions %}
-          <option value="{{ region }}" {% if filters.region == region %}selected{% endif %}>{{ region }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-2">
-      <select name="status" class="form-control">
-        <option value="">All Status</option>
-        <option value="Pending" {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
-        <option value="Delivered" {% if filters.status == 'Delivered' %}selected{% endif %}>Delivered</option>
-        <option value="In Transit" {% if filters.status == 'In Transit' %}selected{% endif %}>In Transit</option>
-      </select>
-    </div>
-    <div class="col-md-2">
-      <input type="text" class="form-control" name="delivery_boy" placeholder="Delivery Boy" value="{{ filters.delivery_boy }}">
-    </div>
-    <div class="col-md-2">
-      <input type="date" class="form-control" name="from_date" value="{{ filters.from_date }}">
-    </div>
-    <div class="col-md-2">
-      <input type="date" class="form-control" name="to_date" value="{{ filters.to_date }}">
-    </div>
-  </form>
+
+  <!-- Customer Name -->
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="customer" placeholder="Customer Name" value="{{ filters.customer }}">
+  </div>
+
+  <!-- Serial Number -->
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="serial_number" placeholder="Serial Number" value="{{ filters.serial_number }}">
+  </div>
+
+  <!-- Asset Description -->
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="asset_description" placeholder="Asset Description" value="{{ filters.asset_description }}">
+  </div>
+
+  <!-- Region -->
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="region" placeholder="Region" value="{{ filters.region }}">
+  </div>
+
+  <!-- Status -->
+  <div class="col-md-2">
+    <select name="status" class="form-control">
+      <option value="">All Status</option>
+      <option value="Pending" {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="In Transit" {% if filters.status == 'In Transit' %}selected{% endif %}>In Transit</option>
+      <option value="Delivered" {% if filters.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+    </select>
+  </div>
+
+  <!-- Delivery Boy -->
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="delivery_boy" placeholder="Delivery Boy" value="{{ filters.delivery_boy }}">
+  </div>
+
+  <!-- FOC -->
+  <div class="col-md-2">
+    <select name="foc" class="form-control">
+      <option value="">FOC?</option>
+      <option value="Yes" {% if filters.foc == 'Yes' %}selected{% endif %}>Yes</option>
+      <option value="No" {% if filters.foc == 'No' %}selected{% endif %}>No</option>
+      <option value="Pending" {% if filters.foc == 'Pending' %}selected{% endif %}>Pending</option>
+    </select>
+  </div>
+
+  <!-- From Date -->
+  <div class="col-md-2">
+    <input type="date" class="form-control" name="from_date" value="{{ filters.from_date }}">
+  </div>
+
+  <!-- To Date -->
+  <div class="col-md-2">
+    <input type="date" class="form-control" name="to_date" value="{{ filters.to_date }}">
+  </div>
+
+  <!-- Submit Button -->
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-primary w-100">
+      <i class="fas fa-filter"></i> Filter
+    </button>
+  </div>
+
+  <!-- Reset Button -->
+  <div class="col-md-2">
+    <a href="{{ url_for('toner.toner_dashboard') }}" class="btn btn-secondary w-100">
+      <i class="fas fa-sync-alt"></i> Reset
+    </a>
+  </div>
+
+</form>
+
 
   <!-- Top Scrollbar -->
   <div id="scroll-sync-top" class="scrollbar-sync mb-2"></div>
@@ -142,6 +185,8 @@
           <th>By</th>
           <th>Type</th>
           <th>FOC</th>
+<th>TAT (hrs)</th>
+
           <th>Actions</th>
         </tr>
       </thead>
@@ -175,6 +220,17 @@
           <td>{{ r.requested_by }}</td>
           <td>{{ r.request_type }}</td>
           <td>{{ r.foc }}</td>
+          <td>
+            {% if r.tat_hours is not none %}
+              <span class="{% if r.tat_hours > 48 and r.delivery_status != 'Delivered' %}text-danger fw-bold{% endif %}">
+                {{ r.tat_hours }} <small class="text-muted">({{ r.tat_label }})</small>
+              </span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+
+
           <td>
             <a href="{{ url_for('toner.print_request', request_group=r.request_group) }}" class="btn btn-sm btn-info" title="View"><i class="fas fa-eye"></i></a>
             <a href="{{ url_for('toner.edit_request', id=r.id) }}" class="btn btn-sm btn-primary" title="Edit"><i class="fas fa-edit"></i></a>

@@ -11,7 +11,7 @@
 
     @media print {
       body {
-        font-size: 10px;
+        font-size: 12px;
         margin: 0;
         padding: 0;
       }
@@ -22,7 +22,7 @@
 
     body {
       font-family: Arial, sans-serif;
-      font-size: 10px;
+      font-size: 12px;
       margin: 10mm 5mm 5mm 5mm;
     }
 
@@ -89,7 +89,8 @@
   <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Left">
   <div style="text-align:center;">
     <h2 style="margin:0; font-weight: 800;">TONER REQUEST FORM</h2>
-    <strong style="font-size: 14px;">MFI DOCUMENT SOLUTIONS</strong><br>
+    <strong style="font-size: 14px;">{{ title_company }}</strong><br>
+
     <small>Plot No. 43, Lumumba Avenue, Kampala, Uganda</small>
   </div>
   <img src="/static/images/logo2.png" alt="Logo Right">
@@ -105,6 +106,7 @@
     <strong>Customer Name:</strong> {{ asset.customer_name }}<br>
     <strong>Region:</strong> {{ asset.region }}<br>
     <strong>Service Location:</strong> {{ asset.service_location }}<br>
+    <strong>Department:</strong> {{ asset.department or '-' }}<br>
     <strong>Billing Company:</strong> {{ asset.billing_company }}<br>
     <strong>Contract Code:</strong> {{ asset.contract }}
   </div>
@@ -189,28 +191,33 @@
 <div class="section-title">Toner Delivery History</div>
 <table width="100%">
   <thead>
-    <tr>
-      <th>Toner</th>
-      <th>Model</th>
-      <th>Life</th>
-      <th>Qty</th>
-      <th>Previous</th>
-      <th>Current</th>
-      <th>Yield</th>
-      <th>Status</th>
-      <th>Source</th>
-      <th>Remarks</th>
-      <th>Delivery</th>
-      <th>Receiver</th>
-      <th>FOC</th>
-    </tr>
-  </thead>
+  <tr>
+    <th>Date Issued</th>
+    <th>Toner</th>
+    <th>Model</th>
+    <th>Life</th>
+    <th>Qty</th>
+    <th>Previous</th>
+    <th>Current</th>
+    <th>Yield</th>
+    <th>Status</th>
+    <th>Source</th>
+    <th>Remarks</th>
+    <th>Delivery</th>
+    <th>Receiver</th>
+    <th>FOC</th>
+  </tr>
+</thead>
+
   <tbody>
     {% for h in history %}
-      {% set prev = h.previous_reading or 0 %}
+      {% set prev = h.actual_previous or 0 %}
       {% set y = (h.meter_reading or 0) - prev %}
       <tr>
-        <td>{{ h.toner_type }}</td>
+        <<tr>
+  <td>{{ h.date_issued.strftime('%Y-%m-%d') if h.date_issued else '' }}</td>
+  <td>{{ h.toner_type }}</td>
+
         <td>{{ h.toner_model }}</td>
         <td>{{ h.toner_life }}</td>
         <td>{{ h.issued_qty }}</td>

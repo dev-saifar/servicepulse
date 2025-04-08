@@ -72,6 +72,7 @@ class Assets(db.Model):
     asset_code = db.Column(db.String(50), nullable=True)
     asset_status = db.Column(db.String(50), nullable=True)
     part_no = db.Column(db.String(50), nullable=True)
+    department = db.Column(db.String(100), nullable=True)
 
 
 
@@ -199,6 +200,7 @@ class Contract(db.Model):
     billing_company = db.Column(db.String, nullable=True)
     sales_person = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
+    document_path = db.Column(db.String(255))
 
     def __repr__(self):
         return f"<Contract {self.contract_code} - {self.cust_code}>"
@@ -334,3 +336,4 @@ class McModel(db.Model):
 
     def __repr__(self):
         return f"<McModel {self.asset_description}>"
+

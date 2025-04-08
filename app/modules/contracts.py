@@ -216,7 +216,8 @@ def view_contract():
         "color_excess_charge": contract.color_excess_charge,
         "rental_charges": contract.rental_charges,
         "software_rental": contract.software_rental,
-        "durations": contract.durations
+        "durations": contract.durations,
+        "document_path": contract.document_path  # ✅ ADD THIS LINE
 
     })
 
@@ -323,7 +324,7 @@ from app.modules.contracts import contracts_bp
 import os
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads/contracts')
+UPLOAD_FOLDER = os.path.join('app', 'static', 'uploads', 'contracts')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @contracts_bp.route('/contracts/dashboard')
@@ -434,11 +435,12 @@ def upload_contract_file(contract_code):
         return jsonify({'success': False, 'error': 'No file uploaded'}), 400
 
     filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_FOLDER, f"{contract_code}_{filename}")
+    saved_filename = f"{contract_code}_{filename}"
+    filepath = os.path.join(UPLOAD_FOLDER, saved_filename)
     file.save(filepath)
 
     contract = Contract.query.filter_by(contract_code=contract_code).first()
-    contract.document_path = filepath
+    contract.document_path = f"uploads/contracts/{saved_filename}"
     db.session.commit()
     return jsonify({'success': True})
 

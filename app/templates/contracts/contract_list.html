@@ -101,6 +101,12 @@
             <div class="mb-2"><strong>Software Rental:</strong> <span id="modalSoftware"></span></div>
             <div class="mb-2"><strong>Duration (Months):</strong> <span id="modalDurations"></span></div>
             <button class="btn btn-sm btn-outline-primary mt-3" onclick="copyContractDetails()">📋 Copy All</button>
+                <div id="downloadButtonContainer" class="mt-3 d-none">
+  <a id="downloadContractBtn" class="btn btn-sm btn-outline-success" target="_blank">
+    ⬇️ Download Contract
+  </a>
+</div>
+
         </div>
 
         </div>
@@ -140,6 +146,14 @@
             document.getElementById("modalRental").innerText = data.rental_charges;
             document.getElementById("modalSoftware").innerText = data.software_rental;
             document.getElementById("modalDurations").innerText = data.durations;
+            if (data.document_path) {
+    const downloadBtn = document.getElementById("downloadContractBtn");
+    downloadBtn.href = `/static/${data.document_path}`;
+    document.getElementById("downloadButtonContainer").classList.remove("d-none");
+} else {
+    document.getElementById("downloadButtonContainer").classList.add("d-none");
+}
+
 
             // Show modal
             new bootstrap.Modal(document.getElementById('viewContractModal')).show();
@@ -275,6 +289,7 @@
         .then(() => alert("✅ Contract details copied to clipboard!"))
         .catch(() => alert("❌ Copy failed"));
 }
+
 
 </script>
 

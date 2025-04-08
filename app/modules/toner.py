@@ -5,6 +5,8 @@ from datetime import datetime
 import pandas as pd
 from flask import send_file
 import io
+from dateutil import parser
+
 
 toner_bp = Blueprint(
     'toner',  # 👈 used in url_for()
@@ -51,8 +53,8 @@ def load_toner_request(serial_number):
         flash("Asset not found", "danger")
         return redirect(url_for("toner.search_assets"))
 
-    requested_by = "Client"
-    request_type = "Alert"
+    requested_by = ""
+    request_type = ""
 
     # Determine toner types from model
     toner_model = TonerModel.query.filter_by(part_number=asset.part_no).first()
@@ -173,42 +175,49 @@ def get_request(id):
 def update_request():
     data = request.get_json()
     try:
-        req = toner_request.query.get(data['id'])
-        if not req:
+        # Fetch the original request to get the request_group
+        original_req = toner_request.query.get(data['id'])
+        if not original_req:
             return jsonify({"success": False, "error": "Request not found"})
 
-        # ✅ Core updates
-        req.toner_source = data.get('toner_source')
-        req.issued_qty = int(data.get('issued_qty', 0))
-        req.meter_reading = int(data.get('meter_reading', 0))
-        req.requested_by = data.get('requested_by')
-        req.comments = data.get('comments')
-        req.delivery_status = data.get('delivery_status')
-        req.receiver_name = data.get('receiver_name')
-        req.delivery_boy = data.get('delivery_boy')
-        req.foc = data.get('foc')
-        req.issued_by = data.get('issued_by')
-        req.request_type = data.get('request_type')
+        # Get all requests in the same group
+        group_requests = toner_request.query.filter_by(request_group=original_req.request_group).all()
 
-        # ✅ Handle delivery_date only if Delivered
-        if req.delivery_status == "Delivered":
-            delivery_date = data.get('delivery_date')
-            if delivery_date:
-                req.delivery_date = datetime.strptime(delivery_date, '%Y-%m-%dT%H:%M')
+        for req in group_requests:
+            req.toner_source = data.get('toner_source')
+            req.issued_qty = int(data.get('issued_qty', req.issued_qty))
+            req.meter_reading = int(data.get('meter_reading', req.meter_reading))
+            req.requested_by = data.get('requested_by')
+            req.comments = data.get('comments')
+            req.delivery_status = data.get('delivery_status')
+            req.receiver_name = data.get('receiver_name')
+            req.delivery_boy = data.get('delivery_boy')
+            req.foc = data.get('foc')
+            req.issued_by = data.get('issued_by')
+            req.request_type = data.get('request_type')
 
-        # ✅ Handle dispatch_time only if In Transit
-        if req.delivery_status == "In Transit":
-            dispatch_time = data.get('dispatch_time')
-            if dispatch_time:
-                req.dispatch_time = datetime.strptime(dispatch_time, '%Y-%m-%dT%H:%M')
+            # Handle delivery_date only if Delivered
+            if req.delivery_status == "Delivered":
+                delivery_date = data.get('delivery_date')
+                if delivery_date:
+                    req.delivery_date = parser.parse(delivery_date)
+
+
+
+            # Handle dispatch_time only if In Transit
+            if req.delivery_status == "In Transit":
+                dispatch_time = data.get('dispatch_time')
+                if dispatch_time:
+                    if dispatch_time:
+                        req.dispatch_time = parser.parse(dispatch_time)
 
         db.session.commit()
         return jsonify({"success": True})
 
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
-
 @toner_bp.route('/dashboard')
 def toner_dashboard():
     page = request.args.get('page', 1, type=int)
@@ -221,7 +230,10 @@ def toner_dashboard():
     region_filter = request.args.get("region", "").strip()
     status_filter = request.args.get("status", "").strip()
     delivery_boy_filter = request.args.get("delivery_boy", "").strip()
-    foc_filter = request.args.get("foc", "").strip()  # ✅ New FOC filter
+    foc_filter = request.args.get("foc", "").strip()
+
+    serial_filter = request.args.get("serial_number", "").strip()
+    asset_desc_filter = request.args.get("asset_description", "").strip()
 
     # Base query
     query = toner_request.query
@@ -239,10 +251,14 @@ def toner_dashboard():
         query = query.filter(toner_request.delivery_status == status_filter)
     if delivery_boy_filter:
         query = query.filter(toner_request.delivery_boy.ilike(f"%{delivery_boy_filter}%"))
-    if foc_filter:  # ✅ Apply FOC filter
+    if foc_filter:
         query = query.filter(toner_request.foc == foc_filter)
+    if serial_filter:
+        query = query.filter(toner_request.serial_number.ilike(f"%{serial_filter}%"))
+    if asset_desc_filter:
+        query = query.filter(toner_request.asset_description.ilike(f"%{asset_desc_filter}%"))
 
-    # Count summary before pagination
+    # Summary counts (before pagination)
     delivered_count = query.filter(toner_request.delivery_status == 'Delivered').count()
     pending_count = query.filter(toner_request.delivery_status == 'Pending').count()
     in_transit_count = query.filter(toner_request.delivery_status == 'In Transit').count()
@@ -253,11 +269,26 @@ def toner_dashboard():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     requests = pagination.items
 
-    # Distinct regions for filter dropdown
+    from datetime import datetime
+
+    now = datetime.now()
+    for r in requests:
+        if r.date_issued:
+            if r.delivery_status == "Delivered" and r.delivery_date:
+                r.tat_label = "Final"
+                r.tat_hours = round((r.delivery_date - r.date_issued).total_seconds() / 3600, 2)
+            else:
+                r.tat_label = "Live"
+                r.tat_hours = round((now - r.date_issued).total_seconds() / 3600, 2)
+        else:
+            r.tat_label = None
+            r.tat_hours = None
+
+    # Distinct region list for dropdown
     region_list = db.session.query(toner_request.region).distinct().all()
     regions = [r[0] for r in region_list if r[0]]
 
-    # ✅ Return corrected
+    # Return template with context
     return render_template(
         'toner/toner_dashboard.html',
         requests=requests,
@@ -274,10 +305,11 @@ def toner_dashboard():
             "delivery_boy": delivery_boy_filter,
             "from_date": from_date,
             "to_date": to_date,
-            "foc": foc_filter  # ✅ pass filter to template
+            "foc": foc_filter,
+            "serial_number": serial_filter,
+            "asset_description": asset_desc_filter
         }
     )
-
 
 # 📦 Load Dashboard Data
 @toner_bp.route('/dashboard_data')
@@ -389,6 +421,8 @@ def submit_bulk_request():
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
+from collections import defaultdict
+
 @toner_bp.route('/print_request/<request_group>', methods=['GET'])
 def print_request(request_group):
     requests = toner_request.query.filter_by(request_group=request_group).all()
@@ -398,15 +432,24 @@ def print_request(request_group):
 
     asset = Assets.query.filter_by(serial_number=requests[0].serial_number).first()
 
-    history = toner_request.query.filter(
+    # Get history
+    raw_history = toner_request.query.filter(
         toner_request.serial_number == requests[0].serial_number,
         toner_request.date_issued < requests[0].date_issued
-    ).order_by(toner_request.date_issued.desc()).limit(5).all()
+    ).order_by(toner_request.toner_type, toner_request.date_issued).all()
 
-    # ✅ Move title logic inside the route
+    # Calculate actual previous readings
+    history = []
+    last_reading = defaultdict(lambda: None)
+    for entry in raw_history:
+        prev = last_reading[entry.toner_type]
+        entry.actual_previous = prev if prev is not None else 0
+        last_reading[entry.toner_type] = entry.meter_reading or prev
+        history.append(entry)
+
     title_company = (
         "MFI MANAGED DOCUMENT SOLUTIONS LIMITED"
-        if requests[0].contract_code and requests[0].contract_code.upper().startswith("MDS")
+        if requests[0].billing_company and requests[0].billing_company.upper() == "MDS"
         else "MFI DOCUMENT SOLUTIONS LIMITED"
     )
 
@@ -415,8 +458,7 @@ def print_request(request_group):
                            asset=asset,
                            history=history,
                            title_company=title_company,
-                           now=datetime.now()  # ✅ Required for template to use 'now'
-                           )
+                           now=datetime.now())
 
 @toner_bp.route('/delete/<int:id>', methods=['POST'])
 def delete_request(id):

@@ -60,7 +60,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="durations" class="form-label">Duration (Months)</label>
-                    <input type="text" id="durations" name="durations" class="form-control" readonly>
+                    <input ype="hidden" id="durations" name="durations" class="form-control" readonly>
                 </div>
             </fieldset>
 
@@ -110,6 +110,10 @@
             </fieldset>
 
             <button type="button" class="btn btn-secondary" onclick="toggleAdvanced()">Show Advanced Fields</button>
+            <div class="mb-3">
+              <label for="contract_file" class="form-label">Upload Scanned Contract</label>
+              <input type="file" id="contract_file" name="contract_file" class="form-control" accept="application/pdf,image/*">
+            </div>
             <button type="submit" class="btn btn-success">Save Contract</button>
         </form>
     </div>
@@ -242,6 +246,56 @@
         let advancedSection = document.getElementById("advanced_section");
         advancedSection.style.display = advancedSection.style.display === "none" ? "block" : "none";
     }
+    document.getElementById("contract_form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    document.getElementById("cust_code_hidden").value = document.getElementById("cust_code").value;
+    document.getElementById("billing_company_hidden").value = document.getElementById("billing_company").value;
+    document.getElementById("cust_name_hidden").value = document.getElementById("cust_name").value;
+
+    let formData = new FormData(this);
+
+    fetch('/contracts/create_contract', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const contractCode = data.contract_code;
+            const fileInput = document.getElementById("contract_file");
+            const file = fileInput.files[0];
+
+            if (file) {
+                const fileForm = new FormData();
+                fileForm.append("contract_file", file);
+
+                fetch(`/contracts/contracts/upload/${contractCode}`, {
+
+                    method: "POST",
+                    body: fileForm
+                })
+                .then(fileRes => fileRes.json())
+                .then(fileData => {
+                    if (!fileData.success) {
+                        alert("Contract created, but file upload failed: " + fileData.error);
+                    }
+                })
+                .catch(() => alert("Contract created, but file upload failed due to network error."));
+            }
+
+            document.getElementById("toastBody").textContent = data.message || "Contract created successfully!";
+            const toast = new bootstrap.Toast(document.getElementById('contractToast'));
+            toast.show();
+
+            setTimeout(() => {
+                window.location.href = "/contracts/list";
+            }, 3000);
+        } else {
+            alert("❌ Error: " + data.error);
+        }
+    });
+});
+
    </script>
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
   <div id="contractToast" class="toast align-items-center text-white bg-success border-0" role="alert">

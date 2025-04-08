@@ -4,6 +4,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+<head><html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -58,6 +59,8 @@
                 <select id="contract_dropdown" class="form-select mt-2" style="display:none;"></select>
             </div>
         </div>
+
+        <input type="hidden" name="contract_expiry_date" id="contract_expiry_date">
 
         <hr class="my-4">
 
@@ -127,6 +130,8 @@
                 <label class="form-label">📅 Install Date</label>
                 <input type="date" id="install_date" name="install_date" class="form-control">
             </div>
+
+            <input type="hidden" name="last_pm_date" id="last_pm_date">
         </div>
 
         <hr class="my-4">
@@ -138,17 +143,26 @@
             <ul id="asset_desc_suggestions" class="list-group mt-1 position-absolute z-3"></ul>
         </div>
 
+        <!-- Department -->
+        <div class="mb-3">
+            <label class="form-label">🏢 Department</label>
+            <input type="text" name="department" class="form-control" placeholder="Enter department">
+        </div>
+
+        <!-- Part Number -->
+        <input type="hidden" name="partnumber" id="partnumber">
+        <div class="mb-3">
+            <label class="form-label">🧩 Part Number</label>
+            <input type="text" id="display_partnumber" class="form-control" readonly>
+        </div>
+
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary px-5 py-2"><i class="bi bi-save"></i> Save Asset</button>
         </div>
     </form>
 </div>
 
-<!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-
-
-<!-- JavaScript block remains unchanged and continues to function -->
 
 <script>
     const assetDescInput = document.querySelector("textarea[name='asset_Description']");
@@ -176,11 +190,20 @@ assetDescInput.addEventListener("input", function () {
                 item.classList.add("list-group-item", "list-group-item-action");
                 item.style.cursor = "pointer";
                 item.textContent = desc;
-                item.onclick = () => {
-                    assetDescInput.value = desc;
-                    assetDescList.innerHTML = "";
-                    assetDescList.style.display = "none";
-                };
+               item.onclick = () => {
+    assetDescInput.value = desc;
+    assetDescList.innerHTML = "";
+    assetDescList.style.display = "none";
+
+    // Auto-fetch part number from model
+    fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("partnumber").value = data.part_no || "";
+            document.getElementById("display_partnumber").value = data.part_no || "";
+        });
+};
+
                 assetDescList.appendChild(item);
             });
 
@@ -287,10 +310,12 @@ document.addEventListener("click", function (e) {
                     dropdown.style.display = "none";
                     return;
                 }
-                if (contracts.length === 1) {
-                    input.value = contracts[0].contract_code;
-                    dropdown.style.display = "none";
-                } else {
+               if (contracts.length === 1) {
+    input.value = contracts[0].contract_code;
+    document.getElementById("contract_expiry_date").value = contracts[0].contract_expiry_date;
+    dropdown.style.display = "none";
+}
+ else {
                     input.value = "";
                     dropdown.innerHTML = "";
                     contracts.forEach(contract => {
@@ -301,14 +326,21 @@ document.addEventListener("click", function (e) {
                     });
                     dropdown.style.display = "block";
                     dropdown.addEventListener("change", function () {
-                        input.value = this.value;
-                    });
+    input.value = this.value;
+    const selected = contracts.find(c => c.contract_code === this.value);
+    if (selected) {
+        document.getElementById("contract_expiry_date").value = selected.contract_expiry_date;
+    }
+});
+
                 }
             });
     }
 
     document.getElementById("asset_form").addEventListener("submit", function (e) {
         e.preventDefault();
+        document.getElementById("last_pm_date").value = document.getElementById("install_date").value;
+
         const formData = new FormData(this);
         fetch("/assets_add/create", {
             method: "POST",

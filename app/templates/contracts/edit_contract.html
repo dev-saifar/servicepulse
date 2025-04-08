@@ -27,7 +27,8 @@
 <body>
 <div class="container">
   <h2 class="text-primary text-center">✏️ Edit Contract</h2>
-  <form method="POST">
+ <form method="POST" enctype="multipart/form-data">
+
     <div class="row g-3">
       <div class="col-md-6">
         <label class="form-label">Contract Code</label>
@@ -139,6 +140,19 @@
           </div>
         </div>
       </div>
+        <div class="col-md-12">
+          <label class="form-label">Replace Scanned Contract</label>
+          <input type="file" id="contract_file" name="contract_file" class="form-control" accept="application/pdf,image/*">
+        </div>
+        {% if contract.document_path %}
+        <div class="mt-2">
+          <strong>Current Document:</strong>
+          <a href="{{ url_for('static', filename=contract.document_path) }}" target="_blank">
+  📄 View Uploaded Contract
+</a>
+
+        </div>
+        {% endif %}
 
       <div class="col-12 text-center mt-4">
         <button type="submit" class="btn btn-success">
@@ -165,6 +179,46 @@
   }
   document.getElementById('start_date').addEventListener('change', calculateDuration);
   document.getElementById('end_date').addEventListener('change', calculateDuration);
+
+  const form = document.querySelector("form");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    fetch(window.location.href, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to save contract");
+      return res.text(); // HTML response
+    })
+    .then(() => {
+      const contractCode = "{{ contract.contract_code }}";
+      const fileInput = document.getElementById("contract_file");
+      const file = fileInput.files[0];
+
+      if (file) {
+        const fileForm = new FormData();
+        fileForm.append("contract_file", file);
+
+        fetch(`/contracts/contracts/upload/${contractCode}`, {
+          method: "POST",
+          body: fileForm
+        })
+        .then(f => f.json())
+        .then(result => {
+          if (!result.success) alert("✅ Contract saved, but file upload failed.");
+          window.location.href = "/contracts/list";
+        });
+      } else {
+        window.location.href = "/contracts/list";
+      }
+    })
+    .catch(() => alert("❌ Failed to save changes"));
+  });
+
+
 </script>
 </body>
 </html>
