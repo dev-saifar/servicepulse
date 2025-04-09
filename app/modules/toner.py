@@ -436,7 +436,7 @@ def print_request(request_group):
     raw_history = toner_request.query.filter(
         toner_request.serial_number == requests[0].serial_number,
         toner_request.date_issued < requests[0].date_issued
-    ).order_by(toner_request.toner_type, toner_request.date_issued).all()
+    ).order_by(toner_request.date_issued.desc()).all()
 
     # Calculate actual previous readings
     history = []
