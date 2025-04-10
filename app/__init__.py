@@ -95,7 +95,9 @@ def create_app():
     from app.modules.contracts import contracts_bp
     from app.modules.assets_add import assets_add_bp
     from app.modules.toner import toner_bp
+    from app.modules.financial import financial_bp
 
+    app.register_blueprint(financial_bp, url_prefix='/financial')
     app.register_blueprint(toner_bp, url_prefix='/toner')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
     app.register_blueprint(technicians_bp, url_prefix='/technicians')
