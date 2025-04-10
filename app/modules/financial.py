@@ -29,7 +29,7 @@ def apply_filters(query, model):
                  getattr(model, 'created_at', None) or \
                  getattr(model, 'date', None)
 
-    min_date = datetime(2025, 1, 1)
+    min_date = datetime(2024, 10, 1)
 
     # Apply default or custom date range filter
     if date_field is not None:
