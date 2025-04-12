@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <h3>Technician Performance Dashboard</h3>
+
+  <!-- 🔍 Filter Form -->
+<form method="get" class="row g-2 align-items-end mb-4">
+  <div class="col-md-2">
+    <label class="form-label">From</label>
+    <input type="date" name="from_date" class="form-control" value="{{ filters.from_date }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">To</label>
+    <input type="date" name="to_date" class="form-control" value="{{ filters.to_date }}">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Technician</label>
+    <input list="technician-list" name="technician" class="form-control" placeholder="Type name..." value="{{ filters.technician or '' }}">
+    <datalist id="technician-list">
+      {% for tech in all_technicians %}
+        <option value="{{ tech.name }}">
+      {% endfor %}
+    </datalist>
+  </div>
+  <div class="col-md-5 text-end d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary">Apply</button>
+    <a href="{{ url_for('ticket1.technician_analytics') }}" class="btn btn-secondary">Clear</a>
+    <a href="{{ url_for('ticket1.export_technician_excel', from_date=filters.from_date, to_date=filters.to_date, technician=filters.technician) }}" class="btn btn-success">Export Table</a>
+    <button id="exportPdfBtn" type="button" class="btn btn-danger">Export Dashboard PDF</button>
+
+
+  </div>
+</form>
+
+</form>
+
+
+  <!-- 🧾 Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>Total Tickets</b><br>{{ summary.total }}</div></div>
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>Closed Tickets</b><br>{{ summary.closed }}</div></div>
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>Avg Resolution</b><br>{{ summary.avg_resolution }} hrs</div></div>
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>Warranty Pending</b><br>{{ summary.warranty_pending }}</div></div>
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>FOC Pending</b><br>{{ summary.foc_pending }}</div></div>
+    <div class="col-md-2"><div class="card p-3 shadow-sm bg-light"><b>Productivity</b><br>{{ summary.productivity }} / day</div></div>
+  </div>
+
+  <!-- 📊 Charts -->
+  <div class="row">
+    <div class="col-md-6"><canvas id="ticketTypeChart"></canvas></div>
+    <div class="col-md-6"><canvas id="resolutionChart"></canvas></div>
+  </div>
+
+  <!-- 👨 Technician Table -->
+  <div class="mt-5">
+    <h5>Technician-wise Performance</h5>
+    <table class="table table-bordered table-striped">
+      <thead class="table-light">
+        <tr>
+          <th>Technician</th><th>Open</th><th>Closed</th><th>PM</th><th>CM</th><th>MYQ</th><th>Install</th><th>Other</th>
+          <th>Avg Resolution (hrs)</th><th>Warranty Pending</th><th>FOC Pending</th><th>Productivity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in data %}
+        <tr>
+          <td>{{ t.name }}</td><td>{{ t.open }}</td><td>{{ t.closed }}</td><td>{{ t.pm }}</td><td>{{ t.cm }}</td>
+          <td>{{ t.myq }}</td><td>{{ t.install }}</td><td>{{ t.other }}</td><td>{{ t.avg_resolution }}</td>
+          <td>{{ t.warranty_pending }}</td><td>{{ t.foc_pending }}</td><td>{{ t.productivity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Chart.js (keep this at top) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Your Chart.js rendering logic -->
+<script>
+  const ticketTrend = {{ ticket_type_trend | tojson }};
+  const resolutionTrend = {{ avg_resolution_by_day | tojson }};
+  const labels = Object.keys(ticketTrend);
+  const types = labels.length ? Object.keys(ticketTrend[labels[0]]) : [];
+
+  const datasets = types.map(type => ({
+    label: type,
+    data: labels.map(day => ticketTrend[day][type] || 0),
+    fill: false,
+    tension: 0.3
+  }));
+
+  new Chart(document.getElementById('ticketTypeChart'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: 'Ticket Types Over Time' } }
+    }
+  });
+
+  new Chart(document.getElementById('resolutionChart'), {
+    type: 'line',
+    data: {
+      labels: Object.keys(resolutionTrend),
+      datasets: [{
+        label: 'Avg Resolution Time (hrs)',
+        data: Object.values(resolutionTrend),
+        borderColor: 'blue',
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { title: { display: true, text: 'Avg Resolution Time Over Time' } }
+    }
+  });
+</script>
+
+<!-- 📷 html2canvas + jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- 📄 Export PDF -->
+<script>
+  document.getElementById('exportPdfBtn').addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const dashboard = document.querySelector(".container-fluid");
+
+    html2canvas(dashboard, { scale: 2 }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save("technician_dashboard.pdf");
+    });
+  });
+</script>
+
+{% endblock %}

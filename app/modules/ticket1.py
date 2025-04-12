@@ -554,36 +554,202 @@ def ticket_dashboard_summary_page():
         trend=trend_data,
         alarming=alarming
     )
-@ticket1_bp.route('/export_alarming_cases')
-def export_alarming_cases():
+@ticket1_bp.route('/technician_analytics')
+def technician_analytics():
     from datetime import datetime, timedelta
-    now = datetime.utcnow()
-    recent_cutoff = now - timedelta(days=90)
+    from collections import defaultdict
+    from app.models import Technician, Ticket, spare_req
 
-    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
-    counter = defaultdict(list)
+    # 📅 Set default date range from 1st Jan 2025 to today
+    today = datetime.today()
+    default_from = datetime(2025, 1, 1)
 
-    for t in recent_tickets:
-        if t.serial_number:
-            counter[t.serial_number].append(t)
+    from_date_str = request.args.get('from_date') or default_from.strftime("%Y-%m-%d")
+    to_date_str = request.args.get('to_date') or today.strftime("%Y-%m-%d")
+    technician_name = request.args.get("technician")
 
-    alarming = []
-    for serial, t_list in counter.items():
-        if len(t_list) >= 3:
-            last = sorted(t_list, key=lambda x: x.created_at, reverse=True)[0]
-            alarming.append({
-                'Serial Number': serial,
-                'Customer Name': last.customer,
-                'Location': last.service_location,
-                'Region': last.region,
-                'Ticket Count': len(t_list),
-                'Last Ticket Date': last.created_at.strftime('%Y-%m-%d')
-            })
+    from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
+    to_date = datetime.strptime(to_date_str, "%Y-%m-%d")
 
-    df = pd.DataFrame(alarming)
+    # 🔍 Resolve technician name to ID
+    technician_id = None
+    if technician_name:
+        tech = Technician.query.filter(Technician.name.ilike(f"%{technician_name}%")).first()
+        if tech:
+            technician_id = tech.id
+
+    # 📊 Trends
+    ticket_type_trend = defaultdict(lambda: defaultdict(int))
+    resolution_trend = defaultdict(list)
+
+    ticket_query = Ticket.query.filter(Ticket.created_at.between(from_date, to_date))
+    if technician_id:
+        ticket_query = ticket_query.filter(Ticket.technician_id == technician_id)
+
+    all_tickets = ticket_query.all()
+    closed_tickets = []
+
+    for t in all_tickets:
+        day = t.created_at.strftime('%Y-%m-%d')
+        ticket_type_trend[day][t.call_type] += 1
+        if t.closed_at:
+            hrs = (t.closed_at - t.created_at).total_seconds() / 3600
+            resolution_trend[day].append(hrs)
+            closed_tickets.append(t)
+
+    avg_resolution_by_day = {
+        day: round(sum(times) / len(times), 1)
+        for day, times in resolution_trend.items()
+    }
+
+    # 🧮 Working Days
+    def working_days(start, end):
+        count = 0
+        while start <= end:
+            if start.weekday() < 5:
+                count += 1
+            start += timedelta(days=1)
+        return count
+
+    wd_total = working_days(from_date, to_date)
+    total_closed = len(closed_tickets)
+    avg_resolution = round(
+        sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed_tickets if t.closed_at and t.created_at) / total_closed, 1
+    ) if total_closed else 0
+    overall_productivity = round(total_closed / max(wd_total, 1), 1)
+
+    # 🛠 Warranty & FOC
+    spare_q = spare_req.query.filter(spare_req.date.between(from_date, to_date))
+    if technician_id:
+        spare_q = spare_q.filter(spare_req.technician_id == technician_id)
+
+    warranty_pending_total = spare_q.filter(spare_req.warranty_status == "Pending").count()
+    foc_pending_total = spare_q.filter(
+        (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
+    ).count()
+
+    # 👨 Technician Stats
+    if technician_id:
+        technicians = Technician.query.filter_by(id=technician_id).all()
+    else:
+        technicians = Technician.query.all()
+
+    data = []
+    for tech in technicians:
+        t_q = Ticket.query.filter(Ticket.technician_id == tech.id, Ticket.created_at.between(from_date, to_date))
+        tickets = t_q.all()
+        closed = [t for t in tickets if t.status == "Closed"]
+        open_count = len([t for t in tickets if t.status != "Closed"])
+
+        pm = sum(1 for t in tickets if t.call_type == "PM")
+        cm = sum(1 for t in tickets if t.call_type == "CM")
+        myq = sum(1 for t in tickets if t.call_type == "MYQ")
+        inst = sum(1 for t in tickets if t.call_type == "Installation")
+        other = sum(1 for t in tickets if t.call_type not in ["PM", "CM", "MYQ", "Installation"])
+
+        avg_res_time = round(
+            sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed if t.closed_at and t.created_at) / len(closed), 1
+        ) if closed else 0
+
+        spare_q = spare_req.query.filter(spare_req.technician_id == tech.id, spare_req.date.between(from_date, to_date))
+        warranty_pending = spare_q.filter(spare_req.warranty_status == "Pending").count()
+        foc_pending = spare_q.filter(
+            (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
+        ).count()
+
+        productivity = round(len(closed) / max(wd_total, 1), 1)
+
+        data.append({
+            "name": tech.name,
+            "open": open_count,
+            "closed": len(closed),
+            "pm": pm,
+            "cm": cm,
+            "myq": myq,
+            "install": inst,
+            "other": other,
+            "avg_resolution": avg_res_time,
+            "warranty_pending": warranty_pending,
+            "foc_pending": foc_pending,
+            "productivity": productivity
+        })
+
+    all_techs = Technician.query.order_by(Technician.name).all()
+
+    return render_template("ticket1/technician_analytics.html",
+        ticket_type_trend=dict(ticket_type_trend),
+        avg_resolution_by_day=avg_resolution_by_day,
+        data=data,
+        filters={"from_date": from_date_str, "to_date": to_date_str, "technician": technician_name},
+        summary={
+            "total": len(all_tickets),
+            "closed": total_closed,
+            "avg_resolution": avg_resolution,
+            "warranty_pending": warranty_pending_total,
+            "foc_pending": foc_pending_total,
+            "productivity": overall_productivity
+        },
+        all_technicians=all_techs
+    )
+@ticket1_bp.route('/export_technician_excel')
+def export_technician_excel():
+    import pandas as pd
+    from flask import send_file
+    from io import BytesIO
+
+    # Reuse your analytics logic to rebuild `data` list
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+    technician = request.args.get('technician')
+
+    # 👇 Reuse the logic from technician_analytics to get `data`
+    # You can refactor data generation to a shared function if preferred
+
+    # Placeholder - replace this with real technician summary logic
+    data = [
+        {"Technician": "John", "Open": 2, "Closed": 5, "PM": 2, "CM": 1, "MYQ": 1, "Install": 0, "Other": 1,
+         "Avg Resolution": 2.5, "Warranty Pending": 1, "FOC Pending": 0, "Productivity": 1.2}
+    ]
+
+    df = pd.DataFrame(data)
     output = BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Alarming Cases")
-
+    df.to_excel(output, index=False, sheet_name='Technician Performance')
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name="alarming_cases.xlsx")
+    return send_file(output, as_attachment=True, download_name='technician_performance.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@ticket1_bp.route('/export_technician_pdf')
+def export_technician_pdf():
+    from flask import render_template, make_response
+    from xhtml2pdf import pisa
+    from io import BytesIO
+    from datetime import datetime
+
+    from_date = request.args.get('from_date') or '2025-01-01'
+    to_date = request.args.get('to_date') or datetime.today().strftime("%Y-%m-%d")
+    technician = request.args.get('technician')
+
+    # 👇 Replace this with your real data generation logic
+    data = [
+        {"name": "John Doe", "open": 3, "closed": 5, "pm": 2, "cm": 1, "myq": 1, "install": 0, "other": 1,
+         "avg_resolution": 2.5, "warranty_pending": 1, "foc_pending": 0, "productivity": 1.2}
+    ]
+    summary = {
+        "total": 8, "closed": 5, "avg_resolution": 2.5,
+        "warranty_pending": 1, "foc_pending": 0, "productivity": 1.2
+    }
+    filters = {"from_date": from_date, "to_date": to_date, "technician": technician}
+
+    html = render_template("ticket1/technician_export_pdf.html", data=data, summary=summary, filters=filters)
+
+    result = BytesIO()
+    pisa_status = pisa.CreatePDF(html, dest=result)
+
+    if pisa_status.err:
+        return f"PDF generation failed: {pisa_status.err}"
+
+    result.seek(0)
+    response = make_response(result.read())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = "attachment; filename=technician_dashboard.pdf"
+    return response
