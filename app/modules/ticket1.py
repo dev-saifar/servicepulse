@@ -753,3 +753,37 @@ def export_technician_pdf():
     response.headers["Content-Type"] = "application/pdf"
     response.headers["Content-Disposition"] = "attachment; filename=technician_dashboard.pdf"
     return response
+@ticket1_bp.route('/export_alarming_cases')
+def export_alarming_cases():
+    from io import BytesIO
+    import pandas as pd
+
+    now = datetime.utcnow()
+    recent_cutoff = now - timedelta(days=90)
+    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
+
+    from collections import defaultdict
+    counter = defaultdict(list)
+    for t in recent_tickets:
+        if t.serial_number:
+            counter[t.serial_number].append(t)
+
+    alarming = []
+    for serial, t_list in counter.items():
+        if len(t_list) >= 3:
+            last = sorted(t_list, key=lambda x: x.created_at, reverse=True)[0]
+            alarming.append({
+                "Serial Number": serial,
+                "Customer Name": last.customer,
+                "Location": last.service_location,
+                "Region": last.region,
+                "Ticket Count": len(t_list),
+                "Last Ticket Date": last.created_at.strftime('%Y-%m-%d')
+            })
+
+    df = pd.DataFrame(alarming)
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name="alarming_cases.xlsx")

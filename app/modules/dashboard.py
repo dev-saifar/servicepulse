@@ -108,3 +108,7 @@ def dashboard_data():
             "daily_tickets": performer_of_day.daily_tickets if performer_of_day else 0
         }
     })
+@dashboard_bp.route('/rotate')
+def dashboard_rotator():
+    return render_template('dashboard_rotator.html')
+

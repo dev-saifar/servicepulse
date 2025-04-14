@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .sidebar {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+</style>
+
+<iframe id="dashboardFrame" src=""></iframe>
+
+<script>
+    const dashboards = [
+        "{{ url_for('dashboard.index') }}",  // Technician Dashboard
+        "{{ url_for('ticket1.technician_analytics') }}",  // Technician Analytics
+        "{{ url_for('contracts.contract_dashboard_page') }}",  // Contracts Dashboard
+        "{{ url_for('toner.delivery_dashboard') }}",  // Toner Delivery Dashboard
+        "{{ url_for('ticket1.ticket_dashboard_summary_page') }}"  // Ticket Dashboard
+    ];
+
+    let index = 0;
+    const interval = 45000; // 45 seconds per dashboard
+
+    function rotateDashboard() {
+        document.getElementById("dashboardFrame").src = dashboards[index];
+        index = (index + 1) % dashboards.length;
+    }
+
+    rotateDashboard();
+    setInterval(rotateDashboard, interval);
+</script>
+{% endblock %}
