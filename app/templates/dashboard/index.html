@@ -43,7 +43,7 @@
                                 <p class="mb-1"><small>Status: {{ tech.status }}</small></p>
                                 <p class="mb-0"><small>Tickets Today: {{ tech.tickets_handled_today }}</small></p>
                                 {% if tech.name in exceeded_time_techs %}
-                                <div class="text-warning small mt-1">⚠ Exceeded Estimated Time!</div>
+                                <div class="text-warning small mt-1 text-truncate" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="⚠ Exceeded Estimated Time!">⚠ Exceeded Estimated Time!</div>
                                 {% endif %}
                             </div>
                         </div>
