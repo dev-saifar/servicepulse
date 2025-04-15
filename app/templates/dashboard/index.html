@@ -4,29 +4,28 @@
 <body class="bg-dark text-white">
 <div class="container-fluid py-4">
     <h2 class="mb-4 text-center text-info">
-        <i class="bi bi-person-badge"></i> Technician Availability
+        <i class="bi bi-person-badge"></i> Technician Dashboard
     </h2>
 
     <div class="row">
         <div class="col-lg-3 col-md-4 d-flex flex-column gap-4">
-            <!-- Chart Box -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
                 <h5 class="mb-3">📊 Ticket Status</h5>
-                <canvas id="ticketChart" class="w-100" height="180"></canvas>
+                <div class="position-relative" style="height: 180px;">
+                    <canvas id="ticketChart" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                </div>
             </div>
 
-            <!-- Performer of the Month -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
                 <h6>🎖️ Performer of the Month</h6>
                 <p class="highlight">{{ performer_of_month.name }}</p>
-                <p>Tickets: {{ performer_of_month.total_tickets }}</p>
+                <p>Tickets Handled: {{ performer_of_month.total_tickets }}</p>
             </div>
 
-            <!-- Performer of the Day -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
                 <h6>🏆 Performer of the Day</h6>
                 <p class="highlight">{{ performer_of_day.name }}</p>
-                <p>Tickets Today: {{ performer_of_day.daily_tickets }}</p>
+                <p>Tickets Handled Today: {{ performer_of_day.daily_tickets }}</p>
             </div>
         </div>
 
@@ -37,22 +36,14 @@
                 </h4>
                 <div class="row justify-content-center">
                     {% for tech in technicians %}
-                    <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                        <div class="card technician-box shadow-sm bg-light text-dark rounded-4 border-0 h-100">
-                            <div class="card-body d-flex flex-column justify-content-between">
-                                <div>
-                                    <h5 class="mb-1 fw-bold text-capitalize">{{ tech.name }}</h5>
-                                    <p class="mb-0 small text-muted">{{ tech.email }}</p>
-                                </div>
-                                <div class="mt-2 d-flex justify-content-between align-items-center">
-                                    <span class="badge fs-6 px-3 py-2 bg-{{ 'success' if tech.status == 'Free' else 'danger' }}">
-                                        <i class="bi {{ 'bi-check-circle' if tech.status == 'Free' else 'bi-x-circle' }} me-1"></i>
-                                        {{ tech.status }}
-                                    </span>
-                                    <small class="text-muted">🎟 {{ tech.tickets_handled_today }}</small>
-                                </div>
+                    <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-3">
+                        <div class="card technician-box text-white text-center {{ 'free-box' if tech.status == 'Free' else 'busy-box' }} h-100">
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-truncate" title="{{ tech.name }}" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ tech.name }}</h6>
+                                <p class="mb-1"><small>Status: {{ tech.status }}</small></p>
+                                <p class="mb-0"><small>Tickets Today: {{ tech.tickets_handled_today }}</small></p>
                                 {% if tech.name in exceeded_time_techs %}
-                                    <div class="text-warning small mt-2 text-center">⚠ Exceeded Estimated Time!</div>
+                                <div class="text-warning small mt-1">⚠ Exceeded Estimated Time!</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -64,7 +55,6 @@
     </div>
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let ticketChartInstance = null;
@@ -83,7 +73,7 @@
                     labels: ["Completed", "Pending"],
                     datasets: [{
                         data: [data.completed_tickets, data.pending_tickets],
-                        backgroundColor: ["#198754", "#dc3545"]
+                        backgroundColor: ["#28a745", "#dc3545"]
                     }]
                 },
                 options: {
@@ -96,8 +86,8 @@
         .catch(error => console.error("Dashboard load failed:", error));
     }
 
-    updateDashboard();
     setInterval(updateDashboard, 60000);
+    updateDashboard();
 </script>
 
 <style>
@@ -105,20 +95,17 @@
         background-color: #f8f9fa;
         font-size: 1.2rem;
     }
+    .highlight { font-weight: bold; color: #007BFF; }
     .technician-box {
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
         transition: transform 0.3s ease;
-        padding: 15px;
-        background: white;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     }
     .technician-box:hover {
         transform: scale(1.05);
     }
     .free-box { background: #28a745; color: white; }
     .busy-box { background: #dc3545; color: white; }
-    .highlight { font-weight: bold; color: #007BFF; }
 </style>
-
     <script>
         let ticketChartInstance = null;
 
