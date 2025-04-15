@@ -36,7 +36,8 @@
                 </h4>
                 <div class="row justify-content-center">
                     {% for tech in technicians %}
-                    <div class="col-lg-2 col-md-3 col-sm-4 col-6 mb-3">
+                    <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6 mb-3" style="flex: 0 0 20%; max-width: 20%;">
+
                         <div class="card technician-box text-white text-center {{ 'free-box' if tech.status == 'Free' else 'busy-box' }} h-100">
                             <div class="card-body p-2">
                                 <h6 class="card-title text-truncate" title="{{ tech.name }}" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ tech.name }}</h6>

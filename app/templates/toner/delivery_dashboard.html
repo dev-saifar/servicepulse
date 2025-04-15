@@ -10,6 +10,42 @@
     background-color: #f8f9fa;
   }
 </style>
+<!-- Summary Cards -->
+<!-- Global Toner Summary -->
+<div class="row text-center mb-4">
+  <div class="col-md-3 mb-2">
+    <div class="card border-dark shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title text-dark"><i class="fas fa-layer-group"></i> Total Delivery Attempts</h6>
+        <h4>{{ stats | length }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-2">
+    <div class="card border-success shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title text-success"><i class="fas fa-check-circle"></i> Delivered Today</h6>
+        <h4>{{ stats | sum(attribute='delivered_today') }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-2">
+    <div class="card border-warning shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title text-warning"><i class="fas fa-hourglass-half"></i> Pending</h6>
+        <h4>{{ stats | sum(attribute='pending') }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-2">
+    <div class="card border-info shadow-sm">
+      <div class="card-body">
+        <h6 class="card-title text-info"><i class="fas fa-truck"></i> In Transit</h6>
+        <h4>{{ stats | sum(attribute='in_transit') }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="container mt-4">
   <h4>Delivery Team Performance</h4>

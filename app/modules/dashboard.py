@@ -111,4 +111,3 @@ def dashboard_data():
 @dashboard_bp.route('/rotate')
 def dashboard_rotator():
     return render_template('dashboard_rotator.html')
-
