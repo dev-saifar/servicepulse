@@ -1,24 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container py-4">
+<body class="bg-dark text-white">
+<div class="container-fluid py-4">
     <h2 class="mb-4 text-center text-info">
         <i class="bi bi-person-badge"></i> Technician Availability
     </h2>
 
     <div class="row">
         <div class="col-lg-3 col-md-4 d-flex flex-column gap-4">
+            <!-- Chart Box -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
-                <h5>📊 Ticket Status</h5>
-                <div class="position-relative" style="height: 220px">
-                    <canvas id="ticketChart" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
-                </div>
+                <h5 class="mb-3">📊 Ticket Status</h5>
+                <canvas id="ticketChart" class="w-100" height="180"></canvas>
             </div>
+
+            <!-- Performer of the Month -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
                 <h6>🎖️ Performer of the Month</h6>
                 <p class="highlight">{{ performer_of_month.name }}</p>
                 <p>Tickets: {{ performer_of_month.total_tickets }}</p>
             </div>
+
+            <!-- Performer of the Day -->
             <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
                 <h6>🏆 Performer of the Day</h6>
                 <p class="highlight">{{ performer_of_day.name }}</p>
@@ -84,7 +88,7 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
                     plugins: { legend: { position: 'bottom' } }
                 }
             });
@@ -114,6 +118,7 @@
     .busy-box { background: #dc3545; color: white; }
     .highlight { font-weight: bold; color: #007BFF; }
 </style>
+
     <script>
         let ticketChartInstance = null;
 
