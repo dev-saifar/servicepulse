@@ -176,8 +176,23 @@ def edit_asset(asset_id):
 
     if request.method == 'POST':
         try:
-            for field in request.form:
-                setattr(asset, field, request.form[field])
+            asset.account_code = request.form.get('account_code')
+            asset.customer_name = request.form.get('customer_name')
+            asset.serial_number = request.form.get('serial_number')
+            asset.service_location = request.form.get('service_location')
+            asset.region = request.form.get('region')
+            asset.technician_name = request.form.get('technician_name')
+            asset.technician_email = request.form.get('technician_email')
+            asset.contract = request.form.get('contract')
+            asset.asset_Description = request.form.get('asset_Description')
+            asset.department = request.form.get('department')
+            asset.part_no = request.form.get('partnumber')
+            asset.pm_freq = request.form.get('pm_freq')
+            asset.asset_status = request.form.get('asset_status')
+
+            # Convert and set install_date
+            install_date = request.form.get('install_date')
+            asset.install_date = install_date if install_date else None
 
             db.session.commit()
             flash("Asset updated successfully!", "success")

@@ -4,71 +4,254 @@
 <div class="container mt-4">
     <h2 class="mb-4">Edit Asset</h2>
 
-    <!-- Flash Messages -->
+    <div id="flash-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                <div class="alert alert-{{ category }} alert-dismissible fade show fade-out" role="alert">
+                    <strong>{{ category.capitalize() }}:</strong> {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <!-- Edit Form -->
     <div class="card p-4 shadow">
         <form method="POST">
-            <div class="form-group">
-                <label for="account_code">Account Code:</label>
-                <input type="text" class="form-control" name="account_code" id="account_code" value="{{ asset.account_code }}">
+            <h5 class="text-primary">🔹 Basic Info</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="account_code">Account Code:</label>
+                        <input type="text" class="form-control" name="account_code" id="account_code" value="{{ asset.account_code }}">
+                    </div>
+                    <div class="form-group position-relative" style="z-index: 2;">
+                        <label for="customer_name">Customer Name:</label>
+                        <input type="text" class="form-control" name="customer_name" id="customer_name" value="{{ asset.customer_name }}" autocomplete="off" required>
+                        <ul id="customer_suggestions" class="list-group position-absolute w-100 mt-1 bg-white border shadow-sm" style="z-index: 10; max-height: 200px; overflow-y: auto;"></ul>
+                    </div>
+                    <div class="form-group">
+                        <label for="serial_number">Serial Number:</label>
+                        <input type="text" class="form-control" name="serial_number" id="serial_number" value="{{ asset.serial_number }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="service_location">Service Location:</label>
+                        <input type="text" class="form-control" name="service_location" id="service_location" value="{{ asset.service_location }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="region">Region:</label>
+                        <input type="text" class="form-control" name="region" id="region" value="{{ asset.region }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Department:</label>
+                        <input type="text" class="form-control" name="department" id="department" value="{{ asset.department }}">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="customer_name">Customer Name:</label>
-                <input type="text" class="form-control" name="customer_name" id="customer_name" value="{{ asset.customer_name }}" required>
+            <h5 class="text-primary mt-4">🔹 Technician Info</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="technician_name">Technician Name:</label>
+                        <select class="form-select" name="technician_name" id="technician_name"></select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="technician_email">Technician Email:</label>
+                        <input type="email" class="form-control" name="technician_email" id="technician_email" value="{{ asset.technician_email }}">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="serial_number">Serial Number:</label>
-                <input type="text" class="form-control" name="serial_number" id="serial_number" value="{{ asset.serial_number }}" required>
+            <h5 class="text-primary mt-4">🔹 Contract & PM Info</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="contract">Contract:</label>
+                        <input type="text" class="form-control" name="contract" id="contract" value="{{ asset.contract }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="install_date">Install Date:</label>
+                        <input type="date" class="form-control" name="install_date" id="install_date" value="{{ asset.install_date }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="pm_freq">PM Frequency:</label>
+                        <input type="text" class="form-control" name="pm_freq" id="pm_freq" value="{{ asset.pm_freq }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="asset_status">Asset Status:</label>
+                        <select class="form-control" name="asset_status" id="asset_status">
+                            <option value="Active" {{ 'selected' if asset.asset_status == 'Active' }}>Active</option>
+                            <option value="Inactive" {{ 'selected' if asset.asset_status == 'Inactive' }}>Inactive</option>
+                            <option value="Under Maintenance" {{ 'selected' if asset.asset_status == 'Under Maintenance' }}>Under Maintenance</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="service_location">Service Location:</label>
-                <input type="text" class="form-control" name="service_location" id="service_location" value="{{ asset.service_location }}">
+            <h5 class="text-primary mt-4">🔹 Asset Details</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group position-relative">
+                        <label for="asset_Description">Asset Description:</label>
+                        <input type="text" class="form-control" name="asset_Description" id="asset_Description" value="{{ asset.asset_Description }}">
+                        <ul id="asset_desc_suggestions" class="list-group mt-1 position-absolute z-3" style="max-height: 200px; overflow-y: auto;"></ul>
+                        <input type="text" id="display_partnumber" class="form-control mt-2" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="partnumber">Part Number:</label>
+                        <input type="text" class="form-control" name="partnumber" id="partnumber" value="{{ asset.part_no }}">
+                    </div>
+
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="region">Region:</label>
-                <input type="text" class="form-control" name="region" id="region" value="{{ asset.region }}">
+            <div class="sticky-bottom bg-white py-3 text-end border-top mt-4">
+                <button type="submit" class="btn btn-success">💾 Update Asset</button>
+                <a href="{{ url_for('assets.index') }}" class="btn btn-secondary">Cancel</a>
             </div>
-
-            <div class="form-group">
-                <label for="technician_name">Technician Name:</label>
-                <input type="text" class="form-control" name="technician_name" id="technician_name" value="{{ asset.technician_name }}">
-            </div>
-
-            <div class="form-group">
-                <label for="technician_email">Technician Email:</label>
-                <input type="email" class="form-control" name="technician_email" id="technician_email" value="{{ asset.technician_email }}">
-            </div>
-
-            <div class="form-group">
-                <label for="contract">Contract:</label>
-                <input type="text" class="form-control" name="contract" id="contract" value="{{ asset.contract }}">
-            </div>
-
-            <div class="form-group">
-                <label for="asset_Description">Asset Description:</label>
-                <input type="text" class="form-control" name="asset_Description" id="asset_Description" value="{{ asset.asset_Description }}">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Update Asset</button>
-            <a href="{{ url_for('assets.index') }}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    // Auto-dismiss flash messages after 4 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.fade-out').forEach(el => {
+            el.classList.remove('show');
+            el.classList.add('fade');
+        });
+    }, 4000);
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    fetch("/assets_add/get_technicians")
+        .then(res => res.json())
+        .then(techs => {
+            const techSelect = document.getElementById("technician_name");
+            techSelect.innerHTML = "";
+            techs.forEach(t => {
+                const opt = document.createElement("option");
+                opt.value = t;
+                opt.textContent = t;
+                if (t === "{{ asset.technician_name }}") opt.selected = true;
+                techSelect.appendChild(opt);
+            });
+        });
+
+    document.getElementById("technician_name").addEventListener("change", function () {
+        const name = this.value;
+        fetch(`/assets_add/get_technician_email?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("technician_email").value = data.email || "";
+            });
+    });
+
+    const customerInput = document.getElementById("customer_name");
+    const customerList = document.getElementById("customer_suggestions");
+
+    customerInput.addEventListener("input", () => {
+        const query = customerInput.value.trim();
+        if (query.length < 2) return customerList.innerHTML = "";
+
+        fetch(`/assets_add/search_customer?query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(customers => {
+                customerList.innerHTML = "";
+                customers.forEach(c => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item list-group-item-action";
+                    li.textContent = `${c.cust_name} (${c.billing_company})`;
+                    li.onclick = () => {
+                        customerInput.value = c.cust_name;
+                        customerList.innerHTML = "";
+                        document.getElementById("account_code").value = c.cust_code;
+
+                        fetchContractsForCustomer(c.cust_name);
+                    };
+                    customerList.appendChild(li);
+                });
+            });
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!customerInput.contains(e.target)) customerList.innerHTML = "";
+    });
+
+    function fetchContractsForCustomer(cust_name) {
+        fetch(`/assets_add/get_contracts_by_customer?cust_name=${encodeURIComponent(cust_name)}`)
+            .then(res => res.json())
+            .then(contracts => {
+                const contractInput = document.getElementById("contract");
+                if (contracts.length === 1) {
+                    contractInput.value = contracts[0].contract_code;
+                } else if (contracts.length > 1) {
+                    contractInput.value = "";
+                    const dropdown = document.createElement("select");
+                    dropdown.className = "form-select mt-2";
+                    dropdown.id = "contract_dropdown";
+                    contracts.forEach(c => {
+                        const opt = document.createElement("option");
+                        opt.value = c.contract_code;
+                        opt.textContent = `${c.contract_code} (Exp: ${c.contract_expiry_date})`;
+                        dropdown.appendChild(opt);
+                    });
+                    contractInput.parentNode.appendChild(dropdown);
+                    dropdown.addEventListener("change", () => {
+                        contractInput.value = dropdown.value;
+                    });
+                }
+            });
+    }
+
+    const descInput = document.getElementById("asset_Description");
+    const descList = document.getElementById("asset_desc_suggestions");
+
+    descInput.addEventListener("input", () => {
+        const query = descInput.value.trim();
+        if (query.length < 2) return descList.style.display = "none";
+
+        fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(descriptions => {
+                descList.innerHTML = "";
+                descriptions.forEach(desc => {
+                    const item = document.createElement("li");
+                    item.className = "list-group-item list-group-item-action";
+                    item.style.cursor = "pointer";
+                    item.textContent = desc;
+                    item.onclick = () => {
+                        descInput.value = desc;
+                        descList.innerHTML = "";
+                        fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                document.getElementById("display_partnumber").value = data.part_no || "";
+document.getElementById("partnumber").value = data.part_no || "";
+
+                            });
+                    };
+                    descList.appendChild(item);
+                });
+                descList.style.display = "block";
+            });
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!descInput.contains(e.target)) descList.style.display = "none";
+    });
+
+});
+</script>
 {% endblock %}
