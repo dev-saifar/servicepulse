@@ -615,10 +615,12 @@ def delivery_dashboard():
         ).all()
         for r in day_records:
             trend_data[r.delivery_boy][6 - i] += 1
+    today_request_count = toner_request.query.filter(func.date(toner_request.date_issued) == today).count()
 
     return render_template(
         'toner/delivery_dashboard.html',
         stats=stats,
         trend_labels=trend_labels,
-        trend_data=dict(trend_data)
+        trend_data=dict(trend_data),
+    today_request_count = today_request_count
     )
