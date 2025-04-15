@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h3 class="my-3">📖 PM History</h3>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <thead class="table-dark">
+    <tr>
+        <th>Serial Number</th>
+        <th>Customer</th>
+        <th>Location</th>
+        <th>Region</th>
+        <th>Scheduled</th>
+        <th>Performed</th>
+        <th>Technician</th>
+        <th>Remarks</th>
+    </tr>
+</thead>
+<tbody>
+    {% for r in records %}
+    <tr>
+        <td>{{ r.serial_number }}</td>
+        <td>{{ r.customer_name }}</td>
+        <td>{{ r.service_location }}</td>
+        <td>{{ r.region }}</td>
+        <td>{{ r.scheduled_date.strftime("%Y-%m-%d") }}</td>
+        <td>{{ r.performed_date.strftime("%Y-%m-%d") }}</td>
+        <td>{{ r.technician_name }}</td>
+        <td>{{ r.remarks }}</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+
+    </table>
+</div>
+{% endblock %}

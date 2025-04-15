@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h3 class="my-3">✅ Complete Preventive Maintenance</h3>
+
+    <form method="POST">
+        <div class="mb-3">
+            <label>Serial Number:</label>
+            <input type="text" name="serial_number" class="form-control" value="{{ asset.serial_number }}" readonly>
+        </div>
+        <div class="mb-3">
+            <label>Scheduled Date:</label>
+            <input type="date" name="scheduled_date" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Performed Date:</label>
+            <input type="date" name="performed_date" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Technician:</label>
+            <input type="text" name="technician_name" class="form-control" value="{{ asset.technician_name }}">
+        </div>
+        <div class="mb-3">
+            <label>Remarks:</label>
+            <textarea name="remarks" class="form-control" rows="4"></textarea>
+        </div>
+        <button class="btn btn-success">Submit</button>
+        <a href="{{ url_for('assets.pm_dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

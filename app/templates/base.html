@@ -160,8 +160,28 @@
                 <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard') }}">
                     <i class="fas fa-ticket-alt me-2"></i> Tickets
                 </a>
-            </li>
+                       <!-- ✅ New: Preventive Maintenance Menu -->
             <li class="nav-item">
+                <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#pmSubMenu" aria-expanded="false">
+                    <i class="fas fa-tools me-2"></i> Preventive Maintenance
+                </a>
+                <div class="collapse ps-2" id="pmSubMenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('assets.pm_dashboard') }}">
+                                <i class="bi bi-speedometer2 me-1"></i> PM Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('assets.pm_history') }}">
+                                <i class="bi bi-clock-history me-1"></i> PM History
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+                       <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('report.report_dashboard') }}">
                     <i class="fas fa-chart-bar me-2"></i> Report
                 </a>

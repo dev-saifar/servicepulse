@@ -5,6 +5,7 @@ import io
 from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models import Assets
+from app.models import PreventiveMaintenance
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.extensions import db
@@ -425,4 +426,166 @@ def export_customers():
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+from datetime import datetime, timedelta
+from flask import render_template
 
+
+@assets_bp.route('/pm_dashboard')
+def pm_dashboard():
+    from app.models import Assets, Ticket
+    from sqlalchemy import func
+    today = datetime.today().date()
+
+    # Filters from request
+    filters = {
+        "customer_name": request.args.get("customer_name"),
+        "service_location": request.args.get("service_location"),
+        "region": request.args.get("region"),
+        "technician_name": request.args.get("technician_name")
+    }
+
+    # Subquery to get serials with active PM tickets
+    active_pm_subq = db.session.query(Ticket.serial_number).filter(
+        Ticket.call_type == 'PM',
+        Ticket.status.in_(['Open', 'In Process'])
+    ).distinct().subquery()
+
+    # Base query with filters and excluding active PMs
+    query = Assets.query.filter(~Assets.serial_number.in_(active_pm_subq))
+
+    for field, value in filters.items():
+        if value:
+            query = query.filter(getattr(Assets, field).ilike(f"%{value}%"))
+
+    # Only fetch assets with both last_pm_date and pm_freq
+    query = query.filter(Assets.last_pm_date.isnot(None), Assets.pm_freq.isnot(None))
+
+    due_assets = []
+    for asset in query.all():
+        try:
+            last_pm = datetime.strptime(asset.last_pm_date, '%Y-%m-%d').date()
+            freq_days = int(asset.pm_freq.split()[0])
+            next_due = last_pm + timedelta(days=freq_days)
+            if next_due <= today:
+                due_assets.append({
+                    "serial_number": asset.serial_number,
+                    "customer_name": asset.customer_name,
+                    "next_due": next_due.strftime('%Y-%m-%d'),
+                    "technician_name": asset.technician_name,
+                    "service_location": asset.service_location,
+                    "region": asset.region,
+                    "asset_description": asset.asset_Description,
+                    "contract": asset.contract
+                })
+        except Exception as e:
+            print(f"Error processing asset {asset.serial_number}: {e}")
+            continue
+
+    return render_template("assets/pm_dashboard.html", due_assets=due_assets)
+
+@assets_bp.route('/pm_complete/<serial_number>', methods=['GET', 'POST'])
+def complete_pm(serial_number):
+    from app.models import PreventiveMaintenance, Assets
+    asset = Assets.query.filter_by(serial_number=serial_number).first_or_404()
+
+    if request.method == 'POST':
+        scheduled_date = request.form.get('scheduled_date') or datetime.utcnow().date()
+        performed_date = request.form.get('performed_date') or datetime.utcnow().date()
+        technician_name = request.form.get('technician_name')
+        remarks = request.form.get('remarks')
+
+        # Save record
+        pm = PreventiveMaintenance(
+            serial_number=serial_number,
+            scheduled_date=scheduled_date,
+            performed_date=performed_date,
+            technician_name=technician_name,
+            remarks=remarks,
+            status="Completed"
+        )
+        db.session.add(pm)
+
+        # ✅ Update asset last_pm_date
+        asset.last_pm_date = performed_date.strftime('%Y-%m-%d')
+        db.session.commit()
+
+        flash("✅ PM record saved and asset updated.", "success")
+        return redirect(url_for('assets.pm_dashboard'))
+
+    return render_template('assets/pm_complete.html', asset=asset)
+
+@assets_bp.route('/pm_history')
+def pm_history():
+    history = PreventiveMaintenance.query.order_by(
+        PreventiveMaintenance.performed_date.desc()
+    ).all()
+
+    # Enhance each record with asset details
+    enriched = []
+    for r in history:
+        asset = Assets.query.filter_by(serial_number=r.serial_number).first()
+        enriched.append({
+            "serial_number": r.serial_number,
+            "scheduled_date": r.scheduled_date,
+            "performed_date": r.performed_date,
+            "technician_name": r.technician_name,
+            "remarks": r.remarks,
+            "customer_name": asset.customer_name if asset else '',
+            "service_location": asset.service_location if asset else '',
+            "region": asset.region if asset else ''
+        })
+
+    return render_template("assets/pm_history.html", records=enriched)
+
+
+@assets_bp.route('/export_pm_filtered')
+def export_pm_filtered():
+    from app.models import Ticket, Assets
+    import pandas as pd
+    from io import BytesIO
+
+    filters = {
+        "customer_name": request.args.get("customer_name"),
+        "service_location": request.args.get("service_location"),
+        "region": request.args.get("region"),
+        "technician_name": request.args.get("technician_name")
+    }
+
+    query = Assets.query
+    for field, value in filters.items():
+        if value:
+            query = query.filter(getattr(Assets, field).ilike(f"%{value}%"))
+
+    today = datetime.today().date()
+    rows = []
+
+    for asset in query.all():
+        try:
+            if asset.last_pm_date and asset.pm_freq:
+                last_pm = datetime.strptime(asset.last_pm_date, '%Y-%m-%d').date()
+                freq_days = int(asset.pm_freq.split()[0])
+                next_due = last_pm + timedelta(days=freq_days)
+
+                existing_pm = Ticket.query.filter_by(serial_number=asset.serial_number, call_type='PM')\
+                    .filter(Ticket.status.in_(['Open', 'In Process'])).first()
+
+                if next_due <= today and not existing_pm:
+                    rows.append({
+                        "Serial Number": asset.serial_number,
+                        "Customer": asset.customer_name,
+                        "Next Due": next_due,
+                        "Technician": asset.technician_name,
+                        "Location": asset.service_location,
+                        "Region": asset.region,
+                        "Asset Description": asset.asset_Description
+                    })
+        except:
+            continue
+
+    df = pd.DataFrame(rows)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name="Pending PM")
+
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name="pending_pm_filtered.xlsx")

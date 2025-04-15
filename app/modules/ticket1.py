@@ -54,10 +54,28 @@ def edit_ticket(ticket_id):
             ticket.mr_color = request.form['mr_color']
 
             new_status = request.form['status']
+            previous_status = ticket.status  # Save old status first
 
-            # ✅ Log closed timestamp when status changes to "Closed"
-            if new_status == "Closed" and ticket.status != "Closed":
+            ticket.status = new_status  # ✅ Update first before condition
+
+            if new_status == "Closed" and previous_status != "Closed":
                 ticket.closed_at = datetime.utcnow()
+
+                if ticket.call_type == "PM":
+                    from app.models import Assets, PreventiveMaintenance
+                    asset = Assets.query.filter_by(serial_number=ticket.serial_number).first()
+                    if asset:
+                        asset.last_pm_date = datetime.utcnow().strftime('%Y-%m-%d')
+
+                        pm_entry = PreventiveMaintenance(
+                            serial_number=ticket.serial_number,
+                            scheduled_date=ticket.created_at.date(),
+                            performed_date=ticket.closed_at.date(),
+                            status="Completed",
+                            remarks=ticket.action_taken or "PM done",
+                            technician_name=ticket.technician.name if ticket.technician else "Unassigned"
+                        )
+                        db.session.add(pm_entry)
 
             ticket.status = new_status
 
@@ -141,6 +159,7 @@ def new_ticket():
     technicians = Technician.query.all()
     return render_template('ticket1/new_ticket.html', technicians=technicians)
 
+from datetime import date
 
 @ticket1_bp.route('/dashboard', methods=['GET'])
 
@@ -186,7 +205,24 @@ def ticket_dashboard():
 
     tickets = query.order_by(Ticket.created_at.desc()).all()
 
-    return render_template('ticket1/dashboard.html', tickets=tickets)
+    return render_template(
+        'ticket1/dashboard.html',
+        tickets=tickets,
+        today=date.today(),
+        total_open=sum(1 for t in tickets if t.status == 'Open'),
+        total_in_progress=sum(1 for t in tickets if t.status == 'In Process'),
+        total_closed=sum(1 for t in tickets if t.status == 'Closed'),
+        avg_resolution_time=round(
+            sum((t.closed_at - t.created_at).total_seconds() for t in tickets if t.closed_at) / 3600 / max(1,
+                                                                                                           len([t for t
+                                                                                                                in
+                                                                                                                tickets
+                                                                                                                if
+                                                                                                                t.closed_at])),
+            1
+        ),
+        overdue_tickets=sum(1 for t in tickets if t.status == 'Open' and (date.today() - t.created_at.date()).days > 3)
+    )
 
 
 import pandas as pd
@@ -787,3 +823,126 @@ def export_alarming_cases():
     output.seek(0)
 
     return send_file(output, as_attachment=True, download_name="alarming_cases.xlsx")
+
+@ticket1_bp.route('/create_pm_ticket')
+def create_pm_ticket():
+    from app.models import Assets, Ticket, Technician
+
+    serial = request.args.get('serial_number')
+    asset = Assets.query.filter_by(serial_number=serial).first()
+
+    if not asset:
+        flash(f"No asset found for Serial No: {serial}", "danger")
+        return redirect(url_for('assets.pm_dashboard'))
+
+    # ✅ Match technician using email (recommended and reliable)
+    technician_id = None
+    assigned_name = "Unassigned"
+
+    if asset.technician_email:
+        tech = Technician.query.filter(
+            Technician.email.ilike(asset.technician_email.strip())
+        ).first()
+
+        if tech:
+            technician_id = tech.id
+            assigned_name = tech.name
+            tech.status = "Busy"
+            db.session.commit()  # Update tech status
+
+    # ✅ Create the PM ticket
+    ticket = Ticket(
+        reference_no=generate_reference_number(),
+        serial_number=asset.serial_number,
+        customer=asset.customer_name,
+        service_location=asset.service_location,
+        region=asset.region,
+        asset_Description=asset.asset_Description,
+        title="Preventive Maintenance",
+        description="Auto-generated PM ticket",
+        called_by="System",
+        call_type="PM",
+        technician_id=technician_id,
+        estimated_time=60,
+        travel_time=15,
+        expected_completion_time=datetime.utcnow() + timedelta(minutes=75),
+        status="Open",
+        created_at=datetime.utcnow()
+    )
+
+    db.session.add(ticket)
+    db.session.commit()
+
+    flash(f"✅ PM Ticket created for {serial} and assigned to: {assigned_name}", "success")
+    return redirect(url_for('assets.pm_dashboard'))
+
+# ✅ New route: Create PM tickets in bulk with optional filters
+# ✅ Bulk PM Ticket Creation with Technician Email Matching
+@ticket1_bp.route('/create_pm_bulk', methods=['POST', 'GET'])
+def create_pm_bulk():
+    from app.models import Assets, Ticket, Technician
+
+    filters = {
+        "customer_name": request.args.get("customer_name"),
+        "service_location": request.args.get("service_location"),
+        "region": request.args.get("region"),
+        "technician_name": request.args.get("technician_name")
+    }
+
+    today = datetime.today().date()
+    created = 0
+
+    query = Assets.query
+    for field, value in filters.items():
+        if value:
+            query = query.filter(getattr(Assets, field).ilike(f"%{value}%"))
+
+    assets = query.all()
+    for asset in assets:
+        try:
+            if asset.last_pm_date and asset.pm_freq:
+                last_pm = datetime.strptime(asset.last_pm_date, '%Y-%m-%d').date()
+                freq_days = int(asset.pm_freq.split()[0])
+                next_due = last_pm + timedelta(days=freq_days)
+
+                existing_pm = Ticket.query.filter_by(
+                    serial_number=asset.serial_number,
+                    call_type='PM'
+                ).filter(Ticket.status.in_(["Open", "In Process"])).first()
+
+                if next_due <= today and not existing_pm:
+                    technician_id = None
+                    if asset.technician_email:
+                        tech = Technician.query.filter(Technician.email.ilike(asset.technician_email.strip())).first()
+                        if tech:
+                            technician_id = tech.id
+                            tech.status = "Busy"
+
+                    ticket = Ticket(
+                        reference_no=generate_reference_number(),
+                        serial_number=asset.serial_number,
+                        customer=asset.customer_name,
+                        service_location=asset.service_location,
+                        region=asset.region,
+                        asset_Description=asset.asset_Description,
+                        title="Preventive Maintenance",
+                        description="Auto-generated bulk PM ticket",
+                        called_by="System",
+                        call_type="PM",
+                        technician_id=technician_id,
+                        estimated_time=60,
+                        travel_time=15,
+                        expected_completion_time=datetime.utcnow() + timedelta(minutes=75),
+                        status="Open",
+                        created_at=datetime.utcnow()
+                    )
+
+                    db.session.add(ticket)
+                    created += 1
+        except Exception as e:
+            print(f"Error creating ticket for {asset.serial_number}: {e}")
+            continue
+
+    db.session.commit()
+    flash(f"✅ {created} PM tickets created in bulk.", "success")
+    return redirect(url_for('assets.pm_dashboard'))

@@ -6,63 +6,84 @@
 <div class="container mt-4">
     <h2 class="text-primary fw-bold mb-4">🎫 Ticket Dashboard</h2>
 
+    <!-- ✅ Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-white bg-primary text-center">
+                <div class="card-body">
+                    <h5>{{ total_open }}</h5><p>Open Tickets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-warning text-center">
+                <div class="card-body">
+                    <h5>{{ total_in_progress }}</h5><p>In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-success text-center">
+                <div class="card-body">
+                    <h5>{{ total_closed }}</h5><p>Closed Tickets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary text-center">
+                <div class="card-body">
+                    <h5>{{ avg_resolution_time }} hrs</h5><p>Avg Resolution Time</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger text-center">
+                <div class="card-body">
+                    <h5>{{ overdue_tickets }}</h5><p>Overdue Tickets</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Control Panel -->
     <div class="d-flex justify-content-between mb-3">
         <div class="d-flex gap-2">
             <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
             <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
         </div>
-        <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+        <a href="{{ url_for('ticket1.export_tickets') }}" class="btn btn-success">📤 Export to Excel</a>
     </div>
 
-    <!-- Filter Options -->
-    <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">Filter Tickets</div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="start_date">Start Date:</label>
-                    <input type="date" id="start_date" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label for="end_date">End Date:</label>
-                    <input type="date" id="end_date" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label for="status_filter">Status:</label>
-                    <select id="status_filter" class="form-select">
-                        <option value="">All</option>
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Closed">Closed</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="customer_filter">Customer:</label>
-                    <input type="text" id="customer_filter" class="form-control" placeholder="Search by Customer">
-                </div>
-                <div class="col-md-3">
-                    <label for="serial_filter">Serial Number:</label>
-                    <input type="text" id="serial_filter" class="form-control" placeholder="Search by Serial No">
-                </div>
-                <div class="col-md-3">
-                    <label for="technician_filter">Technician:</label>
-                    <input type="text" id="technician_filter" class="form-control" placeholder="Search by Technician">
-                </div>
-                <div class="col-md-3">
-                    <label for="region_filter">Region:</label>
-                    <input type="text" id="region_filter" class="form-control" placeholder="Search by Region">
-                </div>
-                <div class="col-md-3">
-                    <label for="call_type_filter">Call Type:</label>
-                    <input type="text" id="call_type_filter" class="form-control" placeholder="Search by Call Type">
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-info mt-4" onclick="applyFilters()">Apply Filters</button>
-                </div>
-                <div class="col-md-3">
-                    <button class="btn btn-outline-secondary mt-4" onclick="resetFilters()">Reset</button>
-                </div>
+    <!-- 🔍 Toggle Filters -->
+    <button class="btn btn-outline-secondary mb-2" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+        🔍 Toggle Filters
+    </button>
+    <div id="filterPanel" class="collapse show">
+        <!-- Filter Options -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">Filter Tickets</div>
+            <div class="card-body">
+                <div class="row">
+    <div class="col-md-2"><input type="date" id="start_date" class="form-control" placeholder="Start Date"></div>
+    <div class="col-md-2"><input type="date" id="end_date" class="form-control" placeholder="End Date"></div>
+    <div class="col-md-2"><input type="text" id="customer_filter" class="form-control" placeholder="Customer"></div>
+    <div class="col-md-2"><input type="text" id="serial_filter" class="form-control" placeholder="Serial No"></div>
+    <div class="col-md-2"><input type="text" id="technician_filter" class="form-control" placeholder="Technician"></div>
+    <div class="col-md-2"><input type="text" id="region_filter" class="form-control" placeholder="Region"></div>
+    <div class="col-md-2"><select id="status_filter" class="form-select">
+        <option value="">Status</option>
+        <option>Open</option><option>In Process</option><option>Closed</option>
+    </select></div>
+    <div class="col-md-2"><select id="call_type_filter" class="form-select">
+        <option value="">Call Type</option>
+        <option>PM</option><option>CM</option><option>Installation</option><option>MYQ</option>
+    </select></div>
+    <div class="col-md-2">
+        <button onclick="applyFilters()" class="btn btn-success">Apply</button>
+        <button onclick="resetFilters()" class="btn btn-outline-danger">Reset</button>
+    </div>
+</div>
+
             </div>
         </div>
     </div>
@@ -87,12 +108,11 @@
                     <th onclick="sortTable(12)">Region</th>
                     <th onclick="sortTable(13)">Asset Description</th>
                     <th onclick="sortTable(14)">Called By</th>
-
                 </tr>
             </thead>
             <tbody id="ticketBody">
                 {% for ticket in tickets %}
-                <tr>
+                <tr {% if ticket.status != 'Closed' and (today - ticket.created_at.date()).days > 3 %} class="table-warning" {% endif %}>
                     <td><a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}">{{ ticket.reference_no }}</a></td>
                     <td>{{ ticket.title }}</td>
                     <td>{{ ticket.customer }}</td>
@@ -110,7 +130,6 @@
                     <td>{{ ticket.region or "N/A" }}</td>
                     <td title="{{ ticket.asset_Description or 'N/A' }}">{{ ticket.asset_Description[:20] if ticket.asset_Description else 'N/A' }}</td>
                     <td>{{ ticket.called_by or "N/A" }}</td>
-
                 </tr>
                 {% endfor %}
             </tbody>
@@ -120,8 +139,12 @@
     <div class="text-center mt-3">
         <button id="loadMoreBtn" class="btn btn-outline-primary" onclick="loadMoreTickets()">Load More</button>
     </div>
-</div>
 
+    <!-- ➕ Floating Add Ticket Button -->
+    <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary position-fixed bottom-0 end-0 m-4 shadow rounded-circle" title="Add Ticket">
+        <i class="bi bi-plus-lg fs-4"></i>
+    </a>
+</div>
 <script>
     let currentPage = 1;
 

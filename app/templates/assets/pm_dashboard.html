@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="my-3">🛠️ Preventive Maintenance Dashboard</h2>
+
+    <!-- 🔹 Summary + Filters Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center">
+                    <h4>{{ due_assets|length }}</h4>
+                    <p>Pending PM Assets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <form method="GET" action="{{ url_for('assets.pm_dashboard') }}" class="row g-2">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="customer_name" placeholder="Customer Name" value="{{ request.args.get('customer_name', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="service_location" placeholder="Service Location" value="{{ request.args.get('service_location', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" name="region" placeholder="Region" value="{{ request.args.get('region', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control" name="technician_name" placeholder="Technician Name" value="{{ request.args.get('technician_name', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🚀 Bulk Ticket Creation Trigger & Export -->
+    <div class="d-flex mb-3">
+        <form method="POST" action="{{ url_for('ticket1.create_pm_bulk', **request.args) }}">
+            <button type="submit" class="btn btn-danger me-2">
+                🚀 Raise PM for All Filtered
+            </button>
+        </form>
+        <a href="{{ url_for('assets.export_pm_filtered', **request.args) }}" class="btn btn-success">
+            📤 Export Filtered to Excel
+        </a>
+    </div>
+
+    <!-- 🔄 Loading Spinner -->
+    <div id="loadingSpinner" class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div>Loading Preventive Maintenance List...</div>
+    </div>
+
+    <!-- ✅ Table Wrapper Hidden Initially -->
+    <div id="pmTableWrapper" class="table-responsive d-none">
+        {% if due_assets %}
+        <table id="pmTable" class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Serial No</th>
+                    <th>Customer</th>
+                    <th>Next Due</th>
+                    <th>Technician</th>
+                    <th>Location</th>
+                    <th>Region</th>
+                    <th>Asset Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in due_assets %}
+                <tr>
+                    <td>{{ asset.serial_number }}</td>
+                    <td>{{ asset.customer_name }}</td>
+                    <td><span class="badge bg-danger">⚠️ {{ asset.next_due }}</span></td>
+                    <td>{{ asset.technician_name or 'Unassigned' }}</td>
+                    <td>{{ asset.service_location }}</td>
+                    <td>{{ asset.region }}</td>
+                    <td>{{ asset.asset_description }}</td>
+                    <td>
+                        <a href="{{ url_for('ticket1.create_pm_ticket', serial_number=asset.serial_number) }}" class="btn btn-sm btn-warning">
+                            Quick PM Ticket
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert alert-info">✅ No preventive maintenance due today.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ✅ DataTables Integration -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.pageLength.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Simulate loading delay for smoother UX
+        setTimeout(() => {
+            $('#loadingSpinner').hide();
+            $('#pmTableWrapper').removeClass('d-none');
+
+            $('#pmTable').DataTable({
+                pageLength: 25,
+                order: [[2, 'asc']],
+                responsive: true,
+                dom: 'Bfrtip',
+                buttons: ['colvis', 'pageLength']
+            });
+        }, 200);  // Short delay for effect
+    });
+</script>
+{% endblock %}

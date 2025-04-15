@@ -337,3 +337,14 @@ class McModel(db.Model):
     def __repr__(self):
         return f"<McModel {self.asset_description}>"
 
+class PreventiveMaintenance(db.Model):
+    __tablename__ = 'preventive_maintenance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    serial_number = db.Column(db.String(100), db.ForeignKey('assets.serial_number'), nullable=False)
+    scheduled_date = db.Column(db.Date, nullable=False)
+    performed_date = db.Column(db.Date, nullable=True)
+    status = db.Column(db.String(50), default='Pending')  # Pending, Completed
+    remarks = db.Column(db.Text, nullable=True)
+    technician_name = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
