@@ -677,11 +677,14 @@ def technician_analytics():
         closed = [t for t in tickets if t.status == "Closed"]
         open_count = len([t for t in tickets if t.status != "Closed"])
 
-        pm = sum(1 for t in tickets if t.call_type == "PM")
-        cm = sum(1 for t in tickets if t.call_type == "CM")
-        myq = sum(1 for t in tickets if t.call_type == "MYQ")
-        inst = sum(1 for t in tickets if t.call_type == "Installation")
-        other = sum(1 for t in tickets if t.call_type not in ["PM", "CM", "MYQ", "Installation"])
+        pm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "pm")
+        cm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "cm")
+        myq = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "myq")
+        inst = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "installation")
+        mfi_central = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "mfi-central")
+        other = sum(1 for t in tickets if t.call_type not in ["PM", "CM", "MYQ", "Installation", "MFI-CENTRAL"])
+        # 🔢 Totals for footer row
+
 
         avg_res_time = round(
             sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed if t.closed_at and t.created_at) / len(closed), 1
@@ -703,30 +706,47 @@ def technician_analytics():
             "cm": cm,
             "myq": myq,
             "install": inst,
+            "mfi_central": mfi_central,
             "other": other,
             "avg_resolution": avg_res_time,
             "warranty_pending": warranty_pending,
             "foc_pending": foc_pending,
             "productivity": productivity
         })
-
+    totals = {
+        "open": sum(t["open"] for t in data),
+        "closed": sum(t["closed"] for t in data),
+        "pm": sum(t["pm"] for t in data),
+        "cm": sum(t["cm"] for t in data),
+        "myq": sum(t["myq"] for t in data),
+        "install": sum(t["install"] for t in data),
+        "mfi_central": sum(t["mfi_central"] for t in data),
+        "other": sum(t["other"] for t in data),
+        "warranty_pending": sum(t["warranty_pending"] for t in data),
+        "foc_pending": sum(t["foc_pending"] for t in data),
+    }
     all_techs = Technician.query.order_by(Technician.name).all()
 
     return render_template("ticket1/technician_analytics.html",
-        ticket_type_trend=dict(ticket_type_trend),
-        avg_resolution_by_day=avg_resolution_by_day,
-        data=data,
-        filters={"from_date": from_date_str, "to_date": to_date_str, "technician": technician_name},
-        summary={
-            "total": len(all_tickets),
-            "closed": total_closed,
-            "avg_resolution": avg_resolution,
-            "warranty_pending": warranty_pending_total,
-            "foc_pending": foc_pending_total,
-            "productivity": overall_productivity
-        },
-        all_technicians=all_techs
-    )
+                           ticket_type_trend=dict(ticket_type_trend),
+                           avg_resolution_by_day=avg_resolution_by_day,
+                           data=data,
+                           filters={
+                               "from_date": from_date_str,
+                               "to_date": to_date_str,
+                               "technician": technician_name
+                           },
+                           summary={
+                               "total": len(all_tickets),
+                               "closed": total_closed,
+                               "avg_resolution": avg_resolution,
+                               "warranty_pending": warranty_pending_total,
+                               "foc_pending": foc_pending_total,
+                               "productivity": overall_productivity
+                           },
+                           all_technicians=all_techs,
+                           totals=totals  # ✅ newly added
+                           )
 @ticket1_bp.route('/export_technician_excel')
 def export_technician_excel():
     import pandas as pd

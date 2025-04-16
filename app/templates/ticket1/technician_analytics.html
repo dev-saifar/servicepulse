@@ -52,27 +52,69 @@
   </div>
 
   <!-- 👨 Technician Table -->
-  <div class="mt-5">
-    <h5>Technician-wise Performance</h5>
-    <table class="table table-bordered table-striped">
+<div class="mt-5">
+  <h5>Technician-wise Performance</h5>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
       <thead class="table-light">
         <tr>
-          <th>Technician</th><th>Open</th><th>Closed</th><th>PM</th><th>CM</th><th>MYQ</th><th>Install</th><th>Other</th>
-          <th>Avg Resolution (hrs)</th><th>Warranty Pending</th><th>FOC Pending</th><th>Productivity</th>
+          <th>Technician</th>
+          <th>Open</th>
+          <th>Closed</th>
+          <th>PM</th>
+          <th>CM</th>
+          <th>MYQ</th>
+          <th>Install</th>
+          <th>MFI-Central</th>
+          <th>Other</th>
+          <th>Avg Resolution (hrs)</th>
+          <th>Warranty Pending</th>
+          <th>FOC Pending</th>
+          <th>Productivity</th>
         </tr>
       </thead>
       <tbody>
         {% for t in data %}
         <tr>
-          <td>{{ t.name }}</td><td>{{ t.open }}</td><td>{{ t.closed }}</td><td>{{ t.pm }}</td><td>{{ t.cm }}</td>
-          <td>{{ t.myq }}</td><td>{{ t.install }}</td><td>{{ t.other }}</td><td>{{ t.avg_resolution }}</td>
-          <td>{{ t.warranty_pending }}</td><td>{{ t.foc_pending }}</td><td>{{ t.productivity }}</td>
+          <td class="text-start">{{ t.name }}</td>
+          <td>{{ t.open }}</td>
+          <td>{{ t.closed }}</td>
+          <td>{{ t.pm }}</td>
+          <td>{{ t.cm }}</td>
+          <td>{{ t.myq }}</td>
+          <td>{{ t.install }}</td>
+          <td>{{ t.mfi_central }}</td>
+          <td>{{ t.other }}</td>
+          <td>{{ t.avg_resolution }}</td>
+          <td>{{ t.warranty_pending }}</td>
+          <td>{{ t.foc_pending }}</td>
+          <td>{{ t.productivity }}</td>
         </tr>
         {% endfor %}
       </tbody>
+      {% if totals %}
+      <tfoot class="table-secondary fw-bold">
+        <tr>
+          <td>Total</td>
+          <td>{{ totals.open }}</td>
+          <td>{{ totals.closed }}</td>
+          <td>{{ totals.pm }}</td>
+          <td>{{ totals.cm }}</td>
+          <td>{{ totals.myq }}</td>
+          <td>{{ totals.install }}</td>
+          <td>{{ totals.mfi_central }}</td>
+          <td>{{ totals.other }}</td>
+          <td>-</td>
+          <td>{{ totals.warranty_pending }}</td>
+          <td>{{ totals.foc_pending }}</td>
+          <td>-</td>
+        </tr>
+      </tfoot>
+      {% endif %}
     </table>
   </div>
 </div>
+
 
 <!-- Chart.js (keep this at top) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -88,15 +88,16 @@
                     <textarea name="description" class="form-control" required>{{ ticket.description }}</textarea>
                 </div>
 
-                <div class="col-md-6 mb-3">
+
+                    <<div class="col-md-6">
                     <label>Call Type</label>
-                    <select name="call_type" class="form-control">
-                        <option value="PM" {% if ticket.call_type == 'PM' %}selected{% endif %}>PM</option>
-                        <option value="MYQ" {% if ticket.call_type == 'MYQ' %}selected{% endif %}>MYQ</option>
-                        <option value="MFI-CENTRAL" {% if ticket.call_type == 'MFI-CENTRAL' %}selected{% endif %}>MFI-CENTRAL</option>
-                        <option value="CM" {% if ticket.call_type == 'CM' %}selected{% endif %}>CM</option>
-                        <option value="OTHER" {% if ticket.call_type == 'OTHER' %}selected{% endif %}>OTHER</option>
-                        <option value="Installation" {% if ticket.call_type == 'installation' %}selected{% endif %}>Installations</option>
+                    <select name="call_type" class="form-control" required>
+                        <option value="PM">PM</option>
+                        <option value="MYQ">MYQ</option>
+                        <option value="MFI-CENTRAL">MFI-CENTRAL</option>
+                        <option value="CM">CM</option>
+                        <option value="Installation">Installation</option>
+                        <option value="OTHER">OTHER</option>
                     </select>
                 </div>
 
