@@ -80,19 +80,83 @@ class Assets(db.Model):
 
 
 # ✅ User Model for Login System
+from flask_login import UserMixin
+from app.extensions import db
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
+    username = db.Column(db.String(150), nullable=False, unique=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), default="viewer")
 
-    def set_password(self, password):
-        """ Hash and set password """
-        self.password_hash = generate_password_hash(password)
+    # ✅ User & Admin Management
+    can_add_user = db.Column(db.Boolean, default=False)
+    can_edit_user = db.Column(db.Boolean, default=False)
+    can_delete_user = db.Column(db.Boolean, default=False)
+    can_assign_roles = db.Column(db.Boolean, default=False)
 
-    def check_password(self, password):
-        """ Check password against stored hash """
-        return check_password_hash(self.password_hash, password)
+    # 🛠 Ticketing System
+    can_view_tickets = db.Column(db.Boolean, default=False)
+    can_create_tickets = db.Column(db.Boolean, default=False)
+    can_edit_tickets = db.Column(db.Boolean, default=False)
+    can_close_tickets = db.Column(db.Boolean, default=False)
+    can_assign_tickets = db.Column(db.Boolean, default=False)
+
+    # 👷 Technician Management
+    can_view_technicians = db.Column(db.Boolean, default=False)
+    can_add_technicians = db.Column(db.Boolean, default=False)
+    can_edit_technicians = db.Column(db.Boolean, default=False)
+
+    # 🖨 Asset Management
+    can_view_assets = db.Column(db.Boolean, default=False)
+    can_add_assets = db.Column(db.Boolean, default=False)
+    can_edit_assets = db.Column(db.Boolean, default=False)
+    can_delete_assets = db.Column(db.Boolean, default=False)
+
+    # 📄 Contracts Module
+
+
+    can_view_contracts = db.Column(db.Boolean, default=False)
+    can_add_contracts = db.Column(db.Boolean, default=False)
+    can_edit_contracts = db.Column(db.Boolean, default=False)
+    can_delete_contracts = db.Column(db.Boolean, default=False)
+
+    # 🧾 Toner Requests
+    can_request_toner = db.Column(db.Boolean, default=False)
+    can_edit_toner_requests = db.Column(db.Boolean, default=False)
+    can_view_toner_dashboard = db.Column(db.Boolean, default=False)
+    can_delete_toner_request = db.Column(db.Boolean, default=False)
+
+    # 🔧 Spare Parts
+    can_request_spares = db.Column(db.Boolean, default=False)
+    can_view_spare_dashboard = db.Column(db.Boolean, default=False)
+    can_delete_spare_request = db.Column(db.Boolean, default=False)
+
+    # 📊 Reports & Dashboards
+    can_view_reports = db.Column(db.Boolean, default=False)
+    can_export_data = db.Column(db.Boolean, default=False)
+
+    # 👤 Customer Management
+    can_view_customers = db.Column(db.Boolean, default=False)
+    can_manage_customers = db.Column(db.Boolean, default=False)
+    can_delete_customers = db.Column(db.Boolean, default=False)
+
+    # 💰 Financial Dashboard
+    can_view_financials = db.Column(db.Boolean, default=False)
+    can_export_financials = db.Column(db.Boolean, default=False)
+    can_view_pm = db.Column(db.Boolean, default=False)
+    can_edit_pm = db.Column(db.Boolean, default=False)
+
+    # 🛠 Preventive Maintenance (PM)
+    can_schedule_pm = db.Column(db.Boolean, default=False)
+    can_view_pm_dashboard = db.Column(db.Boolean, default=False)
+
+    # ⚙ System / Misc
+    can_access_settings = db.Column(db.Boolean, default=False)
+    can_upload_documents = db.Column(db.Boolean, default=False)
+    can_view_audit_logs = db.Column(db.Boolean, default=False)
+
 
 class spare_req(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -146,6 +210,7 @@ class ScheduledReport(db.Model):
     email = db.Column(db.String(255), nullable=False)
     schedule = db.Column(db.String(50), nullable=False)  # Daily, Weekly, Monthly
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    next_run = db.Column(db.DateTime)  # << ADD THIS COLUMN
 
 
 from app.extensions import db
@@ -348,3 +413,21 @@ class PreventiveMaintenance(db.Model):
     remarks = db.Column(db.Text, nullable=True)
     technician_name = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+from app import db
+
+
+
+from datetime import datetime
+
+class ScheduledReportLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.Integer, db.ForeignKey('scheduled_report.id'))
+    status = db.Column(db.String(50))
+    message = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+from datetime import datetime
+from app import db
+
+

@@ -1,62 +1,102 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
 <div class="container mt-4">
-    <h1 class="text-center text-primary fw-bold">Advanced Reports</h1>
+    <h1 class="text-center text-primary fw-bold">Reports & Analytics</h1>
     <p class="text-center text-muted">Select a report type to generate, export, or schedule</p>
 
-    <div class="list-group">
-        <a href="{{ url_for('advance_report.ticket_report') }}" class="list-group-item list-group-item-action">
-            📄 Ticket Report
-        </a>
-        <a href="{{ url_for('technician_performance.technician_performance') }}" class="list-group-item list-group-item-action">
-            👨‍🔧 Technician Performance Report
-        </a>
-         <a href="{{ url_for('technician_performance.technician_foc_war') }}" class="list-group-item list-group-item-action">
-    👨‍🔧 Technician FOC Warranty Performance
-</a>
-
-        </a>
-
-        </a>
+    <!-- Report Type Links -->
+    <div class="list-group mb-4">
+        <a href="{{ url_for('advance_report.ticket_report') }}" class="list-group-item list-group-item-action">📄 Ticket Report</a>
+        <a href="{{ url_for('technician_performance.technician_performance') }}" class="list-group-item list-group-item-action">👨‍🔧 Technician Performance Report</a>
+        <a href="{{ url_for('technician_performance.technician_foc_war') }}" class="list-group-item list-group-item-action">🛠️ Technician FOC Warranty Report</a>
+        <a href="{{ url_for('delivery_report.toner_report_ui') }}" class="list-group-item list-group-item-action">📦 Toner Delivery Report</a>
+        <a href="{{ url_for('delivery_report.spare_report_ui') }}" class="list-group-item list-group-item-action">🔧 Spare Delivery Report</a>
+        <a href="{{ url_for('delivery_report.ticket_cost_report_ui') }}" class="list-group-item list-group-item-action">🎫 Ticket Cost Report</a>
+        <a href="{{ url_for('delivery_report.total_service_summary_ui') }}" class="list-group-item list-group-item-action">📊 Total Service Summary Report</a>
+        <a href="{{ url_for('hourly.hourly_report') }}" class="list-group-item list-group-item-action">🕒 Technician Hourly Report</a>
+        <a href="{{ url_for('advance_report.unified_scheduler') }}" class="list-group-item list-group-item-action">📅 Report Scheduler</a>
     </div>
 
-    <h2 class="mt-5 text-center">Scheduled Reports</h2>
-    <table class="table table-bordered mt-3">
-        <thead>
-            <tr>
-                <th>Report Type</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Schedule</th>
-                <th>Email</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <<tbody>
-    {% for report in scheduled_reports %}
-    <tr>
-        <td>{{ report.report_type }}</td>
-        <td>{{ report.start_date }}</td>
-        <td>{{ report.end_date }}</td>
-        <td>{{ report.schedule }}</td>
-        <td>{{ report.email }}</td>
-        <td>
-            <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
-                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-            </form>
-        </td>
-        <td>
-            <form method="POST" action="{{ url_for('advance_report.run_scheduled_report', report_id=report.id) }}">
-                <button type="submit" class="btn btn-success btn-sm">Run Now</button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
+    <!-- Summary Cards -->
+    <div class="row text-center mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <h6 class="card-title text-primary">Scheduled Reports</h6>
+                    <h3 class="fw-bold">{{ scheduled_reports|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="mb-3">
+        <input type="text" id="search" class="form-control" placeholder="Search reports..." onkeyup="filterTable()">
+    </div>
+
+    <!-- Scheduled Reports Table -->
+    <h2 class="text-center mb-3">Scheduled Reports</h2>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+<tr>
+    <th>Report Type</th>
+    <th>Start Date</th>
+    <th>End Date</th>
+    <th>Schedule</th>
+    <th>Email</th>
+    <th>Next Run</th>
+    <th>Recent Logs</th>
+    <th>Actions</th>
+</tr>
+</thead>
+<tbody>
+{% for report in scheduled_reports %}
+<tr>
+    <td>{{ report.report_type }}</td>
+    <td>{{ report.start_date }}</td>
+    <td>{{ report.end_date }}</td>
+    <td><span class="badge bg-info">{{ report.schedule }}</span></td>
+    <td>{{ report.email }}</td>
+    <td>{{ report.next_run.strftime('%Y-%m-%d %H:%M') if report.next_run }}</td>
+    <td>
+        <ul class="mb-0">
+            {% for log in logs_by_report[report.id][:3] %}
+            <li class="small">
+                <strong>{{ log.status }}</strong> -
+                {{ log.created_at.strftime('%b %d %H:%M') }}
+
+            </li>
+            {% else %}
+            <li class="text-muted small">No logs</li>
+            {% endfor %}
+        </ul>
+    </td>
+    <td class="d-flex gap-1">
+        <form method="POST" action="{{ url_for('advance_report.run_scheduled_report', report_id=report.id) }}">
+            <button type="submit" class="btn btn-success btn-sm">Run</button>
+        </form>
+        <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
 </tbody>
 
-    </table>
+        </table>
+    </div>
 </div>
 
+<script>
+    function filterTable() {
+        const input = document.getElementById("search");
+        const filter = input.value.toLowerCase();
+        const rows = document.querySelectorAll("table tbody tr");
+        rows.forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+        });
+    }
+</script>
 {% endblock %}

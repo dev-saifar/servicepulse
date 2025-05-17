@@ -6,7 +6,7 @@
 
     <div class="card mt-4 shadow-sm">
         <div class="card-body">
-            <!-- Flash Messages for Error Alerts -->
+            <!-- Flash Messages -->
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -19,19 +19,85 @@
             {% endwith %}
 
             <form method="POST">
-                <!-- Username Field -->
+                <!-- Username -->
                 <div class="mb-3">
                     <label for="username" class="form-label fw-bold">Username</label>
                     <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
                 </div>
 
-                <!-- Email Field -->
+                <!-- Email -->
                 <div class="mb-3">
                     <label for="email" class="form-label fw-bold">Email</label>
                     <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" required>
                 </div>
 
-                <!-- Password Field with Toggle -->
+                <h5 class="mt-4">Permissions</h5>
+                <div class="row">
+
+                    <div class="col-md-4">
+                        <h6>User & Admin</h6>
+                        {% set perms_list = ['can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Tickets</h6>
+                        {% set perms_list = ['can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Technicians</h6>
+                        {% set perms_list = ['can_view_technicians', 'can_add_technicians', 'can_edit_technicians'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Assets</h6>
+                        {% set perms_list = ['can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+                    <div class="col-md-4">
+                    <h6>Customers</h6>
+                    {% set perms_list = ['can_view_customers', 'can_manage_customers', 'can_delete_customers'] %}
+                    {% include 'users/perm_block.html' %}
+                        </div>
+
+
+                    <div class="col-md-4">
+                        <h6>Contracts</h6>
+                        {% set perms_list = ['can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Toner</h6>
+                        {% set perms_list = ['can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Spares</h6>
+                        {% set perms_list = ['can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6>Reports & Finance</h6>
+                        {% set perms_list = ['can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials'] %}
+                        {% include 'users/perm_block.html' %}
+                    </div>
+
+                    <div class="col-md-4">
+    <h6>PM & System</h6>
+   {% set perms_list = ['can_schedule_pm', 'can_view_pm', 'can_edit_pm', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'] %}
+    {% include 'users/perm_block.html' %}
+</div>
+
+
+                </div>
+
+                <!-- Password -->
                 <div class="mb-3">
                     <label for="password" class="form-label fw-bold">Password</label>
                     <div class="input-group">
@@ -42,10 +108,10 @@
                     </div>
                 </div>
 
-                <!-- Role Selection Dropdown -->
+                <!-- Role Dropdown -->
                 <div class="mb-3">
                     <label for="role" class="form-label fw-bold">Role</label>
-                    <select class="form-control" id="role" name="role" required>
+                    <select class="form-control" id="roleSelector" name="role" required>
                         <option value="Admin">Admin</option>
                         <option value="Technician">Technician</option>
                         <option value="Viewer">Viewer</option>
@@ -61,6 +127,57 @@
         </div>
     </div>
 </div>
+
+<script>
+    function togglePassword() {
+        let passwordField = document.getElementById("password");
+        let toggleButton = document.querySelector(".btn-outline-secondary i");
+
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            toggleButton.classList.remove("fa-eye");
+            toggleButton.classList.add("fa-eye-slash");
+        } else {
+            passwordField.type = "password";
+            toggleButton.classList.remove("fa-eye-slash");
+            toggleButton.classList.add("fa-eye");
+        }
+    }
+
+    const rolePermissions = {
+      Admin: [
+        'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',
+        'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',
+        'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',
+        'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
+        'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',
+        'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',
+        'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',
+        'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',
+        'can_schedule_pm', 'can_view_pm_dashboard', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'
+      ],
+      Supervisor: [
+        'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_assign_tickets',
+        'can_view_assets', 'can_edit_assets',
+        'can_view_contracts', 'can_edit_contracts',
+        'can_view_reports'
+      ],
+      Technician: [
+        'can_view_tickets', 'can_close_tickets',
+        'can_view_assets', 'can_view_contracts', 'can_request_toner', 'can_request_spares'
+      ]
+    };
+
+    document.getElementById('roleSelector').addEventListener('change', function () {
+      const selected = this.value;
+      document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+      if (rolePermissions[selected]) {
+        rolePermissions[selected].forEach(perm => {
+          const box = document.getElementById(perm);
+          if (box) box.checked = true;
+        });
+      }
+    });
 
 <!-- Password Visibility Toggle -->
 <script>
@@ -78,6 +195,43 @@
             toggleButton.classList.add("fa-eye");
         }
     }
+
+const rolePermissions = {
+  admin: [
+    'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',
+    'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',
+    'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',
+    'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
+    'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',
+    'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',
+    'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',
+    'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',
+    'can_schedule_pm', 'can_view_pm_dashboard', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'
+  ],
+  supervisor: [
+    'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_assign_tickets',
+    'can_view_assets', 'can_edit_assets',
+    'can_view_contracts', 'can_edit_contracts',
+    'can_view_reports'
+  ],
+  technician: [
+    'can_view_tickets', 'can_close_tickets',
+    'can_view_assets', 'can_view_contracts', 'can_request_toner', 'can_request_spares'
+  ]
+};
+
+document.getElementById('roleSelector').addEventListener('change', function () {
+  const selected = this.value;
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  if (rolePermissions[selected]) {
+    rolePermissions[selected].forEach(perm => {
+      const box = document.getElementById(perm);
+      if (box) box.checked = true;
+    });
+  }
+});
+
+
 </script>
 
 {% endblock %}

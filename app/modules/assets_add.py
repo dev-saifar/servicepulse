@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, request, jsonify
 from app.models import Assets, Technician
 from app.extensions import db
 from app.models import McModel  # Make sure the spelling matches your models.py exactly
-
+from flask_login import login_required, current_user
+from app.utils.permission_required import permission_required
 
 assets_add_bp = Blueprint(
     'assets_add', __name__,
@@ -11,6 +12,7 @@ assets_add_bp = Blueprint(
 )
 
 @assets_add_bp.route('/add_asset_form')
+@permission_required('can_add_assets')
 def add_asset_form():
     return render_template('assets_Add.html')
 
@@ -41,6 +43,7 @@ def generate_asset_code():
     return jsonify({"asset_code": f"{prefix}{str(count).zfill(5)}"})
 
 @assets_add_bp.route('/create', methods=['POST'])
+@permission_required('can_add_assets')
 def create_asset():
     try:
         serial_number = request.form.get("serial_number")

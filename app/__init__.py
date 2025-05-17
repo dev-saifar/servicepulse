@@ -1,12 +1,13 @@
 from flask import Flask, redirect, url_for
 from config import Config
-
+from flask import render_template
 from flask_migrate import Migrate  # ✅ Ensure Flask-Migrate is imported
 from flask_login import LoginManager, current_user, login_required
 from app.extensions import db, mail
 from app.celery import make_celery
 from app.models import create_tables_if_not_exist  # ✅ Ensure correct import
 from app.models import User
+from flask_login import current_user
 
 # ✅ Define global extensions
 celery = None
@@ -18,7 +19,7 @@ celery = Celery(__name__, broker='redis://localhost:6379/0')
 from flask_mail import Mail
 from config import Config
 
-mail = Mail()
+
 
 def create_app():
     global celery
@@ -27,9 +28,16 @@ def create_app():
     app.config["DEBUG"] = True
     app.config["ENV"] = "development"
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///techtrack.db"
+    mail.init_app(app)
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('errors/403.html', user=current_user), 403
+
+
 
     # Register custom datetimeformat filter
-    from datetime import datetime
+
 
     from datetime import datetime
 
@@ -96,7 +104,9 @@ def create_app():
     from app.modules.assets_add import assets_add_bp
     from app.modules.toner import toner_bp
     from app.modules.financial import financial_bp
+    from app.modules.delivery_report import delivery_report_bp
 
+    app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')
     app.register_blueprint(toner_bp, url_prefix='/toner')
     app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
@@ -114,5 +124,9 @@ def create_app():
     app.register_blueprint(technician_performance_bp, url_prefix='/technician_performance')
     app.register_blueprint(contracts_bp, url_prefix='/contracts')
     app.register_blueprint(assets_add_bp, url_prefix='/assets_add')
+    from app.modules.logs_dashboard import logs_bp
+    app.register_blueprint(logs_bp)
+    from app.modules import db_logger  # Ensure Log model is registered
 
     return app
+

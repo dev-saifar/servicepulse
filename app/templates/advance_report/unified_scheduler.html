@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-primary fw-bold">📅 Unified Report Scheduler</h2>
+    <form method="POST" action="{{ url_for('advance_report.schedule_unified_report') }}" class="border p-4 rounded shadow-sm bg-light">
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">📄 Report Type</label>
+                <select name="report_type" class="form-select" required>
+                    <option value="">Select Report</option>
+                    <option value="Ticket Report">🎫 Ticket Cost Report</option>
+                    <option value="Toner Delivery">🖨️ Toner Delivery Report</option>
+                    <option value="Spare Delivery">🔧 Spare Delivery Report</option>
+                    <option value="Total Summary">📊 Total Service Summary</option>
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">📧 Email to Send</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">⏱ Frequency</label>
+                <select name="frequency" class="form-select" required>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">🗓 Report Period</label>
+                <select name="period" class="form-select" required id="period-select">
+                    <option value="This Week">This Week</option>
+                    <option value="Last Week">Last Week</option>
+                    <option value="This Month">This Month</option>
+                    <option value="Last Month">Last Month</option>
+                    <option value="This Year">This Year</option>
+                    <option value="Last Year">Last Year</option>
+                    <option value="Custom">Custom Range</option>
+                </select>
+            </div>
+
+            <div class="col-md-4 custom-date d-none">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control">
+            </div>
+
+            <div class="col-md-4 custom-date d-none">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control">
+            </div>
+        </div>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-success">✅ Schedule Report</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('period-select').addEventListener('change', function () {
+        const show = this.value === 'Custom';
+        document.querySelectorAll('.custom-date').forEach(el => {
+            el.classList.toggle('d-none', !show);
+        });
+    });
+</script>
+{% endblock %}

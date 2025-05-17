@@ -6,6 +6,9 @@ import pandas as pd
 from app.models import Assets, Ticket
 from sqlalchemy.orm import aliased
 
+from app.utils.permission_required import permission_required
+from flask_login import login_required
+
 ticket1_bp = Blueprint("ticket1", __name__, template_folder="../templates/ticket1")
 
 
@@ -29,6 +32,8 @@ def generate_reference_number():
 
 
 @ticket1_bp.route('/edit/<int:ticket_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_edit_tickets')
 def edit_ticket(ticket_id):
     ticket = Ticket.query.get_or_404(ticket_id)
 
@@ -103,6 +108,8 @@ def edit_ticket(ticket_id):
 
 
 @ticket1_bp.route('/new', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_create_tickets')
 def new_ticket():
     """Register a new ticket and mark technician as Busy"""
     if request.method == 'POST':
@@ -162,7 +169,8 @@ def new_ticket():
 from datetime import date
 
 @ticket1_bp.route('/dashboard', methods=['GET'])
-
+@login_required
+@permission_required('can_view_tickets')
 def ticket_dashboard():
     """Render the ticket dashboard with extended filters and additional fields."""
     start_date = request.args.get('start_date')
@@ -233,6 +241,8 @@ from datetime import datetime
 
 
 @ticket1_bp.route('/export', methods=['GET'])
+@login_required
+@permission_required('can_export_data')
 def export_tickets():
     """Export only the filtered tickets to an Excel file."""
     start_date = request.args.get('start_date')
@@ -316,6 +326,8 @@ def search_assets():
     return render_template('tickets/search_assets.html')
 
 @ticket1_bp.route('/new_auto_populated_ticket', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_create_tickets')
 def new_auto_populated_ticket():
     """Render the ticket form with technician list and handle ticket creation"""
     if request.method == 'POST':
@@ -475,6 +487,8 @@ def check_serial(serial_number):
     else:
         return jsonify({"error": "Serial Number not found"}), 404
 @ticket1_bp.route('/load_tickets')
+@login_required
+@permission_required('can_view_tickets')
 def load_tickets():
     page = request.args.get('page', 1, type=int)
     per_page = 100
@@ -518,6 +532,8 @@ from collections import defaultdict
 from app.models import Ticket  # or however you import it
 
 @ticket1_bp.route('/ticket_dashboard_summary_page')
+@login_required
+@permission_required('can_view_tickets')
 def ticket_dashboard_summary_page():
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
@@ -591,6 +607,8 @@ def ticket_dashboard_summary_page():
         alarming=alarming
     )
 @ticket1_bp.route('/technician_analytics')
+@login_required
+@permission_required('can_view_tickets')
 def technician_analytics():
     from datetime import datetime, timedelta
     from collections import defaultdict
@@ -748,6 +766,8 @@ def technician_analytics():
                            totals=totals  # ✅ newly added
                            )
 @ticket1_bp.route('/export_technician_excel')
+@login_required
+@permission_required('can_export_data')
 def export_technician_excel():
     import pandas as pd
     from flask import send_file
@@ -775,6 +795,8 @@ def export_technician_excel():
 
 
 @ticket1_bp.route('/export_technician_pdf')
+@login_required
+@permission_required('can_export_data')
 def export_technician_pdf():
     from flask import render_template, make_response
     from xhtml2pdf import pisa
@@ -810,6 +832,8 @@ def export_technician_pdf():
     response.headers["Content-Disposition"] = "attachment; filename=technician_dashboard.pdf"
     return response
 @ticket1_bp.route('/export_alarming_cases')
+@login_required
+@permission_required('can_export_data')
 def export_alarming_cases():
     from io import BytesIO
     import pandas as pd
@@ -845,6 +869,8 @@ def export_alarming_cases():
     return send_file(output, as_attachment=True, download_name="alarming_cases.xlsx")
 
 @ticket1_bp.route('/create_pm_ticket')
+@login_required
+@permission_required('can_create_tickets')
 def create_pm_ticket():
     from app.models import Assets, Ticket, Technician
 
@@ -899,6 +925,8 @@ def create_pm_ticket():
 # ✅ New route: Create PM tickets in bulk with optional filters
 # ✅ Bulk PM Ticket Creation with Technician Email Matching
 @ticket1_bp.route('/create_pm_bulk', methods=['POST', 'GET'])
+@login_required
+@permission_required('can_create_tickets')
 def create_pm_bulk():
     from app.models import Assets, Ticket, Technician
 
@@ -966,3 +994,5 @@ def create_pm_bulk():
     db.session.commit()
     flash(f"✅ {created} PM tickets created in bulk.", "success")
     return redirect(url_for('assets.pm_dashboard'))
+from app.utils.permission_required import permission_required
+

@@ -5,13 +5,19 @@ from datetime import datetime
 from flask import send_file
 from flask import send_file
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import login_required
+from app.utils.permission_required import permission_required
 material_bp = Blueprint('material', __name__, template_folder='../templates/material')
 
 @material_bp.route('/dashboard', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def material_dashboard():
     return render_template('material/material_dashboard.html')
 
 @material_bp.route('/fetch_asset/<serial_number>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_asset(serial_number):
     serial_number = serial_number.strip()
 
@@ -30,6 +36,8 @@ def fetch_asset(serial_number):
 
 # Fetch technician list
 @material_bp.route('/fetch_technicians', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_technicians():
     technicians = Technician.query.all()
     tech_list = [{"id": tech.id, "name": tech.name} for tech in technicians]
@@ -37,6 +45,8 @@ def fetch_technicians():
 
 # Fetch spare part details
 @material_bp.route('/fetch_spare/<part_number>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_spare(part_number):
     part_number = part_number.strip()
     spare = spares.query.filter_by(material_nr=part_number).first()
@@ -44,6 +54,8 @@ def fetch_spare(part_number):
 
 # Fetch previous reading for a specific serial number and part number
 @material_bp.route('/fetch_previous_reading/<serial_number>/<part_number>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_previous_reading(serial_number, part_number):
     spare_entry = spare_req.query.filter(
         spare_req.serial_number == serial_number,
@@ -54,6 +66,8 @@ def fetch_previous_reading(serial_number, part_number):
 
 # Fetch warranty pending count and FOC return pending count for a technician
 @material_bp.route('/fetch_pending_counts/<int:technician_id>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_pending_counts(technician_id):
     """ Fetch count of warranty pending and FOC return pending for a technician """
     warranty_pending = spare_req.query.filter(
@@ -74,6 +88,8 @@ def fetch_pending_counts(technician_id):
 from math import ceil
 
 @material_bp.route('/fetch_requests', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_requests():
     """ Fetch paginated requests with filtering options """
     page = request.args.get('page', 1, type=int)
@@ -138,6 +154,8 @@ def fetch_requests():
 import uuid  # ✅ Import UUID to generate unique request IDs
 
 @material_bp.route('/submit_request', methods=['POST'])
+@login_required
+@permission_required('can_request_spares')
 def submit_request():
     """Handles spare request submission and saves data to the database."""
     data = request.json  # Get JSON data from frontend
@@ -195,6 +213,8 @@ def submit_request():
         return render_template("material/material_dashboard.html")
 
 @material_bp.route('/print_request/<request_id>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def print_request(request_id):
     """ Fetches print request details and loads the print page """
     request_entries = spare_req.query.filter_by(request_id=request_id).all()
@@ -279,10 +299,14 @@ def print_request(request_id):
 
 
 @material_bp.route('/movement', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def material_movement():
     return render_template('material/material_movement.html')
 
 @material_bp.route('/history', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def request_history():
     return render_template('material/request_history.html')
 
@@ -290,6 +314,8 @@ def request_history():
 
 # Route to serve the edit request page
 @material_bp.route('/edit_request/<int:id>')
+@login_required
+@permission_required('can_edit_toner_requests')  # Reuse as appropriate
 def edit_request_page(id):
     return render_template('material/edit_request.html')
 import pandas as pd
@@ -301,6 +327,8 @@ from flask import send_file  # ✅ Added missing import
 
 
 @material_bp.route('/export_excel', methods=['GET'])
+@login_required
+@permission_required('can_export_data')
 def export_excel():
     """ Export filtered requests as an Excel file """
     from_date = request.args.get('fromDate')
@@ -360,6 +388,8 @@ def export_excel():
 
 
 @material_bp.route('/fetch_print_data/<int:request_id>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_print_data(request_id):
     """ Fetches print request details along with pending counts and spare request history """
     request_entry = spare_req.query.get(request_id)
@@ -414,6 +444,8 @@ def fetch_print_data(request_id):
         "history": history_data
     })
 @material_bp.route('/get_request/<int:id>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def get_request(id):
     """Fetch request details including UUID for reprint."""
     request_data = spare_req.query.get(id)
@@ -446,6 +478,8 @@ def get_request(id):
     })
 
 @material_bp.route('/update_request/<int:id>', methods=['POST'])
+@login_required
+@permission_required('can_edit_toner_requests')  # Reuse as appropriate
 def update_request(id):
     print(f"✏️ Updating request ID: {id}")  # Debugging Output
 
@@ -473,6 +507,8 @@ def update_request(id):
     return jsonify({"success": True})  # ✅ Ensure JSON response is correct
 
 @material_bp.route('/fetch_history/<serial_number>', methods=['GET'])
+@login_required
+@permission_required('can_view_spare_dashboard')
 def fetch_history(serial_number):
     """ Fetch the spare request history for a given serial number. """
     history_entries = spare_req.query.filter_by(serial_number=serial_number).order_by(spare_req.date.desc()).all()
@@ -498,6 +534,8 @@ def fetch_history(serial_number):
 
 
 @material_bp.route('/delete_request/<int:request_id>', methods=['DELETE'])
+@login_required
+@permission_required('can_delete_spare_request')
 def delete_request(request_id):
     """Handles deletion of a material request by ID."""
     try:

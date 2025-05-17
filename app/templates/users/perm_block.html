@@ -1,0 +1,7 @@
+{% for perm in perms_list %}
+  <div class="form-check">
+    <input type="checkbox" class="form-check-input" name="{{ perm }}" id="{{ perm }}"
+      {% if user and user.__getattribute__(perm) %}checked{% endif %}>
+    <label class="form-check-label" for="{{ perm }}">{{ perm.replace('_', ' ').capitalize() }}</label>
+  </div>
+{% endfor %}

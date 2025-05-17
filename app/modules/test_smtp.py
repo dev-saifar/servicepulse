@@ -1,35 +1,32 @@
-import smtplib
+# test_smtp.py
 from email.mime.text import MIMEText
-from config import Config  # Import SMTP settings from config.py
+from email.mime.multipart import MIMEMultipart
+import smtplib
+from flask import current_app
 
-
-def test_smtp():
-    """Function to test SMTP configuration."""
-    sender_email = "emailprint.ug@groupmfi.com"
-    receiver_email = "a.saifar@groupmfi.com"  # Change this to your test email
-    subject = "SMTP Test Email"
-    body = "This is a test email to confirm SMTP settings."
-
-    # Create the email message
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = receiver_email
-
+def send_email(to_email, subject, text=None, html=None):  # ✅ Fixed: added text and html parameters
     try:
-        # Connect to SMTP server
-        server = smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT)
-        server.set_debuglevel(1)
-        server.starttls()  # Secure connection
-        server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
-        print()
+        smtp_server = current_app.config['MAIL_SERVER']
+        smtp_port = current_app.config['MAIL_PORT']
+        smtp_username = current_app.config['MAIL_USERNAME']
+        smtp_password = current_app.config['MAIL_PASSWORD']
 
-        # Send email
-        server.sendmail(sender_email, receiver_email, msg.as_string())
+        message = MIMEMultipart("alternative")
+        message['From'] = smtp_username
+        message['To'] = to_email
+        message['Subject'] = subject
+
+        if text:
+            message.attach(MIMEText(text, 'plain', 'utf-8'))
+        if html:
+            message.attach(MIMEText(html, 'html', 'utf-8'))
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, to_email, message.as_bytes())
         server.quit()
 
-        print("✅ Email sent successfully!")
-        return True
+        print(f"✅ Email sent to {to_email}")
     except Exception as e:
-        print("❌ Error:", e)
-        return False
+        print(f"❌ Failed to send email to {to_email}. Error: {e}")

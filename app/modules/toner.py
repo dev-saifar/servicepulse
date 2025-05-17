@@ -6,7 +6,9 @@ import pandas as pd
 from flask import send_file
 import io
 from dateutil import parser
-
+from flask_login import login_required
+from flask_login import login_required
+from app.utils.permission_required import permission_required
 
 toner_bp = Blueprint(
     'toner',  # 👈 used in url_for()
@@ -19,6 +21,8 @@ toner_bp = Blueprint(
 
 # 🔍 Asset Search Page
 @toner_bp.route('/search_assets', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_view_assets')
 def search_assets():
     if request.method == 'POST':
         data = request.get_json()
@@ -47,6 +51,8 @@ def search_assets():
 
 
 @toner_bp.route('/request/<serial_number>', methods=['GET'])
+@login_required
+@permission_required('can_request_toner')
 def load_toner_request(serial_number):
     asset = Assets.query.filter_by(serial_number=serial_number).first()
     if not asset:
@@ -84,6 +90,7 @@ def load_toner_request(serial_number):
 
 # 🔁 Fetch Toner Models for Selected Machine
 @toner_bp.route('/get_toner_models', methods=['POST'])
+@login_required
 def get_toner_models():
     data = request.get_json()
     model = data.get('model')
@@ -95,6 +102,8 @@ def get_toner_models():
 
 # ✅ Submit Toner Request
 @toner_bp.route('/submit_request', methods=['POST'])
+@login_required
+@permission_required('can_request_toner')
 def submit_toner_request():
     data = request.get_json()
     try:
@@ -126,6 +135,8 @@ def submit_toner_request():
 
 # 🖨 Print/Reprint Toner Request
 @toner_bp.route('/print_request/<int:id>')
+@login_required
+@permission_required('can_view_toner_dashboard')
 def print_toner_request(id):
     req = toner_request.query.get(id)
     if not req:
@@ -147,6 +158,8 @@ def print_toner_request(id):
 
 # ✏️ Get Data for Editing a Request
 @toner_bp.route('/get_request/<int:id>')
+@login_required
+@permission_required('can_edit_toner_requests')
 def get_request(id):
     req = toner_request.query.get(id)
     if not req:
@@ -172,6 +185,8 @@ def get_request(id):
 
 # 💾 Update an Existing Request
 @toner_bp.route('/update_request', methods=['POST'])
+@login_required
+@permission_required('can_edit_toner_requests')
 def update_request():
     data = request.get_json()
     try:
@@ -219,6 +234,8 @@ def update_request():
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 @toner_bp.route('/dashboard')
+@login_required
+@permission_required('can_view_toner_dashboard')
 def toner_dashboard():
     page = request.args.get('page', 1, type=int)
     per_page = 100
@@ -313,6 +330,8 @@ def toner_dashboard():
 
 # 📦 Load Dashboard Data
 @toner_bp.route('/dashboard_data')
+@login_required
+@permission_required('can_view_toner_dashboard')
 def toner_dashboard_data():
     from_date = request.args.get("from")
     to_date = request.args.get("to")
@@ -338,6 +357,7 @@ def toner_dashboard_data():
     } for r in query.all()])
 
 @toner_bp.route('/get_toner_model_and_life', methods=['POST'])
+@login_required
 def get_toner_model_and_life():
     data = request.get_json()
     model = data.get('machine_model')  # match what JS sends
@@ -358,6 +378,7 @@ def get_toner_model_and_life():
     })
 
 @toner_bp.route('/fetch_previous_reading/<serial>/<toner_type>')
+@login_required
 def fetch_previous_reading(serial, toner_type):
     from app.models import toner_request
     last = toner_request.query.filter_by(
@@ -370,6 +391,8 @@ from datetime import datetime
 import uuid
 
 @toner_bp.route('/submit_bulk_request', methods=['POST'])
+@login_required
+@permission_required('can_request_toner')
 def submit_bulk_request():
     data = request.get_json()
     success_count = 0
@@ -424,6 +447,8 @@ def submit_bulk_request():
 from collections import defaultdict
 
 @toner_bp.route('/print_request/<request_group>', methods=['GET'])
+@login_required
+@permission_required('can_view_toner_dashboard')
 def print_request(request_group):
     requests = toner_request.query.filter_by(request_group=request_group).all()
     if not requests:
@@ -461,6 +486,8 @@ def print_request(request_group):
                            now=datetime.now())
 
 @toner_bp.route('/delete/<int:id>', methods=['POST'])
+@login_required
+@permission_required('can_delete_toner_request')
 def delete_request(id):
     req = toner_request.query.get_or_404(id)
     db.session.delete(req)
@@ -469,6 +496,8 @@ def delete_request(id):
     return redirect(url_for('toner.toner_dashboard'))
 
 @toner_bp.route('/edit/<int:id>', methods=['GET'])
+@login_required
+@permission_required('can_edit_toner_requests')
 def edit_request(id):
     req = toner_request.query.get_or_404(id)
     delivery_team = DeliveryTeam.query.all()
@@ -476,6 +505,8 @@ def edit_request(id):
 
 
 @toner_bp.route('/export_excel')
+@login_required
+@permission_required('can_export_data')
 def export_excel():
     query = toner_request.query
 
@@ -544,6 +575,8 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from app.models import toner_request, DeliveryTeam
 @toner_bp.route('/delivery_dashboard')
+@login_required
+@permission_required('can_view_toner_dashboard')
 def delivery_dashboard():
     today = date.today()
     filter_boy = request.args.get('delivery_boy')
@@ -624,3 +657,4 @@ def delivery_dashboard():
         trend_data=dict(trend_data),
     today_request_count = today_request_count
     )
+from app.utils.permission_required import permission_required

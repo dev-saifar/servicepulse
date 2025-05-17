@@ -11,7 +11,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app.extensions import db
 from app.models import Customer, Contract, Assets
 from datetime import datetime
-
+from flask_login import login_required
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+from app.utils.permission_required import permission_required
 assets_bp = Blueprint('assets', __name__, template_folder='../templates/assets')
 
 UPLOAD_FOLDER = 'uploads'
@@ -42,6 +45,8 @@ def download_template():
 
 # ✅ Display paginated assets with filters
 @assets_bp.route('/')
+@login_required
+@permission_required('can_view_assets')
 def index():
     query = Assets.query
 
@@ -70,6 +75,8 @@ def index():
 
 # ✅ Export assets to Excel
 @assets_bp.route('/export-to-excel')
+@login_required
+@permission_required('can_view_assets')
 def export_to_excel():
     """Exports asset data to an Excel file."""
     assets = Assets.query.all()
@@ -105,6 +112,8 @@ def export_to_excel():
 
 # ✅ Import assets from an Excel/CSV file
 @assets_bp.route('/import', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_add_assets')
 def import_assets():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -166,8 +175,9 @@ def import_assets():
     return render_template('assets/import.html')
 
 
-# ✅ Edit an asset
 @assets_bp.route('/edit/<int:asset_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_edit_assets')
 def edit_asset(asset_id):
     asset = Assets.query.get(asset_id)
     if not asset:
@@ -203,8 +213,9 @@ def edit_asset(asset_id):
     return render_template('assets/edit.html', asset=asset)
 
 
-# ✅ Delete an asset
 @assets_bp.route('/delete/<int:asset_id>', methods=['POST'])
+@login_required
+@permission_required('can_delete_assets')
 def delete_asset(asset_id):
     asset = Assets.query.get(asset_id)
     if not asset:
@@ -221,6 +232,8 @@ def delete_asset(asset_id):
     return redirect(url_for('assets.index'))
 
 @assets_bp.route('/customers', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_manage_customers')
 def manage_customers():
     if request.method == 'POST':
         billing_company = request.form['billing_company']
@@ -277,22 +290,26 @@ def search_customer():
         for c in customers
     ])
 
-@assets_bp.route('/contracts', methods=['GET'])
+@assets_bp.route('/contracts')
+@login_required
+@permission_required('can_view_contracts')
 def manage_contracts():
     """Display contract management page"""
     contracts = Contract.query.all()  # Fetch all contracts
     return render_template("contracts/contracts.html")  # Correct path to the contract management template
 
 
-# ✅ Route to display asset creation form
 @assets_bp.route('/add_asset/<contract_code>', methods=['GET'])
-def add_asset():
+@login_required
+@permission_required('can_add_assets')
+def add_asset(contract_code):
     """Render asset creation form for a specific contract"""
     return render_template('contracts/asset_creation.html', contract_code=contract_code)
 
 
-# ✅ Route to handle asset creation
 @assets_bp.route('/create_asset', methods=['POST'])
+@login_required
+@permission_required('can_add_assets')
 def create_asset():
     """Create a new asset"""
     required_fields = ['contract', 'account_code', 'customer_name', 'serial_number', 'service_location',
@@ -335,6 +352,8 @@ def create_asset():
     return jsonify({"success": True, "message": "Asset created successfully"})
 
 @assets_bp.route('/customers/list', methods=['GET'])
+@login_required
+@permission_required('can_view_assets')
 def customer_list():
     from sqlalchemy import func, distinct
 
@@ -351,6 +370,8 @@ def customer_list():
 
 
 @assets_bp.route('/customers/edit/<int:customer_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_manage_customers')
 def edit_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
 
@@ -366,6 +387,8 @@ def edit_customer(customer_id):
     return render_template('assets/edit_customer.html', customer=customer)
 
 @assets_bp.route('/customers/delete/<int:customer_id>', methods=['POST'])
+@login_required
+@permission_required('can_delete_customers')
 def delete_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     try:
@@ -446,6 +469,8 @@ from flask import render_template
 
 
 @assets_bp.route('/pm_dashboard')
+@login_required
+@permission_required('can_view_pm')
 def pm_dashboard():
     from app.models import Assets, Ticket
     from sqlalchemy import func
@@ -499,6 +524,8 @@ def pm_dashboard():
     return render_template("assets/pm_dashboard.html", due_assets=due_assets)
 
 @assets_bp.route('/pm_complete/<serial_number>', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_edit_pm')
 def complete_pm(serial_number):
     from app.models import PreventiveMaintenance, Assets
     asset = Assets.query.filter_by(serial_number=serial_number).first_or_404()
@@ -530,6 +557,8 @@ def complete_pm(serial_number):
     return render_template('assets/pm_complete.html', asset=asset)
 
 @assets_bp.route('/pm_history')
+@login_required
+@permission_required('can_view_pm')
 def pm_history():
     history = PreventiveMaintenance.query.order_by(
         PreventiveMaintenance.performed_date.desc()
@@ -554,6 +583,8 @@ def pm_history():
 
 
 @assets_bp.route('/export_pm_filtered')
+@login_required
+@permission_required('can_view_pm')
 def export_pm_filtered():
     from app.models import Ticket, Assets
     import pandas as pd
@@ -604,3 +635,4 @@ def export_pm_filtered():
 
     output.seek(0)
     return send_file(output, as_attachment=True, download_name="pending_pm_filtered.xlsx")
+

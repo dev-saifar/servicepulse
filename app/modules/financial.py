@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify, send_file, render_template
 from sqlalchemy import func, case, and_, cast, Float
 from app import db
 from app.models import toner_request, TonerCosting, spare_req, spares, Ticket, Assets
-
+from flask_login import login_required
+from app.utils.permission_required import permission_required
+from flask_login import login_required, current_user
 import pandas as pd
 import io
 
@@ -288,6 +290,8 @@ def export_excel():
     return send_file(output, as_attachment=True, download_name=f"{data_type}_financial_report.xlsx")
 
 @financial_bp.route('/dashboard')
+@login_required
+@permission_required('can_view_financials')
 def financial_dashboard():
     return render_template('financial/financial_dashboard.html')
 from app.models import Customer
@@ -297,3 +301,9 @@ def customers_suggest():
     term = request.args.get('term', '')
     customers = Customer.query.filter(Customer.cust_name.ilike(f"%{term}%")).limit(10).all()
     return jsonify([c.cust_name for c in customers])
+@financial_bp.route('/')
+@login_required
+@permission_required('can_view_financials')
+def financial_home():
+    return redirect(url_for('financial.financial_dashboard'))
+

@@ -7,6 +7,10 @@ from app.models import Customer
 from flask import jsonify
 from sqlalchemy import func
 from datetime import date
+from flask_login import login_required
+from app.utils.permission_required import permission_required
+from flask_login import login_required, current_user
+
 
 
 
@@ -57,6 +61,8 @@ def get_contract_details():
     })
 
 @contracts_bp.route('/create_contract', methods=['POST'])
+@login_required
+@permission_required('can_add_contracts')
 def create_contract():
     """Create a new contract"""
     # Validate required fields
@@ -145,7 +151,10 @@ from datetime import datetime
 
 
 @contracts_bp.route('/list')
+@login_required
+@permission_required('can_view_contracts')
 def list_contracts():
+
     return render_template('contract_list.html')
 
 
@@ -153,6 +162,8 @@ from datetime import datetime
 
 
 @contracts_bp.route('/fetch_contracts1')
+@login_required
+@permission_required('can_view_contracts')
 def fetch_contracts1():
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
@@ -193,6 +204,8 @@ def convert_to_date(date_value):
 
 
 @contracts_bp.route('/view')
+@login_required
+@permission_required('can_view_contracts')
 def view_contract():
     contract_code = request.args.get('code')
     contract = Contract.query.filter_by(contract_code=contract_code).first()
@@ -222,6 +235,8 @@ def view_contract():
     })
 
 @contracts_bp.route('/edit', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_edit_contracts')
 def edit_contract():
     contract_code = request.args.get('code')
     contract = Contract.query.filter_by(contract_code=contract_code).first()
@@ -262,6 +277,8 @@ def edit_contract():
     return render_template('contracts/edit_contract.html', contract=contract)
 
 @contracts_bp.route('/delete', methods=['DELETE'])
+@login_required
+@permission_required('can_delete_contracts')
 def delete_contract():
     contract_code = request.args.get('code')
     contract = Contract.query.filter_by(contract_code=contract_code).first()
@@ -328,6 +345,8 @@ UPLOAD_FOLDER = os.path.join('app', 'static', 'uploads', 'contracts')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @contracts_bp.route('/contracts/dashboard')
+@login_required
+@permission_required('can_view_contracts')
 def contract_dashboard_page():
     billing_companies = [b[0] for b in db.session.query(Contract.billing_company).distinct()]
     years = sorted(set(int(y[0]) for y in db.session.query(extract('year', Contract.contract_start_date)).distinct() if y[0]))
@@ -335,6 +354,8 @@ def contract_dashboard_page():
 
 
 @contracts_bp.route('/contracts/dashboard-data')
+@login_required
+@permission_required('can_view_contracts')
 def contract_dashboard_data():
     today = date.today()
     billing_filter = request.args.get('billing_company', '').strip()
@@ -429,6 +450,8 @@ def contract_dashboard_data():
 
 
 @contracts_bp.route('/contracts/upload/<contract_code>', methods=['POST'])
+@login_required
+@permission_required('can_edit_contracts')
 def upload_contract_file(contract_code):
     file = request.files.get('contract_file')
     if not file:

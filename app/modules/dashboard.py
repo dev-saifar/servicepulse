@@ -4,17 +4,19 @@ from app.extensions import db
 from app.models import Ticket, Technician
 from sqlalchemy.sql import func, case
 from flask_login import login_required
+from app.utils.permission_required import permission_required
 
 dashboard_bp = Blueprint('dashboard', __name__, template_folder='../templates/dashboard')
 
 @dashboard_bp.route('/')
+@login_required
+@permission_required('can_view_reports')
 def index():
     completed_tickets = Ticket.query.filter_by(status="Closed").count()
     pending_tickets = Ticket.query.filter(Ticket.status != "Closed").count()
 
     today = datetime.utcnow().strftime('%Y-%m-%d')
 
-    # Get technician details including tickets handled today
     technicians = db.session.query(
         Technician.id,
         Technician.name,
@@ -22,7 +24,6 @@ def index():
         func.count(case((func.strftime('%Y-%m-%d', Ticket.created_at) == today, 1), else_=None)).label('tickets_handled_today')
     ).outerjoin(Ticket, Technician.id == Ticket.technician_id).group_by(Technician.id).all()
 
-    # Get performer of the month and performer of the day
     performer_of_month = db.session.query(
         Technician.name, func.count(Ticket.id).label('total_tickets')
     ).join(Ticket).filter(
@@ -53,8 +54,9 @@ def index():
         exceeded_time_techs=exceeded_time_techs
     )
 
-# API Endpoint to Fetch Dashboard Data for Real-Time Updates
 @dashboard_bp.route('/dashboard-data')
+@login_required
+@permission_required('can_view_reports')
 def dashboard_data():
     today = datetime.utcnow().strftime('%Y-%m-%d')
 
@@ -108,6 +110,9 @@ def dashboard_data():
             "daily_tickets": performer_of_day.daily_tickets if performer_of_day else 0
         }
     })
+
 @dashboard_bp.route('/rotate')
+@login_required
+@permission_required('can_view_reports')
 def dashboard_rotator():
     return render_template('dashboard_rotator.html')

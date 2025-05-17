@@ -3,58 +3,115 @@
 {% block content %}
 <div class="container">
     <div class="split-screen">
-        <!-- Left Section: Features & Technologies -->
+        <!-- Left Section -->
         <div class="left-section">
-            <h2>About ServPulse</h2>
-            <p class="tagline">Optimizing Technician Management and Service Efficiency 🚀</p>
-            <p>Welcome to <strong>ServPulse</strong>, your intelligent solution for <strong>technician tracking, service ticket automation, and real-time performance analytics</strong>. Designed to enhance field service efficiency, ServPulse ensures seamless ticket management, SLA compliance, and in-depth reporting.</p>
+            <!-- Animation -->
+            <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+            <lottie-player
+                src="https://assets6.lottiefiles.com/packages/lf20_qp1q7mct.json"
+                background="transparent"
+                speed="1"
+                style="max-width: 100%; height: 250px;"
+                loop
+                autoplay>
+            </lottie-player>
 
-            <h3>Key Features:</h3>
+            <h2>What is ServPulse?</h2>
+            <p>
+                <strong>ServPulse</strong> is a smart, web-based Service Management Platform built by the <strong>MFI-UG MDS Technical Team</strong> to optimize internal service workflows across Technical, Sales, Finance, and Credit Control.
+                Hosted locally at Kansanga HQ, it empowers teams with real-time visibility into tickets, assets, logistics, contracts, and financials.
+            </p>
+
+            <h3>Core Modules:</h3>
             <div class="feature-cards">
-                <div class="card"><i class="fas fa-chart-line"></i> <strong>Live Technician Dashboard</strong><br> Monitor real-time technician availability.</div>
-                <div class="card"><i class="fas fa-tools"></i> <strong>Smart Ticketing System</strong><br> Track, assign, and escalate service requests.</div>
-                <div class="card"><i class="fas fa-box"></i> <strong>Asset Management</strong><br> Track and manage company assets.</div>
-                <div class="card"><i class="fas fa-truck-moving"></i> <strong>Material Movement</strong><br> Monitor material logistics.</div>
-                <div class="card"><i class="fas fa-chart-pie"></i> <strong>Tracking & Analysis</strong><br> Analyze service trends and efficiency.</div>
-                <div class="card"><i class="fas fa-history"></i> <strong>History Management</strong><br> Maintain logs for all technician activities.</div>
+                <div class="card"><strong>🎫 Ticket Management</strong><br> Real-time technician tracking, SLA alerts, escalation workflows, and resolution analytics.</div>
+                <div class="card"><strong>🧰 Spare & Toner Requests</strong><br> Complete lifecycle tracking from request to delivery. Historical meter tracking, toner yield, and delivery team workflow.</div>
+                <div class="card"><strong>📃 Contract Management</strong><br> Add, track, and alert contracts. Auto-code generation, expiry dashboards, and document upload/download.</div>
+                <div class="card"><strong>🖥️ Asset Management</strong><br> Tag machines with contract, technician, and PM mapping. Auto-code generation by location (Kampala / Upcountry / Used).</div>
+                <div class="card"><strong>📊 Technician Reporting</strong><br> Analyze job types, resolution times, FOC/warranty work, and productivity via charts.</div>
+                <div class="card"><strong>💸 Financial Dashboard</strong><br> Automated cost analysis by contract, asset, or customer. Tracks toner, spare, and service costs.</div>
+                <div class="card"><strong>📑 Dashboards & Alerts</strong><br> Overview of open tickets, top-serviced clients, overdue issues, and delivery summaries.</div>
+                <div class="card"><strong>🧭 PM Scheduling</strong><br> Plan and track preventive maintenance with custom frequency and technician reminders.</div>
             </div>
+
+            <h3>Why ServPulse?</h3>
+            <ul>
+                <li>✅ Built in-house by MFI-UG MDS Tech Team</li>
+                <li>✅ Saves time via automated workflows</li>
+                <li>✅ Centralized contract + ticket + cost visibility</li>
+                <li>✅ Department-specific benefits & real-time reporting</li>
+                <li>✅ Hosted securely in your internal network</li>
+            </ul>
+
+
 
             <h3>Technologies Used:</h3>
             <div class="tech-list">
-                <p><i class="fab fa-html5"></i> <strong>Frontend:</strong> HTML, Bootstrap, JavaScript</p>
-                <p><i class="fab fa-python"></i> <strong>Backend:</strong> Flask, Python, SQLAlchemy</p>
+                <p><i class="fab fa-html5"></i> <strong>Frontend:</strong> HTML, Bootstrap, JavaScript, Lottie</p>
+                <p><i class="fab fa-python"></i> <strong>Backend:</strong> Flask, SQLAlchemy</p>
                 <p><i class="fas fa-database"></i> <strong>Database:</strong> SQLite / PostgreSQL</p>
-                <p><i class="fas fa-chart-bar"></i> <strong>Reports & Charts:</strong> Chart.js, DataTables</p>
+                <p><i class="fas fa-chart-bar"></i> <strong>Visualization:</strong> Chart.js, DataTables</p>
+                <p><i class="fas fa-file-export"></i> <strong>Reporting:</strong> Excel / PDF Export, WeasyPrint</p>
             </div>
         </div>
 
-        <!-- Right Section: Developer Info & Version History -->
-        <div class="right-section">
-            <h3>Meet the Developer:</h3>
-            <div class="developer-photo">
-                <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
-            </div>
-            <p><strong>Saifar Abdul Latheef.</strong> – Passionate about building efficient IT solutions.</p>
-            <p>Email: <a href="mailto:dev.saifar@gmail.com">dev.saifar@gmail.com</a></p>
-            <p>💡 <strong>Have feedback?</strong> Reach out for feature requests & improvements!</p>
+        <!-- Right Section -->
+<div class="right-section">
+    <h3>Meet the Developer</h3>
+    <div class="developer-photo">
+        <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
+    </div>
+    <p><strong>Saifar Abdul Latheef</strong><br> </p>
+    <p>Email: <a href="mailto:dev.saifar@gmail.com">dev.saifar@gmail.com</a></p>
 
-            <h3>Version Information:</h3>
-            <p><strong>ServPulse v2025-1</strong> – Initial release with ticketing & tracking features.</p>
 
-            <h3>Upcoming Features:</h3>
-            <div class="feature-cards">
-                <div class="card">🔹 <strong>Contract Management</strong> – Manage service agreements and contracts.</div>
-                <div class="card">🔹 <strong>Document Management</strong> – Store and retrieve critical service documents.</div>
-                <div class="card">🔹 <strong>Review Meeting Schedules & Reminders</strong> – Stay on top of scheduled meetings.</div>
-                <div class="card">🔹 <strong>Renewal Reminders</strong> – Get alerts for contract renewals.</div>
-                <div class="card">🔹 <strong>Directory Functionality</strong> – Central repository for contacts and resources.</div>
+
+    <h3>ServPulse v2025.04</h3>
+    <p>Latest release includes full support for:</p>
+    <ul>
+        <li>Contract Management with alerts</li>
+        <li>Toner & Spare request workflows</li>
+        <li>Technician tracking & analytics</li>
+        <li>Cost dashboards (service, toner, spare)</li>
+        <li>PM Scheduling & Completion Tracker</li>
+    </ul>
+
+    <h3>Team Behind ServPulse</h3>
+    <p>ServPulse is proudly built in-house by the MFI-UG MDS Technical Team to streamline daily service operations across Uganda.</p>
+    <ul>
+        <li>🎯 Designed for field & support engineers</li>
+        <li>💼 Supports sales, credit control, and finance teams</li>
+        <li>🔐 Securely hosted on local infrastructure</li>
+    </ul>
+
+    <h3>Coming Soon</h3>
+    <div class="feature-cards">
+        <div class="card">🔹 <strong>Email Alerts</strong> – For contract expiry, ticket assignment, deliveries</div>
+        <div class="card">🔹 <strong>Mobile View</strong> – UI optimized for phones & tablets</div>
+        <div class="card">🔹 <strong>Auto Scheduling</strong> – PM visit planner based on frequency</div>
+    </div>
+<h3>Department Benefits</h3>
+            <div class="tech-list">
+                <table class="table table-bordered table-sm bg-white">
+                    <thead class="table-light">
+                        <tr><th>Department</th><th>What They Get</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>🛠️ Technical</td><td>Ticket dashboards, asset status, PM, toner, delivery tracking</td></tr>
+                        <tr><td>💼 Sales</td><td>Contract listing, uploads, renewal alerts, document access</td></tr>
+                        <tr><td>📊 Finance</td><td>Cost analytics by customer/asset, exportable reports</td></tr>
+                        <tr><td>🔐 Credit Control</td><td>Stop-service history, contract access & compliance overview</td></tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
+
+</div>
+
     </div>
 
-    <!-- Call to Action -->
+    <!-- CTA -->
     <div class="cta">
-        <p class="note">📌 Need help? Contact us today for a demo!</p>
+        <p class="note">📌 Want a demo or need help? Contact the team today!</p>
     </div>
 </div>
 
@@ -68,13 +125,12 @@
         background-size: 300px;
         background-position: center;
         background-repeat: no-repeat;
-        opacity: 100;
     }
 
     .container {
         max-width: 1200px;
         margin: auto;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
@@ -82,19 +138,19 @@
 
     .split-screen {
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap;
         gap: 40px;
     }
 
     .left-section, .right-section {
-        width: 48%;
+        width: 100%;
+        max-width: 48%;
     }
 
     .feature-cards {
         display: flex;
         flex-wrap: wrap;
         gap: 15px;
-        justify-content: space-between;
     }
 
     .card {
@@ -102,9 +158,9 @@
         color: white;
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
-        font-size: 1em;
+        font-size: 0.95em;
         width: 48%;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
         transition: transform 0.3s ease-in-out;
     }
 
@@ -112,7 +168,7 @@
         transform: scale(1.05);
     }
 
-    .tech-list {
+    .tech-list, table {
         background: #eef5ff;
         padding: 10px;
         border-radius: 8px;
@@ -132,7 +188,7 @@
     }
 
     .note {
-        font-size: 1.2em;
+        font-size: 1.1em;
         color: #FF5733;
         font-weight: bold;
         text-align: center;

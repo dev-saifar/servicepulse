@@ -2,11 +2,15 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from datetime import datetime, timedelta
 from app.extensions import db
 from app.models import Technician, Ticket
+from sqlalchemy import func
+from flask_login import login_required
+from app.utils.permission_required import permission_required
 
 technicians_bp = Blueprint('technicians', __name__, template_folder='../templates/technicians')
 
-from sqlalchemy import func
 @technicians_bp.route('/')
+@login_required
+@permission_required('can_view_technicians')
 def index():
     technicians = db.session.query(
         Technician.id,
@@ -18,14 +22,12 @@ def index():
             func.coalesce(Ticket.service_location, ' '),
             ' - ',
             func.coalesce(Ticket.customer, ' ')
-
         ).label('last_location'),
         db.func.count(Ticket.id).filter(Ticket.created_at >= datetime.utcnow().date()).label('calls_today'),
         db.func.coalesce(Ticket.expected_completion_time, datetime.utcnow()).label('expected_free_time')
     ).outerjoin(Ticket, Technician.id == Ticket.technician_id) \
         .group_by(Technician.id).all()
 
-    # Process estimated free time
     technician_list = []
     for tech in technicians:
         minutes_left = max((tech.expected_free_time - datetime.utcnow()).total_seconds() / 60, 0)
@@ -45,6 +47,8 @@ def index():
 
 
 @technicians_bp.route('/add', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_add_technicians')
 def add_technician():
     if request.method == 'POST':
         name = request.form['name']
@@ -65,6 +69,8 @@ def add_technician():
 
 
 @technicians_bp.route('/import', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_add_technicians')
 def import_technicians():
     if request.method == 'POST':
         file = request.files['file']
@@ -92,7 +98,10 @@ def import_technicians():
 
     return render_template('technicians/import_technicians.html')
 
+
 @technicians_bp.route('/edit/<int:tech_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_edit_technicians')
 def edit_technician(tech_id):
     technician = Technician.query.get_or_404(tech_id)
     if request.method == 'POST':
@@ -101,7 +110,10 @@ def edit_technician(tech_id):
         return redirect(url_for('technicians.index'))
     return render_template('technicians/edit.html', technician=technician)
 
+
 @technicians_bp.route('/delete/<int:tech_id>', methods=['POST'])
+@login_required
+@permission_required('can_edit_technicians')
 def delete_technician(tech_id):
     technician = Technician.query.get_or_404(tech_id)
     db.session.delete(technician)

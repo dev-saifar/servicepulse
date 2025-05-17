@@ -1,7 +1,12 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, redirect, url_for, flash
+from flask_login import login_required
 from sqlalchemy import func
 from app import db
 from app.models import Ticket, Technician, ScheduledReport
+from flask import render_template
+from collections import defaultdict
+from app.models import ScheduledReport, ScheduledReportLog
+
 import pandas as pd
 import io
 from datetime import datetime, timedelta
@@ -10,6 +15,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import schedule
 import time
+from app.modules.delivery_report import (
+    generate_toner_delivery_excel,
+    generate_spare_delivery_excel,
+    generate_ticket_cost_excel,
+    generate_total_service_summary_excel
+)
+
 import threading
 from config import Config  # Import SMTP settings from config.py
 
@@ -19,68 +31,139 @@ advance_report_bp = Blueprint('advance_report', __name__, url_prefix='/advance_r
 
 def send_email_report(report, file_path):
     """Send scheduled report via email using SMTP settings from config.py"""
+    from email.mime.base import MIMEBase
+    from email import encoders
+
     sender_email = Config.MAIL_USERNAME
     receiver_email = report.email
-    subject = f"Scheduled Report: {report.report_type}"
-    body = "Hello , Please find the scheduled report attached."
+    subject = f"📊 Scheduled Report: {report.report_type}"
 
+    # Extract and personalize values
+    recipient_name = receiver_email.split('@')[0].replace('.', ' ').title()
+    report_type = report.report_type
+    start_date = report.start_date.strftime('%Y-%m-%d') if report.start_date else None
+    end_date = report.end_date.strftime('%Y-%m-%d') if report.end_date else None
+
+    # Compose body text
+    body = (
+        f"Dear {recipient_name},\n\n"
+        f"Please find attached your scheduled report: *{report_type}*.\n"
+        f"{f"The data covers the period from {start_date} to {end_date}.\n" if start_date and end_date else ''}"
+        f"\nIf you have any questions or need further insights, feel free to contact our support team.\n\n"
+        f"\n\n"
+        f"Warm regards,\n"
+        f"\n"
+        f"ServPulse Automated Reporting System"
+    )
+
+    # Create email message
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain'))
 
+    # Attach report
     with open(file_path, "rb") as attachment:
-        from email.mime.base import MIMEBase
-        from email import encoders
         part = MIMEBase("application", "octet-stream")
         part.set_payload(attachment.read())
         encoders.encode_base64(part)
-        part.add_header(
-            "Content-Disposition", f"attachment; filename={file_path}"
-        )
+        part.add_header("Content-Disposition", f"attachment; filename={file_path}")
         msg.attach(part)
 
+    # Send email
     with smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT) as server:
         server.starttls()
         server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
         server.sendmail(sender_email, receiver_email, msg.as_string())
 
+from datetime import datetime, timedelta
+from flask_mail import Message
+from app import mail, db
+from app.models import ScheduledReport, Ticket
+import pandas as pd
+import io
+import traceback
 
 def generate_scheduled_reports():
-    """Check scheduled reports and send them via email"""
     now = datetime.utcnow()
     reports = ScheduledReport.query.all()
+
     for report in reports:
-        if (report.schedule == "daily" and now.hour == 17) or \
-                (report.schedule == "weekly" and now.weekday() == 4 and now.hour == 17) or \
-                (report.schedule == "monthly" and now.day == 1 and now.hour == 5):
+        try:
+            # === Determine if report should run now ===
+            run_now = (
+                (report.schedule == "daily" and now.hour == 17) or
+                (report.schedule == "weekly" and now.weekday() == 4 and now.hour == 17) or
+                (report.schedule == "monthly" and now.day == 1 and now.hour == 5)
+            )
+            if not run_now:
+                continue
 
-            query = Ticket.query
-            if report.start_date:
-                query = query.filter(Ticket.created_at >= report.start_date)
-            if report.end_date:
-                query = query.filter(Ticket.created_at <= report.end_date)
-            if report.technician_id:
-                query = query.filter(Ticket.technician_id == report.technician_id)
-            if report.region:
-                query = query.filter(Ticket.region.ilike(f"%{report.region}%"))
-            if report.status:
-                query = query.filter(Ticket.status == report.status)
-            if report.call_type:
-                query = query.filter(Ticket.call_type == report.call_type)
-            if report.customer:
-                query = query.filter(Ticket.customer.ilike(f"%{report.customer}%"))
+            # === Resolve Date Range ===
+            start_date, end_date = report.start_date, report.end_date
+            today = now.date()
 
-            tickets = query.all()
-            file_path = f"scheduled_reports/{report.report_type}_{now.strftime('%Y%m%d')}.xlsx"
-            df = pd.DataFrame(
-                [{column.name: getattr(ticket, column.name) for column in Ticket.__table__.columns} for ticket in
-                 tickets])
-            with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Scheduled Report')
+            if report.period and report.period.lower() != "custom":
+                if report.period == "This Week":
+                    start_date = today - timedelta(days=today.weekday())
+                    end_date = today
+                elif report.period == "Last Week":
+                    end_date = today - timedelta(days=today.weekday() + 1)
+                    start_date = end_date - timedelta(days=6)
+                elif report.period == "This Month":
+                    start_date = today.replace(day=1)
+                    end_date = today
+                elif report.period == "Last Month":
+                    first_this_month = today.replace(day=1)
+                    end_date = first_this_month - timedelta(days=1)
+                    start_date = end_date.replace(day=1)
+                elif report.period == "This Year":
+                    start_date = today.replace(month=1, day=1)
+                    end_date = today
+                elif report.period == "Last Year":
+                    start_date = today.replace(year=today.year - 1, month=1, day=1)
+                    end_date = start_date.replace(month=12, day=31)
 
+            s_date = start_date.strftime('%Y-%m-%d') if start_date else ''
+            e_date = end_date.strftime('%Y-%m-%d') if end_date else ''
+
+            # === Generate Report File Based on Type ===
+            if report.report_type == "Ticket Report":
+                output, filename = generate_ticket_cost_excel(s_date, e_date)
+
+            elif report.report_type == "Total Summary":
+                output, filename = generate_total_service_summary_excel(s_date, e_date)
+
+            elif report.report_type == "Toner Delivery":
+                output, filename = generate_toner_delivery_excel(s_date, e_date)
+
+            elif report.report_type == "Spare Delivery":
+                output, filename = generate_spare_delivery_excel(s_date, e_date)
+
+            else:
+                print(f"Unknown report type: {report.report_type}")
+                continue
+
+            # === Save File ===
+            import os
+
+            # Ensure folder exists
+            os.makedirs("scheduled_reports", exist_ok=True)
+
+            file_path = os.path.join("scheduled_reports", filename)
+            with open(file_path, "wb") as f:
+                f.write(output.getvalue())
+
+            # === Send Email Using Working SMTP Method ===
             send_email_report(report, file_path)
+            print(f"✅ Report sent: {filename} → {report.email}")
+
+        except Exception as e:
+            print(f"❌ Failed to generate/send report: {report.report_type}")
+            import traceback
+            traceback.print_exc()
+            continue
 
 
 # Run the scheduler in a separate thread
@@ -95,10 +178,43 @@ threading.Thread(target=run_scheduler, daemon=True).start()
 
 
 @advance_report_bp.route('/')
+@advance_report_bp.route('/')
 def advance_report_dashboard():
     """Renders the Advanced Reports Dashboard"""
     scheduled_reports = ScheduledReport.query.all()
-    return render_template('advance_report/dashboard.html', scheduled_reports=scheduled_reports)
+
+    # Fetch recent logs per report (e.g. last 3 logs per report)
+    logs = ScheduledReportLog.query.order_by(ScheduledReportLog.created_at.desc()).limit(100).all()
+
+    # Group logs by report_id
+    logs_by_report = defaultdict(list)
+    for log in logs:
+        logs_by_report[log.report_id].append(log)
+
+    # ⬇️ Move the next_run calculation here
+    def calculate_next_run(report):
+        now = datetime.utcnow()
+        if report.schedule == "daily":
+            return (now + timedelta(days=18)).replace(hour=1, minute=0, second=0, microsecond=0)
+        elif report.schedule == "weekly":
+            next_friday = now + timedelta(days=(4 - now.weekday() + 7) % 7)
+            return next_friday.replace(hour=18, minute=0, second=0, microsecond=0)
+        elif report.schedule == "monthly":
+            next_month = (now.replace(day=1) + timedelta(days=32)).replace(day=1)
+            return next_month.replace(hour=5, minute=0, second=0, microsecond=0)
+        return None
+
+    # Inject next_run dynamically
+    for report in scheduled_reports:
+        report.next_run = calculate_next_run(report)
+
+    # ✅ Return after everything is ready
+    return render_template(
+        'advance_report/dashboard.html',
+        scheduled_reports=scheduled_reports,
+        logs_by_report=logs_by_report
+    )
+
 
 
 import os
@@ -254,6 +370,7 @@ def delete_schedule(schedule_id):
     return redirect(url_for('advance_report.advance_report_dashboard'))
 
 
+
 @advance_report_bp.route('/run_scheduled_report/<int:report_id>', methods=['POST'])
 def run_scheduled_report(report_id):
     """Manually run a specific scheduled report"""
@@ -265,60 +382,335 @@ def run_scheduled_report(report_id):
 
         print(f"Running scheduled report: {report.report_type} for email {report.email}")
 
-        # Generate report
-        query = Ticket.query
-        if report.start_date:
-            query = query.filter(Ticket.created_at >= report.start_date)
-        if report.end_date:
-            query = query.filter(Ticket.created_at <= report.end_date)
-        if report.technician_id:
-            query = query.filter(Ticket.technician_id == report.technician_id)
-        if report.region:
-            query = query.filter(Ticket.region.ilike(f"%{report.region}%"))
-        if report.status:
-            query = query.filter(Ticket.status == report.status)
-        if report.call_type:
-            query = query.filter(Ticket.call_type == report.call_type)
-        if report.customer:
-            query = query.filter(Ticket.customer.ilike(f"%{report.customer}%"))
+        # === Resolve Date Range ===
+        start_date, end_date = report.start_date, report.end_date
+        today = datetime.utcnow().date()
+        if report.period and report.period.lower() != "custom":
+            if report.period == "This Week":
+                start_date = today - timedelta(days=today.weekday())
+                end_date = today
+            elif report.period == "Last Week":
+                end_date = today - timedelta(days=today.weekday() + 1)
+                start_date = end_date - timedelta(days=6)
+            elif report.period == "This Month":
+                start_date = today.replace(day=1)
+                end_date = today
+            elif report.period == "Last Month":
+                first_this_month = today.replace(day=1)
+                end_date = first_this_month - timedelta(days=1)
+                start_date = end_date.replace(day=1)
+            elif report.period == "This Year":
+                start_date = today.replace(month=1, day=1)
+                end_date = today
+            elif report.period == "Last Year":
+                start_date = today.replace(year=today.year - 1, month=1, day=1)
+                end_date = start_date.replace(month=12, day=31)
 
-        tickets = query.all()
-        if not tickets:
-            flash(f"No records found for scheduled report: {report.report_type}", "warning")
-            print(f"No tickets found for scheduled report ID {report_id}")
+        s_date = start_date.strftime('%Y-%m-%d') if start_date else ''
+        e_date = end_date.strftime('%Y-%m-%d') if end_date else ''
+
+        # === Generate appropriate report ===
+        if report.report_type == "Ticket Report":
+            from app.modules.delivery_report import generate_ticket_cost_excel
+            output, filename = generate_ticket_cost_excel(s_date, e_date)
+
+        elif report.report_type == "Toner Delivery":
+            from app.modules.delivery_report import generate_toner_delivery_excel
+            output, filename = generate_toner_delivery_excel(s_date, e_date)
+
+        elif report.report_type == "Spare Delivery":
+            from app.modules.delivery_report import generate_spare_delivery_excel
+            output, filename = generate_spare_delivery_excel(s_date, e_date)
+
+        elif report.report_type == "Total Summary":
+            from app.modules.delivery_report import generate_total_service_summary_excel
+            output, filename = generate_total_service_summary_excel(s_date, e_date)
+
+        else:
+            flash("Unsupported report type.", "danger")
             return redirect(url_for('advance_report.advance_report_dashboard'))
 
-        print(f"Found {len(tickets)} tickets for scheduled report.")
+        import os
 
-        # Ensure directory exists
-        report_dir = os.path.join(os.getcwd(), "scheduled_reports")
-        if not os.path.exists(report_dir):
-            os.makedirs(report_dir)
+        # Ensure folder exists
+        os.makedirs("scheduled_reports", exist_ok=True)
 
-        # Generate report file
-        file_name = f"{report.report_type}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.xlsx"
-        file_path = os.path.join(report_dir, file_name)
-
-        df = pd.DataFrame([{column.name: getattr(ticket, column.name) for column in Ticket.__table__.columns} for ticket in tickets])
-
-        with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Scheduled Report')
-
-        # Check if file exists
-        if not os.path.exists(file_path):
-            flash(f"Error: Report file was not created.", "danger")
-            print("Error: File was not created.")
-            return redirect(url_for('advance_report.advance_report_dashboard'))
-
-        print(f"Report successfully saved at: {file_path}")
+        file_path = os.path.join("scheduled_reports", filename)
+        with open(file_path, "wb") as f:
+            f.write(output.getvalue())
 
         # Send report via email
-        send_email_report(report, file_path)
+        send_email_report(report, f"scheduled_reports/{filename}")
+        with open(f"scheduled_reports/{filename}", 'wb') as f:
+            f.write(output.getvalue())
+
         flash(f"Report '{report.report_type}' sent successfully to {report.email}!", "success")
-        print(f"Email sent to {report.email} with file {file_path}")
 
     except Exception as e:
         flash(f"Error running scheduled report: {str(e)}", "danger")
         print(f"Exception occurred: {str(e)}")
 
     return redirect(url_for('advance_report.advance_report_dashboard'))
+
+
+@advance_report_bp.route('/schedule_unified_report', methods=['POST'])
+@login_required
+def schedule_unified_report():
+    from app.models import ScheduledReport
+    from datetime import datetime
+    from flask import flash
+
+    report_type = request.form.get('report_type')
+    email = request.form.get('email')
+    schedule = request.form.get('frequency')  # form still sends "frequency", we map it to schedule
+    period = request.form.get('period')
+    start_date = request.form.get('start_date') or None
+    end_date = request.form.get('end_date') or None
+
+    if period != 'Custom':
+        start_date = None
+        end_date = None
+
+    report = ScheduledReport(
+        report_type=report_type,
+        email=email,
+        schedule=schedule,
+        period=period,
+        start_date=start_date,
+        end_date=end_date,
+        #next_run=datetime.utcnow()
+    )
+    db.session.add(report)
+    db.session.commit()
+
+    flash("Report has been scheduled successfully!", "success")
+    return redirect(url_for('advance_report.advance_report_dashboard'))
+
+
+@advance_report_bp.route('/unified_scheduler')
+@login_required
+def unified_scheduler():
+    return render_template('advance_report/unified_scheduler.html')
+
+# Existing imports
+
+# Helper: Toner Delivery Report
+    # Existing imports
+
+    from app.models import toner_request, TonerCosting, spare_req, spares, Ticket
+    from app.utils.permission_required import permission_required
+    from flask_login import login_required
+    from app import db
+    import pandas as pd
+    import io
+    from datetime import datetime
+
+    # Helper: Toner Delivery Report
+
+    def generate_toner_delivery_excel(start_date=None, end_date=None):
+        query = db.session.query(toner_request).filter(toner_request.delivery_status == 'Delivered')
+        if start_date:
+            query = query.filter(toner_request.date_issued >= start_date)
+        if end_date:
+            query = query.filter(toner_request.date_issued <= end_date)
+
+        results = query.all()
+        data = []
+
+        for t in results:
+            cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
+            unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+            total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
+
+            data.append({
+                "Date Issued": t.date_issued.strftime('%Y-%m-%d') if t.date_issued else '',
+                "Serial Number": t.serial_number,
+                "Customer Name": t.customer_name,
+                "Toner Model": t.toner_model,
+                "Source": t.toner_source,
+                "Qty": t.issued_qty,
+                "Unit Cost": round(unit_cost, 2),
+                "Total Cost": round(total_cost, 2),
+            })
+
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="Toner")
+        output.seek(0)
+        return output, "toner_delivery_report.xlsx"
+
+    # Helper: Spare Delivery Report
+
+    def generate_spare_delivery_excel(start_date=None, end_date=None):
+        query = db.session.query(spare_req)
+        if start_date:
+            query = query.filter(spare_req.date >= start_date)
+        if end_date:
+            query = query.filter(spare_req.date <= end_date)
+
+        results = query.all()
+        data = []
+
+        for s in results:
+            spare_info = spares.query.filter_by(material_nr=s.product_code).first()
+            unit_cost = 0.0 if s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
+            total_cost = unit_cost * s.qty
+
+            data.append({
+                "Date": s.date.strftime('%Y-%m-%d') if s.date else '',
+                "Serial Number": s.serial_number,
+                "Product Code": s.product_code,
+                "Description": s.description,
+                "Qty": s.qty,
+                "Warehouse": s.warehouse,
+                "Customer Name": s.customer_name,
+                "Unit Cost": round(unit_cost, 2),
+                "Total Cost": round(total_cost, 2),
+            })
+
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="Spare")
+        output.seek(0)
+        return output, "spare_delivery_report.xlsx"
+
+    # Helper: Ticket Cost Report
+
+    def generate_ticket_cost_excel(start_date=None, end_date=None):
+        query = db.session.query(Ticket)
+        if start_date:
+            query = query.filter(Ticket.created_at >= start_date)
+        if end_date:
+            query = query.filter(Ticket.created_at <= end_date)
+
+        results = query.all()
+        data = []
+
+        for t in results:
+            data.append({
+                "Reference No": t.reference_no,
+                "Customer": t.customer,
+                "Created At": t.created_at.strftime('%Y-%m-%d') if t.created_at else '',
+                "Service Cost": 10
+            })
+
+        df = pd.DataFrame(data)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="Ticket Cost")
+        output.seek(0)
+        return output, "ticket_cost_report.xlsx"
+
+    # Helper: Total Service Summary
+
+    def generate_total_service_summary_excel(start_date=None, end_date=None):
+        from collections import defaultdict
+
+        if start_date:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        if end_date:
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
+        toner_query = db.session.query(toner_request)
+        spare_query = db.session.query(spare_req)
+        ticket_query = db.session.query(Ticket)
+
+        if start_date:
+            toner_query = toner_query.filter(toner_request.date_issued >= start_date)
+            spare_query = spare_query.filter(spare_req.date >= start_date)
+            ticket_query = ticket_query.filter(Ticket.created_at >= start_date)
+        if end_date:
+            toner_query = toner_query.filter(toner_request.date_issued <= end_date)
+            spare_query = spare_query.filter(spare_req.date <= end_date)
+            ticket_query = ticket_query.filter(Ticket.created_at <= end_date)
+
+        toner_data, toner_costs = [], defaultdict(float)
+        for t in toner_query.all():
+            cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
+            unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+            total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
+            toner_costs[t.customer_name] += total_cost
+            toner_data.append({
+                "Date Issued": t.date_issued.strftime('%Y-%m-%d') if t.date_issued else '',
+                "Serial Number": t.serial_number,
+                "Customer Name": t.customer_name,
+                "Toner Model": t.toner_model,
+                "Toner Source": t.toner_source,
+                "Issued Qty": t.issued_qty,
+                "Unit Cost": round(unit_cost, 2),
+                "Total Cost": round(total_cost, 2),
+            })
+
+        spare_data, spare_costs = [], defaultdict(float)
+        for s in spare_query.all():
+            spare_info = spares.query.filter_by(material_nr=s.product_code).first()
+            unit_cost = 0.0 if s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
+            total_cost = unit_cost * s.qty
+            spare_costs[s.customer_name] += total_cost
+            spare_data.append({
+                "Date": s.date.strftime('%Y-%m-%d') if s.date else '',
+                "Serial Number": s.serial_number,
+                "Product Code": s.product_code,
+                "Description": s.description,
+                "Qty": s.qty,
+                "Warehouse": s.warehouse,
+                "Customer Name": s.customer_name,
+                "Unit Cost": round(unit_cost, 2),
+                "Total Cost": round(total_cost, 2),
+            })
+
+        ticket_data, service_costs = [], defaultdict(float)
+        for t in ticket_query.all():
+            service_costs[t.customer] += 10
+            ticket_data.append({
+                "Reference No": t.reference_no,
+                "Customer": t.customer,
+                "Created At": t.created_at.strftime('%Y-%m-%d') if t.created_at else '',
+                "Service Cost": 10
+            })
+
+        all_customers = set(toner_costs) | set(spare_costs) | set(service_costs)
+        summary_data = []
+        for cust in all_customers:
+            toner = toner_costs.get(cust, 0)
+            spare = spare_costs.get(cust, 0)
+            service = service_costs.get(cust, 0)
+            total = toner + spare + service
+            summary_data.append({
+                "Customer": cust,
+                "Toner Cost": round(toner, 2),
+                "Spare Cost": round(spare, 2),
+                "Service Cost": round(service, 2),
+                "Total Cost": round(total, 2)
+            })
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Write primary data
+            pd.DataFrame(toner_data).to_excel(writer, index=False, sheet_name="Toner")
+            pd.DataFrame(spare_data).to_excel(writer, index=False, sheet_name="Spare")
+            pd.DataFrame(ticket_data).to_excel(writer, index=False, sheet_name="Ticket Cost")
+
+            # Create and write summary
+            df_summary['Total Cost'] = pd.to_numeric(df_summary['Total Cost'], errors='coerce').fillna(0)
+            df_summary = pd.DataFrame(summary_data)
+            df_summary.to_excel(writer, index=False, sheet_name="Summary")
+
+            # Create chart from full summary
+            df_summary = pd.DataFrame(summary_data)
+            df_summary = df_summary.sort_values(by='Total Cost', ascending=False)
+            df_summary.to_excel(writer, index=False, sheet_name="Summary")
+
+            workbook = writer.book
+            worksheet_summary = writer.sheets["Summary"]
+            num_rows = len(df_summary)
+
+
+
+        # Prepare the output
+        output.seek(0)
+        return output, "total_service_summary.xlsx"
+
+

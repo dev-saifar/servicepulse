@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-primary text-center fw-bold">🔧 Spare Delivery Report</h2>
+    <form method="GET" action="{{ url_for('delivery_report.export_spare_deliveries') }}" target="_blank" class="mt-4 border p-3 rounded shadow-sm bg-light">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="customer" class="form-label">Customer Name</label>
+                <input type="text" name="customer" class="form-control" placeholder="Enter customer name">
+            </div>
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100">Export Excel</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

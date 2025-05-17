@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h1 class="display-4 text-danger">403 - Forbidden</h1>
+    <p class="lead mb-4">Sorry, you don't have permission to access this page.</p>
+
+    <div class="d-flex justify-content-center mb-4">
+    <a href="javascript:history.back()" class="btn btn-primary m-2">
+        ⬅️ Go Back
+    </a>
+    <a href="{{ url_for('about.about') }}" class="btn btn-secondary m-2">
+        About Us
+    </a>
+</div>
+
+    <!-- Expandable Permissions Card -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Your Permissions</h5>
+            <button class="btn btn-light btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#permissionsCollapse" aria-expanded="false" aria-controls="permissionsCollapse">
+                Show/Hide
+            </button>
+        </div>
+        <div id="permissionsCollapse" class="collapse">
+            <div class="card-body">
+                {% if user %}
+                <div class="row text-start">
+                    {% for perm, value in user.__dict__.items() %}
+                        {% if perm.startswith('can_') %}
+                            <div class="col-md-4 mb-2">
+                                {% if value %}
+                                    <span class="badge bg-success">✅ {{ perm.replace('can_', '').replace('_', ' ').title() }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">❌ {{ perm.replace('can_', '').replace('_', ' ').title() }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No user permissions available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
