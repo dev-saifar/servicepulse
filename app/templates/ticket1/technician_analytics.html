@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<!-- DataTables + Bootstrap5 -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
 <div class="container-fluid mt-4">
   <h3>Technician Performance Dashboard</h3>
 
@@ -25,7 +31,8 @@
   <div class="col-md-5 text-end d-flex gap-2 mt-3">
     <button type="submit" class="btn btn-primary">Apply</button>
     <a href="{{ url_for('ticket1.technician_analytics') }}" class="btn btn-secondary">Clear</a>
-    <a href="{{ url_for('ticket1.export_technician_excel', from_date=filters.from_date, to_date=filters.to_date, technician=filters.technician) }}" class="btn btn-success">Export Table</a>
+    <a href="{{ url_for('technician_performance.export_technician_excel', from_date=filters.from_date, to_date=filters.to_date, technician=filters.technician) }}" class="btn btn-success">Export Table</a>
+
     <button id="exportPdfBtn" type="button" class="btn btn-danger">Export Dashboard PDF</button>
 
 
@@ -55,7 +62,8 @@
 <div class="mt-5">
   <h5>Technician-wise Performance</h5>
   <div class="table-responsive">
-    <table class="table table-bordered table-striped text-center align-middle">
+    <table id="performanceTable" class="table table-bordered table-striped text-center align-middle">
+
       <thead class="table-light">
         <tr>
           <th>Technician</th>
@@ -177,6 +185,17 @@
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save("technician_dashboard.pdf");
+    });
+  });
+</script>
+<script>
+  $(document).ready(function () {
+    $('#performanceTable').DataTable({
+      paging: false,           // disable pagination
+      searching: false,        // disable search box
+      info: false,             // disable info text
+      order: [],               // no default sorting
+      fixedHeader: true
     });
   });
 </script>

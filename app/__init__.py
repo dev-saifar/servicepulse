@@ -8,7 +8,9 @@ from app.celery import make_celery
 from app.models import create_tables_if_not_exist  # ✅ Ensure correct import
 from app.models import User
 from flask_login import current_user
-
+from flask import request
+from app.modules.db_logger import Log
+from app import db
 # ✅ Define global extensions
 celery = None
 migrate = Migrate()
@@ -34,7 +36,28 @@ def create_app():
     def forbidden(e):
         return render_template('errors/403.html', user=current_user), 403
 
+    @app.after_request
+    def log_request(response):
+        try:
+            message = f'{request.remote_addr} - [{request.method}] "{request.path}" {response.status_code}'
+            new_log = Log(level="INFO", message=message)
+            db.session.add(new_log)
+            db.session.commit()
+        except Exception as e:
+            # Avoid circular errors
+            print("Logging failed:", e)
+        return response
 
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        try:
+            message = f'❌ Error on {request.method} {request.path}: {str(e)}'
+            error_log = Log(level="ERROR", message=message)
+            db.session.add(error_log)
+            db.session.commit()
+        except:
+            pass  # Avoid logging loop
+        return "An error occurred", 500
 
     # Register custom datetimeformat filter
 

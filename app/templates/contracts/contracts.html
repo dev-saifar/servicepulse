@@ -212,35 +212,6 @@
         }
     }
 
-    document.getElementById("contract_form").addEventListener("submit", function (e) {
-        e.preventDefault();
-        document.getElementById("cust_code_hidden").value = document.getElementById("cust_code").value;
-        document.getElementById("billing_company_hidden").value = document.getElementById("billing_company").value;
-        document.getElementById("cust_name_hidden").value = document.getElementById("cust_name").value;
-
-        let formData = new FormData(this);
-
-        fetch('/contracts/create_contract', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-    document.getElementById("toastBody").textContent = data.message || "Contract created successfully!";
-    const toast = new bootstrap.Toast(document.getElementById('contractToast'));
-    toast.show();
-
-    // Redirect after 3 seconds
-    setTimeout(() => {
-        window.location.href = "/contracts/list";
-    }, 3000);
-}
- else {
-                alert("❌ Error: " + data.error);
-            }
-        });
-    });
 
     function toggleAdvanced() {
         let advancedSection = document.getElementById("advanced_section");

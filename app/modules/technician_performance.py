@@ -295,3 +295,89 @@ def test_email():
         return jsonify({"message": "Test email sent successfully!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+def get_technician_analytics_data(from_date=None, to_date=None, technician=None):
+    if from_date:
+        from_date = datetime.strptime(from_date, "%Y-%m-%d")
+    if to_date:
+        to_date = datetime.strptime(to_date, "%Y-%m-%d")
+
+    query = Ticket.query
+
+    if from_date and to_date:
+        query = query.filter(Ticket.created_at.between(from_date, to_date))
+
+    if technician:
+        tech_obj = Technician.query.filter_by(name=technician).first()
+        if tech_obj:
+            query = query.filter(Ticket.technician_id == tech_obj.id)
+
+    tickets = query.all()
+    technician_data = {}
+
+    for ticket in tickets:
+        tech_name = ticket.technician.name if ticket.technician else "Unknown"
+        if tech_name not in technician_data:
+            technician_data[tech_name] = {
+                "Technician": tech_name,
+                "PM": 0,
+                "CM": 0,
+                "MYQ": 0,
+                "Install": 0,
+                "MFI-Central": 0,
+                "Other": 0,
+                "Closed": 0,
+                "Open": 0,
+                "TATs": [],
+            }
+
+        entry = technician_data[tech_name]
+        call_type = ticket.call_type or ""
+        status = ticket.status or ""
+        if call_type == "PM":
+            entry["PM"] += 1
+        elif call_type == "CM":
+            entry["CM"] += 1
+        elif call_type == "MYQ":
+            entry["MYQ"] += 1
+        elif call_type == "Installation":
+            entry["Install"] += 1
+        elif call_type == "MFI-CENTRAL":
+            entry["MFI-Central"] += 1
+        else:
+            entry["Other"] += 1
+
+        if status == "Closed":
+            entry["Closed"] += 1
+        else:
+            entry["Open"] += 1
+
+        if ticket.tat:
+            entry["TATs"].append(ticket.tat)
+
+    # Finalize TATs
+    for entry in technician_data.values():
+        tats = entry.pop("TATs")
+        entry["Avg Resolution Time (Hours)"] = round(sum(tats)/len(tats), 2) if tats else 0
+
+    return list(technician_data.values())
+
+@technician_performance_bp.route("/export_technician_excel", methods=["GET"])
+def export_technician_excel():
+    from_date = request.args.get("from_date")
+    to_date = request.args.get("to_date")
+    technician = request.args.get("technician")
+
+    data = get_technician_analytics_data(from_date, to_date, technician)
+    if not data:
+        return jsonify({"message": "No data found"}), 400
+
+    df = pd.DataFrame(data)
+
+    reports_dir = os.path.join(os.getcwd(), "app", "static", "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+
+    filename = "technician_analytics_export.xlsx"
+    filepath = os.path.join(reports_dir, filename)
+    df.to_excel(filepath, index=False, engine="openpyxl")
+
+    return send_file(filepath, as_attachment=True)

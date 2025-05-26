@@ -6,6 +6,7 @@ from app.models import Ticket, Technician, ScheduledReport
 from flask import render_template
 from collections import defaultdict
 from app.models import ScheduledReport, ScheduledReportLog
+from flask import current_app
 
 import pandas as pd
 import io
@@ -168,11 +169,15 @@ def generate_scheduled_reports():
 
 # Run the scheduler in a separate thread
 def run_scheduler():
-    schedule.every().hour.do(generate_scheduled_reports)
+    schedule.every().hour.do(run_report_job_with_context)
     while True:
         schedule.run_pending()
         time.sleep(60)
 
+def run_report_job_with_context():
+    from app import app
+    with app.app_context():
+        generate_scheduled_reports()
 
 threading.Thread(target=run_scheduler, daemon=True).start()
 
@@ -464,8 +469,11 @@ def schedule_unified_report():
     email = request.form.get('email')
     schedule = request.form.get('frequency')  # form still sends "frequency", we map it to schedule
     period = request.form.get('period')
-    start_date = request.form.get('start_date') or None
-    end_date = request.form.get('end_date') or None
+    start_date_str = request.form.get('start_date') or None
+    end_date_str = request.form.get('end_date') or None
+
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else None
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else None
 
     if period != 'Custom':
         start_date = None

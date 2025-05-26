@@ -1,44 +1,52 @@
-from flask import Blueprint, request, jsonify, send_file, render_template
+from flask import Blueprint, request, jsonify, send_file, render_template, redirect, url_for
 from sqlalchemy import func, case, and_, cast, Float
 from app import db
-from app.models import toner_request, TonerCosting, spare_req, spares, Ticket, Assets
-from flask_login import login_required
-from app.utils.permission_required import permission_required
+from app.models import toner_request, TonerCosting, spare_req, spares, Ticket, Assets, Customer
 from flask_login import login_required, current_user
+from app.utils.permission_required import permission_required
 import pandas as pd
 import io
+from collections import defaultdict
+from datetime import datetime
 
 financial_bp = Blueprint('financial', __name__)
 
 HOURLY_SERVICE_RATE = 10
 
-from datetime import datetime
-
 def apply_filters(query, model):
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
+    from datetime import datetime
+
+    today = datetime.today().date()
+    default_start = datetime(today.year, 1, 1).date()
+
+    def safe_date(date_str, fallback):
+        try:
+            return datetime.strptime(date_str, '%Y-%m-%d').date()
+        except:
+            return fallback
+
+    start_str = request.args.get('start_date')
+    end_str = request.args.get('end_date')
+
+    start_date = safe_date(start_str, default_start)
+    end_date = safe_date(end_str, today)
+
+    print(f"[FILTER] {model.__name__} | {start_date} to {end_date}")
+
     customer = request.args.get('customer')
     contract = request.args.get('contract')
     serial = request.args.get('serial_number')
 
-    # Always ensure query is valid
     if query is None:
-        return db.session.query(model)
+        query = db.session.query(model)
 
-    # Check for a date field
     date_field = getattr(model, 'date_issued', None) or \
                  getattr(model, 'req_date', None) or \
                  getattr(model, 'created_at', None) or \
                  getattr(model, 'date', None)
 
-    min_date = datetime(2025, 1, 1)
-
-    # Apply default or custom date range filter
     if date_field is not None:
-        if start_date and end_date:
-            query = query.filter(date_field.between(start_date, end_date))
-        else:
-            query = query.filter(date_field >= min_date)
+        query = query.filter(date_field.between(start_date, end_date))
 
     if hasattr(model, 'customer_name') and customer:
         query = query.filter(model.customer_name.ilike(f"%{customer}%"))
@@ -51,149 +59,115 @@ def apply_filters(query, model):
 
     return query
 
-# 🔹 Shared Data Functions
+
+# 🔹 Updated Logic with Manual Spare and Ticket Calculation
+
 def get_customer_data():
-    toner = apply_filters(
-        db.session.query(
-            toner_request.customer_name,
-            func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
-        ).join(TonerCosting, and_(
-            toner_request.toner_model == TonerCosting.toner_model,
-            toner_request.toner_source == TonerCosting.source
-        )),
-        toner_request
-    ).group_by(toner_request.customer_name).subquery()
+    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
 
-    spare = apply_filters(
-        db.session.query(
-            spare_req.customer_name,
-            func.sum(case(
-                (spare_req.warehouse.ilike('WORKSHOP'), 0),
-                else_=(spare_req.qty * spares.price)
-            )).label('spare_cost')
-        ).join(spares, spare_req.product_code == spares.material_nr),
-        spare_req
-    ).group_by(spare_req.customer_name).subquery()
+    toner_query = apply_filters(db.session.query(toner_request), toner_request)
+    for t in toner_query.all():
+        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
+        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+        total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
+        toner_costs[t.customer_name] += total_cost
 
-    service = apply_filters(
-        db.session.query(
-            Assets.customer_name,
-            func.count(Ticket.id).label('service_count')
-        ).join(Assets, Ticket.serial_number == Assets.serial_number),
-        Ticket
-    ).group_by(Assets.customer_name).subquery()
+    spare_query = apply_filters(db.session.query(spare_req), spare_req)
+    for s in spare_query.all():
+        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
+        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
+        total_cost = unit_cost * s.qty
+        spare_costs[s.customer_name] += total_cost
 
-    results = db.session.query(
-        toner.c.customer_name,
-        func.coalesce(toner.c.toner_cost, 0),
-        func.coalesce(spare.c.spare_cost, 0),
-        func.coalesce(service.c.service_count, 0)
-    ).outerjoin(spare, toner.c.customer_name == spare.c.customer_name
-    ).outerjoin(service, toner.c.customer_name == service.c.customer_name).all()
+    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
+    for t in ticket_query.all():
+        customer = t.customer or "Unknown"
+        service_costs[customer] += HOURLY_SERVICE_RATE
 
+    all_customers = set(toner_costs) | set(spare_costs) | set(service_costs)
     return [{
-        "customer_name": r[0],
-        "toner_cost": round(r[1], 2),
-        "spare_cost": round(r[2], 2),
-        "service_cost": r[3] * HOURLY_SERVICE_RATE,
-        "total": round(r[1] + r[2] + r[3] * HOURLY_SERVICE_RATE, 2)
-    } for r in results]
+        "customer_name": cust,
+        "toner_cost": round(toner_costs.get(cust, 0), 2),
+        "spare_cost": round(spare_costs.get(cust, 0), 2),
+        "service_cost": round(service_costs.get(cust, 0), 2),
+        "total": round(toner_costs.get(cust, 0) + spare_costs.get(cust, 0) + service_costs.get(cust, 0), 2)
+    } for cust in all_customers]
 
 def get_contract_data():
-    toner = apply_filters(
-        db.session.query(
-            toner_request.contract_code,
-            func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
-        ).join(TonerCosting, and_(
-            toner_request.toner_model == TonerCosting.toner_model,
+    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
 
-            toner_request.toner_source == TonerCosting.source
-        )),
-        toner_request
-    ).group_by(toner_request.contract_code).subquery()
+    # === TONER ===
+    toner_query = apply_filters(db.session.query(toner_request), toner_request)
+    for t in toner_query.all():
+        contract = str(t.contract_code) if t.contract_code else ""
+        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
+        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+        total_cost = unit_cost * (t.issued_qty or 0)
+        toner_costs[contract] += total_cost
 
-    spare = apply_filters(
-        db.session.query(
-            spare_req.contract.label('contract_code'),
-            func.sum(case(
-                (spare_req.warehouse.ilike('WORKSHOP'), 0),
-                else_=(spare_req.qty * spares.price)
-            )).label('spare_cost')
-        ).join(spares, spare_req.product_code == spares.material_nr),
-        spare_req
-    ).group_by(spare_req.contract).subquery()
+    # === SPARE ===
+    spare_query = apply_filters(db.session.query(spare_req), spare_req)
+    for s in spare_query.all():
+        contract = str(s.contract) if s.contract else ""
+        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
+        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
+        total_cost = unit_cost * s.qty
+        spare_costs[contract] += total_cost
 
-    service = apply_filters(
-        db.session.query(
-            Assets.contract.label('contract_code'),
-            func.count(Ticket.id).label('service_count')
-        ).join(Assets, Ticket.serial_number == Assets.serial_number),
-        Ticket
-    ).group_by(Assets.contract).subquery()
+    # === SERVICE ===
+    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
+    for t in ticket_query.all():
+        contract = str(t.contract) if t.contract else ""
+        service_costs[contract] += HOURLY_SERVICE_RATE
 
-    results = db.session.query(
-        toner.c.contract_code,
-        func.coalesce(toner.c.toner_cost, 0),
-        func.coalesce(spare.c.spare_cost, 0),
-        func.coalesce(service.c.service_count, 0)
-    ).outerjoin(spare, toner.c.contract_code == spare.c.contract_code
-    ).outerjoin(service, toner.c.contract_code == service.c.contract_code).all()
+    # === COMBINE ===
+    all_contracts = set(toner_costs) | set(spare_costs) | set(service_costs)
+    data = []
+    for code in all_contracts:
+        toner = toner_costs.get(code, 0)
+        spare = spare_costs.get(code, 0)
+        service = service_costs.get(code, 0)
+        total = toner + spare + service
+        data.append({
+            "contract_code": code,
+            "toner_cost": round(toner, 2),
+            "spare_cost": round(spare, 2),
+            "service_cost": round(service, 2),
+            "total": round(total, 2)
+        })
 
-    return [{
-        "contract_code": r[0],
-        "toner_cost": round(r[1], 2),
-        "spare_cost": round(r[2], 2),
-        "service_cost": r[3] * HOURLY_SERVICE_RATE,
-        "total": round(r[1] + r[2] + r[3] * HOURLY_SERVICE_RATE, 2)
-    } for r in results]
+    return data
 
 def get_asset_data():
-    toner = apply_filters(
-        db.session.query(
-            toner_request.serial_number,
-            func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
-        ).join(TonerCosting, and_(
-            toner_request.toner_model == TonerCosting.toner_model,
+    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
 
-            toner_request.toner_source == TonerCosting.source
-        )),
-        toner_request
-    ).group_by(toner_request.serial_number).subquery()
+    toner_query = apply_filters(db.session.query(toner_request), toner_request)
+    for t in toner_query.all():
+        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
+        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+        total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
+        toner_costs[t.serial_number] += total_cost
 
-    spare = apply_filters(
-        db.session.query(
-            spare_req.serial_number,
-            func.sum(case(
-                (spare_req.warehouse.ilike('WORKSHOP'), 0),
-                else_=(spare_req.qty * spares.price)
-            )).label('spare_cost')
-        ).join(spares, spare_req.product_code == spares.material_nr),
-        spare_req
-    ).group_by(spare_req.serial_number).subquery()
+    spare_query = apply_filters(db.session.query(spare_req), spare_req)
+    for s in spare_query.all():
+        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
+        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
+        total_cost = unit_cost * s.qty
+        spare_costs[s.serial_number] += total_cost
 
-    service = apply_filters(
-        db.session.query(
-            Ticket.serial_number,
-            func.count(Ticket.id).label('service_count')
-        ).join(Assets, Ticket.serial_number == Assets.serial_number),
-        Ticket
-    ).group_by(Ticket.serial_number).subquery()
+    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
+    for t in ticket_query.all():
+        key = t.serial_number or "Unspecified"
+        service_costs[key] += HOURLY_SERVICE_RATE
 
-    results = db.session.query(
-        toner.c.serial_number,
-        func.coalesce(toner.c.toner_cost, 0),
-        func.coalesce(spare.c.spare_cost, 0),
-        func.coalesce(service.c.service_count, 0)
-    ).outerjoin(spare, toner.c.serial_number == spare.c.serial_number
-    ).outerjoin(service, toner.c.serial_number == service.c.serial_number).all()
-
+    all_assets = set(toner_costs) | set(spare_costs) | set(service_costs)
     return [{
-        "serial_number": r[0],
-        "toner_cost": round(r[1], 2),
-        "spare_cost": round(r[2], 2),
-        "service_cost": r[3] * HOURLY_SERVICE_RATE,
-        "total": round(r[1] + r[2] + r[3] * HOURLY_SERVICE_RATE, 2)
-    } for r in results]
+        "serial_number": sn,
+        "toner_cost": round(toner_costs.get(sn, 0), 2),
+        "spare_cost": round(spare_costs.get(sn, 0), 2),
+        "service_cost": round(service_costs.get(sn, 0), 2),
+        "total": round(toner_costs.get(sn, 0) + spare_costs.get(sn, 0) + service_costs.get(sn, 0), 2)
+    } for sn in all_assets]
 
 # Routes
 

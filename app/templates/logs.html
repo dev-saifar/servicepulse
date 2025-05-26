@@ -4,9 +4,38 @@
 <div class="container mt-4">
     <h2 class="mb-4 text-center">📋 Application Logs</h2>
 
-    <div class="table-responsive">
+    <!-- 🔍 Filter Form -->
+    <form method="get" class="row g-3 mb-3 align-items-end">
+        <div class="col-md-3">
+            <label for="level" class="form-label">Log Level</label>
+            <select name="level" id="level" class="form-select">
+                <option value="">All</option>
+                <option value="INFO" {% if level == 'INFO' %}selected{% endif %}>INFO</option>
+                <option value="ERROR" {% if level == 'ERROR' %}selected{% endif %}>ERROR</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="start" class="form-label">Start Date</label>
+            <input type="date" name="start" value="{{ start }}" class="form-control" id="start">
+        </div>
+        <div class="col-md-3">
+            <label for="end" class="form-label">End Date</label>
+            <input type="date" name="end" value="{{ end }}" class="form-control" id="end">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100">🔍 Filter</button>
+        </div>
+    </form>
+
+    <!-- 📥 Export Button -->
+    <div class="mb-3 text-end">
+        <a href="{{ url_for('logs.export_logs') }}" class="btn btn-success">📥 Export to Excel</a>
+    </div>
+
+    <!-- 📊 Logs Table -->
+    <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
         <table class="table table-bordered table-striped table-hover">
-            <thead class="table-dark">
+            <thead class="table-dark" style="position: sticky; top: 0;">
                 <tr>
                     <th>ID</th>
                     <th>Timestamp</th>
@@ -15,28 +44,67 @@
                 </tr>
             </thead>
             <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td>{{ log.id }}</td>
-                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                    <td>
-                        {% if log.level == 'ERROR' %}
-                            <span class="badge bg-danger">{{ log.level }}</span>
-                        {% elif log.level == 'INFO' %}
-                            <span class="badge bg-primary">{{ log.level }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ log.level }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ log.message }}</td>
-                </tr>
+                {% if logs and logs.items %}
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            {% if log.level == 'ERROR' %}
+                                <span class="badge bg-danger">{{ log.level }}</span>
+                            {% elif log.level == 'INFO' %}
+                                <span class="badge bg-primary">{{ log.level }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.level }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.message }}</td>
+                    </tr>
+                    {% endfor %}
                 {% else %}
-                <tr>
-                    <td colspan="4" class="text-center">No logs available.</td>
-                </tr>
-                {% endfor %}
+                    <tr>
+                        <td colspan="4" class="text-center">No logs found for the selected filter.</td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
+
+    <!-- 🔄 Pagination -->
+    {% if logs %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if logs.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('logs.view_logs', page=logs.prev_num, level=level, start=start, end=end) }}">Previous</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            {% endif %}
+
+            {% for page_num in logs.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == logs.page %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('logs.view_logs', page=page_num, level=level, start=start, end=end) }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if logs.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('logs.view_logs', page=logs.next_num, level=level, start=start, end=end) }}">Next</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Next</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}
