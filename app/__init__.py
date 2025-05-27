@@ -150,6 +150,30 @@ def create_app():
     from app.modules.logs_dashboard import logs_bp
     app.register_blueprint(logs_bp)
     from app.modules import db_logger  # Ensure Log model is registered
+    from app.modules.license_utils import is_license_valid
+    from app.modules.license import license_bp
+    app.register_blueprint(license_bp)
+    from app.modules.license_status import license_status_bp
+    app.register_blueprint(license_status_bp)
+    from flask import request
+
+    valid, reason = is_license_valid()
+
+    if not valid:
+        print("❌ License check failed:", reason)
+
+        @app.before_request
+        def enforce_license_check():
+            allowed_endpoints = [
+                'license.license_page',
+                'about.about',
+                'about.download_license_info',
+                'static'
+            ]
+
+            if not request.endpoint or request.endpoint not in allowed_endpoints:
+                print(f"🔒 Blocking access to {request.endpoint} due to invalid license.")
+                return redirect(url_for("license.license_page"))
 
     return app
 

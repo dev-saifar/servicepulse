@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>License Activation</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f5f5f5; }
+        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        textarea, input, button, select {
+            width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px; border-radius: 5px;
+        }
+        button { cursor: pointer; border: none; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .alert-success { background-color: #d4edda; }
+        .alert-warning { background-color: #fff3cd; }
+        .alert-danger { background-color: #f8d7da; }
+        h2 { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔐 License Activation</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post">
+            <label><strong>Paste License Key (.lic content):</strong></label>
+            <textarea name="license_key" rows="6" placeholder="Paste your encrypted license key here..."></textarea>
+            <button type="submit" class="btn-primary">Activate License</button>
+        </form>
+
+        <hr>
+
+        <h3>🎁 Activate Trial (90 Days)</h3>
+        <form method="post">
+            <input type="hidden" name="trial" value="1">
+            <input type="text" name="client_name" placeholder="Client Name" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <textarea name="address" placeholder="Address" rows="2" required></textarea>
+            <button type="submit" class="btn-success">Activate Trial License</button>
+        </form>
+    </div>
+</body>
+</html>

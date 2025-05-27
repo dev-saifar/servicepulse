@@ -1,10 +1,19 @@
 {% extends 'base.html' %}
 
 {% block content %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="alert alert-{{ category if category in ['success','warning','danger','info'] else 'info' }} mt-2">
+        {{ message }}
+    </div>
+  {% endfor %}
+{% endwith %}
+
 <div class="container">
     <div class="split-screen">
         <!-- Left Section -->
         <div class="left-section">
+
             <!-- Animation -->
             <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
             <lottie-player
@@ -12,11 +21,53 @@
                 background="transparent"
                 speed="1"
                 style="max-width: 100%; height: 250px;"
-                loop
-                autoplay>
+                loop autoplay>
             </lottie-player>
 
-            <h2>What is ServPulse?</h2>
+            <!-- License Info -->
+            <h3>🔐 License Status</h3>
+            <div class="tech-list">
+                <table class="table table-bordered table-sm bg-white">
+                    <thead class="table-light">
+                        <tr><th>Field</th><th>Value</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Client Name</td><td>{{ license.client_name }}</td></tr>
+                        <tr><td>Domain</td><td>{{ license.domain }}</td></tr>
+                        <tr><td>Hardware ID</td><td>{{ license.hardware_id }}</td></tr>
+                        <tr><td>License Type</td><td>{{ license.license_type }}</td></tr>
+                        <tr><td>Expiry Date</td><td>{{ license.expiry_date }}</td></tr>
+                        <tr><td>Status</td><td>{{ license.status or 'Unknown' }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- License Actions -->
+            <div class="mt-4">
+                {% if license.license_type == 'trial' and license.status.startswith("✅") %}
+                <div class="p-4 bg-success text-white rounded shadow-sm mb-4">
+                    <h5>🎯 Upgrade from Trial</h5>
+                    <p>You are currently on a trial license. Activate your full license below:</p>
+                    <form action="{{ url_for('license.license_page') }}" method="get">
+                        <button type="submit" class="btn btn-light fw-bold">➕ Add Full License</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                <div class="p-4 bg-primary text-white rounded shadow-sm">
+                    <h5>📥 Download License Info</h5>
+                    <p>Send this file to the ServPulse team for license generation.</p>
+                    <form method="post" action="{{ url_for('about.download_license_info') }}">
+                        <input type="hidden" name="client_name" value="{{ license.client_name }}">
+                        <input type="hidden" name="email" value="{{ license.email }}">
+                        <input type="hidden" name="address" value="{{ license.address }}">
+                        <button type="submit" class="btn btn-light fw-bold">Download License Info JSON</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- About Section -->
+            <h2 class="mt-5">What is ServPulse?</h2>
             <p>
                 <strong>ServPulse</strong> is a smart, web-based Service Management Platform built by the <strong>MFI-UG MDS Technical Team</strong> to optimize internal service workflows across Technical, Sales, Finance, and Credit Control.
                 Hosted locally at Kansanga HQ, it empowers teams with real-time visibility into tickets, assets, logistics, contracts, and financials.
@@ -43,8 +94,6 @@
                 <li>✅ Hosted securely in your internal network</li>
             </ul>
 
-
-
             <h3>Technologies Used:</h3>
             <div class="tech-list">
                 <p><i class="fab fa-html5"></i> <strong>Frontend:</strong> HTML, Bootstrap, JavaScript, Lottie</p>
@@ -56,41 +105,40 @@
         </div>
 
         <!-- Right Section -->
-<div class="right-section">
-    <h3>Meet the Developer</h3>
-    <div class="developer-photo">
-        <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
-    </div>
-    <p><strong>Saifar Abdul Latheef</strong><br> </p>
-    <p>Email: <a href="mailto:dev.saifar@gmail.com">dev.saifar@gmail.com</a></p>
+        <div class="right-section">
+            <h3>Meet the Developer</h3>
+            <div class="developer-photo">
+                <img src="{{ url_for('static', filename='developer.jpg') }}" alt="Developer Photo" class="oval-photo">
+            </div>
+            <p><strong>Saifar Abdul Latheef</strong></p>
+            <p>Email: <a href="mailto:dev.saifar@gmail.com">dev.saifar@gmail.com</a></p>
 
+            <h3>ServPulse v2025.04</h3>
+            <p>Latest release includes full support for:</p>
+            <ul>
+                <li>Contract Management with alerts</li>
+                <li>Toner & Spare request workflows</li>
+                <li>Technician tracking & analytics</li>
+                <li>Cost dashboards (service, toner, spare)</li>
+                <li>PM Scheduling & Completion Tracker</li>
+            </ul>
 
+            <h3>Team Behind ServPulse</h3>
+            <p>ServPulse is proudly built in-house by the MFI-UG MDS Technical Team to streamline daily service operations across Uganda.</p>
+            <ul>
+                <li>🎯 Designed for field & support engineers</li>
+                <li>💼 Supports sales, credit control, and finance teams</li>
+                <li>🔐 Securely hosted on local infrastructure</li>
+            </ul>
 
-    <h3>ServPulse v2025.04</h3>
-    <p>Latest release includes full support for:</p>
-    <ul>
-        <li>Contract Management with alerts</li>
-        <li>Toner & Spare request workflows</li>
-        <li>Technician tracking & analytics</li>
-        <li>Cost dashboards (service, toner, spare)</li>
-        <li>PM Scheduling & Completion Tracker</li>
-    </ul>
+            <h3>Coming Soon</h3>
+            <div class="feature-cards">
+                <div class="card">🔹 <strong>Email Alerts</strong> – For contract expiry, ticket assignment, deliveries</div>
+                <div class="card">🔹 <strong>Mobile View</strong> – UI optimized for phones & tablets</div>
+                <div class="card">🔹 <strong>Auto Scheduling</strong> – PM visit planner based on frequency</div>
+            </div>
 
-    <h3>Team Behind ServPulse</h3>
-    <p>ServPulse is proudly built in-house by the MFI-UG MDS Technical Team to streamline daily service operations across Uganda.</p>
-    <ul>
-        <li>🎯 Designed for field & support engineers</li>
-        <li>💼 Supports sales, credit control, and finance teams</li>
-        <li>🔐 Securely hosted on local infrastructure</li>
-    </ul>
-
-    <h3>Coming Soon</h3>
-    <div class="feature-cards">
-        <div class="card">🔹 <strong>Email Alerts</strong> – For contract expiry, ticket assignment, deliveries</div>
-        <div class="card">🔹 <strong>Mobile View</strong> – UI optimized for phones & tablets</div>
-        <div class="card">🔹 <strong>Auto Scheduling</strong> – PM visit planner based on frequency</div>
-    </div>
-<h3>Department Benefits</h3>
+            <h3>Department Benefits</h3>
             <div class="tech-list">
                 <table class="table table-bordered table-sm bg-white">
                     <thead class="table-light">
@@ -104,9 +152,7 @@
                     </tbody>
                 </table>
             </div>
-
-</div>
-
+        </div>
     </div>
 
     <!-- CTA -->
@@ -117,7 +163,6 @@
 
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-
     body {
         font-family: 'Poppins', sans-serif;
         background-color: #eef5ff;
@@ -126,7 +171,6 @@
         background-position: center;
         background-repeat: no-repeat;
     }
-
     .container {
         max-width: 1200px;
         margin: auto;
@@ -135,24 +179,20 @@
         border-radius: 12px;
         box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
     }
-
     .split-screen {
         display: flex;
         flex-wrap: wrap;
         gap: 40px;
     }
-
     .left-section, .right-section {
         width: 100%;
         max-width: 48%;
     }
-
     .feature-cards {
         display: flex;
         flex-wrap: wrap;
         gap: 15px;
     }
-
     .card {
         background: linear-gradient(135deg, #007BFF, #00D4FF);
         color: white;
@@ -163,22 +203,18 @@
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
         transition: transform 0.3s ease-in-out;
     }
-
     .card:hover {
         transform: scale(1.05);
     }
-
     .tech-list, table {
         background: #eef5ff;
         padding: 10px;
         border-radius: 8px;
     }
-
     .developer-photo {
         text-align: center;
         margin-bottom: 20px;
     }
-
     .oval-photo {
         width: 150px;
         height: 150px;
@@ -186,7 +222,6 @@
         object-fit: cover;
         border: 3px solid #007BFF;
     }
-
     .note {
         font-size: 1.1em;
         color: #FF5733;

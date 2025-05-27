@@ -6,8 +6,9 @@ from app.models import Ticket, Technician, ScheduledReport
 from flask import render_template
 from collections import defaultdict
 from app.models import ScheduledReport, ScheduledReportLog
+from flask_login import login_required
 from flask import current_app
-
+from app.utils.permission_required import permission_required
 import pandas as pd
 import io
 from datetime import datetime, timedelta
@@ -183,7 +184,8 @@ threading.Thread(target=run_scheduler, daemon=True).start()
 
 
 @advance_report_bp.route('/')
-@advance_report_bp.route('/')
+@login_required
+@permission_required('can_view_reports')
 def advance_report_dashboard():
     """Renders the Advanced Reports Dashboard"""
     scheduled_reports = ScheduledReport.query.all()
@@ -506,7 +508,7 @@ def unified_scheduler():
     # Existing imports
 
     from app.models import toner_request, TonerCosting, spare_req, spares, Ticket
-    from app.utils.permission_required import permission_required
+
     from flask_login import login_required
     from app import db
     import pandas as pd

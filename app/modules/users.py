@@ -172,3 +172,21 @@ def delete_user(user_id):
     db.session.commit()
     flash("✅ User deleted successfully!", "success")
     return redirect(url_for('users.user_list'))
+@users_bp.route('/reset_own_password', methods=['POST'])
+@login_required
+def reset_own_password():
+    from flask_login import current_user
+    from werkzeug.security import generate_password_hash
+
+    new_password = request.form.get("new_password")
+    confirm_password = request.form.get("confirm_password")
+
+    if not new_password or new_password != confirm_password:
+        flash("❌ Passwords do not match or are empty.", "danger")
+        return redirect(request.referrer)
+
+    user = User.query.get(current_user.id)
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    flash("✅ Password updated successfully!", "success")
+    return redirect(request.referrer)

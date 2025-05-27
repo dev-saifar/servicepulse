@@ -11,115 +11,241 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <style>
-
     .is-invalid {
         border-color: #dc3545;
         box-shadow: 0 0 0 0.15rem rgba(220,53,69,.25);
     }
 
+    .logo {
+        width: 100px;
+        height: auto;
+        margin-bottom: 10px;
+    }
 
-        .logo {
-            width: 100px;
-            height: auto;
-            margin-bottom: 10px;
-        }
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        transition: background-color 0.3s, color 0.3s;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
-            transition: background-color 0.3s, color 0.3s;
-        }
+    /* Sidebar with z-index fixes */
+    .sidebar {
+        width: 250px;
+        position: fixed;
+        align-items: center;
+        height: 100%;
+        background: #343a40;
+        color: white;
+        padding-top: 20px;
+        transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        z-index: 1030;
+        overflow: visible !important;
+    }
+
+    .sidebar a {
+        display: block;
+        color: white;
+        padding: 12px 20px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
+
+    .sidebar a:hover {
+        background: #495057;
+    }
+
+    .main-content {
+        margin-left: 260px;
+        padding: 20px;
+        z-index: 1020;
+        position: relative;
+        transition: margin-left 0.3s;
+    }
+
+    .sidebar-footer {
+        text-align: center;
+        padding: 10px;
+        background: #2c3034;
+        color: white;
+        margin-top: auto;
+        width: 100%;
+    }
+
+    .nav-link {
+        padding-left: 30px !important;
+    }
+
+    /* Dropdown menu z-index fixes */
+    .sidebar .collapse {
+        z-index: 1031 !important;
+        position: relative;
+        overflow: visible !important;
+    }
+
+    .sidebar .nav {
+        overflow: visible !important;
+    }
+
+    @media (max-width: 768px) {
         .sidebar {
-            width: 250px;
-            position: fixed;
-            align-items: center;
-            height: 100%;
-            background: #343a40;
-            color: white;
-            padding-top: 20px;
-            transition: background 0.3s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .sidebar a {
-            display: block;
-            color: white;
-            padding: 12px 20px;
-            text-decoration: none;
-            transition: background 0.3s;
-        }
-        .sidebar a:hover {
-            background: #495057;
+            display: none;
+            z-index: 1030;
+            background-color: #343a40;
         }
         .main-content {
-            margin-left: 260px;
-            padding: 20px;
+            margin-left: 0 !important;
         }
-        .sidebar-footer {
-            text-align: center;
-            padding: 10px;
-            background: #2c3034;
-            color: white;
-            margin-top: auto;
-            width: 100%;
-        }
-        .nav-link {
-            padding-left: 30px !important;
-        }
+    }
+
+    .sidebar.collapsed {
+        width: 60px;
+    }
+
+    .sidebar.collapsed .nav-link,
+    .sidebar.collapsed .sidebar-footer,
+    .sidebar.collapsed h5,
+    .sidebar.collapsed span,
+    .sidebar.collapsed p {
+        display: none !important;
+    }
+
+    .sidebar.collapsed .logo {
+        width: 40px;
+        margin-bottom: 0;
+    }
+
+    .main-content.collapsed {
+        margin-left: 70px !important;
+    }
+
+    .sidebar.collapsed:hover {
+        width: 250px;
+    }
+
+    .sidebar.collapsed:hover .nav-link,
+    .sidebar.collapsed:hover .sidebar-footer,
+    .sidebar.collapsed:hover h5,
+    .sidebar.collapsed:hover span,
+    .sidebar.collapsed:hover p {
+        display: block !important;
+    }
+
+    .sidebar-toggle {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+    }
+
+    .sidebar-toggle:hover {
+        color: #adb5bd;
+    }
+
+    .sidebar {
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .sidebar.d-none {
+        transform: translateX(-100%);
+    }
     </style>
+    <script>
+        // Automatically dismiss alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert.auto-dismiss');
+            alerts.forEach(alert => {
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500); // remove after fade
+            });
+        }, 3000);
+
+        function toggleSidebar() {
+            const sidebar = document.querySelector(".sidebar");
+            sidebar.classList.toggle("d-none");
+        }
+
+        function collapseSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("mainContent");
+            const toggleIcon = document.getElementById("sidebarToggleIcon");
+
+            sidebar.classList.toggle("collapsed");
+            content.classList.toggle("collapsed");
+
+            // Toggle between chevron icons
+            if (sidebar.classList.contains("collapsed")) {
+                toggleIcon.classList.remove("fa-angle-double-left");
+                toggleIcon.classList.add("fa-angle-double-right");
+            } else {
+                toggleIcon.classList.remove("fa-angle-double-right");
+                toggleIcon.classList.add("fa-angle-double-left");
+            }
+        }
+    </script>
 </head>
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
 <body>
-    <div class="sidebar text-start">
+    <div class="sidebar text-start" id="sidebar">
+        <button class="sidebar-toggle" onclick="collapseSidebar()" title="Collapse/Expand">
+            <i id="sidebarToggleIcon" class="fas fa-angle-double-left"></i>
+        </button>
+
         <div class="text-center">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Serv-Pulse Logo" class="logo">
             <h5 class="text-white">Serv-Pulse</h5>
         </div>
 
         <ul class="nav flex-column w-100">
+            <!-- Rest of your sidebar content remains the same -->
             <!-- Dashboard Collapsible Menu -->
-<!-- Dashboard Collapsible Menu -->
-<li class="nav-item">
-  <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#dashboardSubMenu" aria-expanded="false">
-    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
-  </a>
-  <div class="collapse ps-2" id="dashboardSubMenu">
-    <ul class="nav flex-column">
-      <li class="nav-item">
-        <a class="nav-link text-white" href="{{ url_for('dashboard.index') }}">
-          <i class="bi bi-house-door me-1"></i> Technician Dashboard
-        </a>
-      </li>
-        <li class="nav-item">
-  <a class="nav-link text-white" href="{{ url_for('ticket1.technician_analytics') }}">
-    <i class="fas fa-chart-line me-1"></i> Technician Analytics
-  </a>
-</li>
+            <li class="nav-item">
+                <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#dashboardSubMenu" aria-expanded="false">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                <div class="collapse ps-2" id="dashboardSubMenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('dashboard.index') }}">
+                                <i class="bi bi-house-door me-1"></i> Technician Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('ticket1.technician_analytics') }}">
+                                <i class="fas fa-chart-line me-1"></i> Technician Analytics
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('contracts.contract_dashboard_page') }}">
+                                <i class="fas fa-file-contract me-1"></i> Contracts Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('toner.delivery_dashboard') }}">
+                                <i class="fas fa-truck me-1"></i> Toner Delivery Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard_summary_page') }}">
+                                <i class="fa-ticket-alt me-1"></i> Ticket Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('financial.financial_dashboard') }}">
+                                <i class="fas fa-coins me-1"></i> Financial Dashboard
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
 
-      <li class="nav-item">
-        <a class="nav-link text-white" href="{{ url_for('contracts.contract_dashboard_page') }}">
-          <i class="fas fa-file-contract me-1"></i> Contracts Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link text-white" href="{{ url_for('toner.delivery_dashboard') }}">
-          <i class="fas fa-truck me-1"></i> Toner Delivery Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard_summary_page') }}">
-          <i class="fa-ticket-alt me-1"></i> Ticket Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link text-white" href="{{ url_for('financial.financial_dashboard') }}">
-          <i class="fas fa-coins me-1"></i> Financial Dashboard
-        </a>
-      </li>
-    </ul>
-  </div>
-</li>
-
+            <!-- Rest of your menu items... -->
             <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('technicians.index') }}">
                     <i class="fas fa-user-cog me-2"></i> Technicians
@@ -161,7 +287,8 @@
                 <a class="nav-link text-white" href="{{ url_for('ticket1.ticket_dashboard') }}">
                     <i class="fas fa-ticket-alt me-2"></i> Tickets
                 </a>
-                       <!-- ✅ New: Preventive Maintenance Menu -->
+            </li>
+            <!-- ✅ New: Preventive Maintenance Menu -->
             <li class="nav-item">
                 <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#pmSubMenu" aria-expanded="false">
                     <i class="fas fa-tools me-2"></i> Preventive Maintenance
@@ -182,38 +309,36 @@
                 </div>
             </li>
 
-                       <li class="nav-item">
+            <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('advance_report.advance_report_dashboard') }}">
-
                     <i class="fas fa-chart-bar me-2"></i> Report
                 </a>
             </li>
             <!-- Material Movement Collapsible Menu -->
-<li class="nav-item">
-    <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#materialSubMenu" aria-expanded="false">
-        <i class="fas fa-warehouse me-2"></i> Material Movement
-    </a>
-    <div class="collapse ps-2" id="materialSubMenu">
-        <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('toner.toner_dashboard') }}">
-                    <i class="fas fa-tint me-1"></i> Toner
+                <a class="nav-link dropdown-toggle text-white" href="#" data-bs-toggle="collapse" data-bs-target="#materialSubMenu" aria-expanded="false">
+                    <i class="fas fa-warehouse me-2"></i> Material Movement
                 </a>
+                <div class="collapse ps-2" id="materialSubMenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('toner.toner_dashboard') }}">
+                                <i class="fas fa-tint me-1"></i> Toner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{{ url_for('material.material_dashboard') }}">
+                                <i class="fas fa-tools me-1"></i> Spare
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </li>
             <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('material.material_dashboard') }}">
-                    <i class="fas fa-tools me-1"></i> Spare
+                <a class="nav-link text-white" href="{{ url_for('logs.view_logs') }}">
+                    <i class="fas fa-clipboard-list me-2"></i> Logs
                 </a>
             </li>
-        </ul>
-    </div>
-</li>
-            <li class="nav-item">
-    <a class="nav-link text-white" href="{{ url_for('logs.view_logs') }}">
-        <i class="fas fa-clipboard-list me-2"></i> Logs
-    </a>
-</li>
-
 
             <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('about.about') }}">
@@ -222,13 +347,26 @@
             </li>
         </ul>
 
+        </ul>
+
         <!-- Footer -->
         <div class="sidebar-footer">
             {% if current_user.is_authenticated %}
-                <p class="mb-1">Logged in as: <strong>{{ current_user.username }}</strong></p>
-                <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+                <div class="d-flex align-items-center justify-content-center mb-2">
+                    <div class="bg-white text-dark rounded-circle d-flex justify-content-center align-items-center me-2"
+                        style="width: 35px; height: 35px; font-weight: bold;">
+                        {{ current_user.username[0] | upper }}
+                    </div>
+                    <span class="text-white small">Logged in as<br><strong>{{ current_user.username }}</strong></span>
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#resetPasswordModal">
+                        <i class="fas fa-key me-1"></i> Reset Password
+                    </button>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
             {% else %}
                 <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">
                     <i class="fas fa-sign-in-alt"></i> Login
@@ -237,8 +375,50 @@
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" id="mainContent">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show auto-dismiss" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <button class="btn text-dark position-fixed top-0 start-0 m-2 d-md-none z-3" onclick="toggleSidebar()" style="background: none; border: none;">
+            <i class="fas fa-bars fa-lg"></i>
+        </button>
+
         {% block content %}{% endblock %}
+    </div>
+
+    <!-- Password Reset Modal -->
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="POST" action="{{ url_for('users.reset_own_password') }}">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">Reset Your Password</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" name="new_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-warning">Update Password</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </body>
 </html>
