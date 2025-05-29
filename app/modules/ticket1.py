@@ -535,8 +535,12 @@ from app.models import Ticket  # or however you import it
 @login_required
 @permission_required('can_view_tickets')
 def ticket_dashboard_summary_page():
-    from_date = request.args.get('from_date')
-    to_date = request.args.get('to_date')
+    from datetime import datetime, timedelta
+
+    now = datetime.today()
+    from_date = request.args.get('from_date') or (now - timedelta(days=90)).strftime("%Y-%m-%d")
+    to_date = request.args.get('to_date') or now.strftime("%Y-%m-%d")
+
     technician = request.args.get('technician')
 
     query = Ticket.query.join(Technician, isouter=True)
@@ -616,7 +620,8 @@ def technician_analytics():
 
     # 📅 Set default date range from 1st Jan 2025 to today
     today = datetime.today()
-    default_from = datetime(2025, 1, 1)
+    default_from = today - timedelta(days=90)
+
 
     from_date_str = request.args.get('from_date') or default_from.strftime("%Y-%m-%d")
     to_date_str = request.args.get('to_date') or today.strftime("%Y-%m-%d")

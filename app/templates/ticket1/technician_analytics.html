@@ -198,6 +198,22 @@
       fixedHeader: true
     });
   });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const fromInput = document.querySelector('input[name="from_date"]');
+    const toInput = document.querySelector('input[name="to_date"]');
+
+    if (!fromInput.value || !toInput.value) {
+      const toDate = new Date();
+      const fromDate = new Date();
+      fromDate.setDate(toDate.getDate() - 90); // ← Last 3 months
+
+      const formatDate = date => date.toISOString().split('T')[0];
+      fromInput.value = formatDate(fromDate);
+      toInput.value = formatDate(toDate);
+    }
+  });
 </script>
+
 
 {% endblock %}
