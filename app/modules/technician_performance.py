@@ -381,12 +381,13 @@ def export_technician_excel():
     df.to_excel(filepath, index=False, engine="openpyxl")
 
     return send_file(filepath, as_attachment=True)
+
 @technician_performance_bp.route("/top3_tv", methods=["GET"])
 def show_top3_performers_tv():
     today = datetime.today()
-    start_of_month = today.replace(day=1)
+    start_date = today - timedelta(days=30)
 
-    # Step 1: Get top 3 technician IDs by number of closed tickets
+    # Step 1: Get top 3 technician IDs by number of closed tickets in last 30 days
     top3_query = (
         db.session.query(
             Technician.id,
@@ -396,7 +397,7 @@ def show_top3_performers_tv():
         .filter(
             Ticket.status == "Closed",
             Ticket.closed_at != None,
-            Ticket.closed_at >= start_of_month
+            Ticket.closed_at >= start_date
         )
         .group_by(Technician.id)
         .order_by(db.func.count(Ticket.id).desc())
@@ -407,10 +408,10 @@ def show_top3_performers_tv():
     top_ids = [t.id for t in top3_query]
 
     if not top_ids:
-        return render_template("tv/top3_performers.html", top_performers=[], current_month=today.strftime("%B %Y"))
+        return render_template("tv/top3_performers.html", top_performers=[], current_month="Last 30 Days")
 
     # Step 2: Fetch analytics and match
-    from_str = start_of_month.strftime("%Y-%m-%d")
+    from_str = start_date.strftime("%Y-%m-%d")
     to_str = today.strftime("%Y-%m-%d")
     analytics_data = get_technician_analytics_data(from_str, to_str)
 
@@ -440,5 +441,6 @@ def show_top3_performers_tv():
     return render_template(
         "tv/top3_performers.html",
         top_performers=top_performers,
-        current_month=today.strftime("%B %Y")
+        current_month="Last 30 Days"
     )
+
