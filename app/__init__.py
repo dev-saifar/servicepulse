@@ -128,6 +128,8 @@ def create_app():
     from app.modules.toner import toner_bp
     from app.modules.financial import financial_bp
     from app.modules.delivery_report import delivery_report_bp
+    from app.modules.dashboard_rotator import dashboard_rotator_bp
+    app.register_blueprint(dashboard_rotator_bp)
 
     app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')

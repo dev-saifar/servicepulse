@@ -1,50 +1,60 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<body class="bg-dark text-white">
+<body class="bg-light text-dark">
 <div class="container-fluid py-4">
-    <h2 class="mb-4 text-center text-info">
-        <i class="bi bi-person-badge"></i> Technician Dashboard
-    </h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-info"><i class="bi bi-person-badge"></i> Technician Dashboard</h2>
+        <button class="btn btn-sm btn-dark" onclick="toggleTheme()">🌗 Toggle Theme</button>
+    </div>
 
-    <div class="row">
-        <div class="col-lg-3 col-md-4 d-flex flex-column gap-4">
-            <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
-                <h5 class="mb-3">📊 Ticket Status</h5>
-                <div class="position-relative" style="height: 180px;">
-                    <canvas id="ticketChart" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+    <!-- 🚦 Status Summary Badges -->
+    <div class="row text-center mb-3">
+        <div class="col"><span class="badge bg-success fs-6">🟢 Free: {{ total_free }}</span></div>
+        <div class="col"><span class="badge bg-danger fs-6">🔴 Busy: {{ total_busy }}</span></div>
+    </div>
+
+    <div class="row g-4">
+        <!-- 📊 Charts and Performer Cards -->
+        <div class="col-lg-3 col-md-4">
+            <div class="d-flex flex-column gap-4">
+
+                <div class="card shadow-sm text-center bg-white text-dark rounded-4 p-3">
+                    <h6 class="mb-2">🎫 Ticket Status</h6>
+                    <div class="position-relative" style="height: 180px;">
+                        <canvas id="ticketChart"></canvas>
+                    </div>
+                    <div class="card-footer small text-muted">Auto-refresh every 10s</div>
                 </div>
-            </div>
 
-            <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
-                <h6>🎖️ Performer of the Month</h6>
-                <p class="highlight">{{ performer_of_month.name }}</p>
-                <p>Tickets Handled: {{ performer_of_month.total_tickets }}</p>
-            </div>
+                <div class="card shadow-sm text-center bg-white text-dark rounded-4 p-3">
+                    <h6>🎖️ Performer of the Month</h6>
+                    <p class="highlight">{{ performer_of_month.name }}</p>
+                    <p>Tickets Handled: {{ performer_of_month.total_tickets }}</p>
+                </div>
 
-            <div class="card shadow-sm text-center bg-white text-dark rounded-4 border-0 p-3">
-                <h6>🏆 Performer of the Day</h6>
-                <p class="highlight">{{ performer_of_day.name }}</p>
-                <p>Tickets Handled Today: {{ performer_of_day.daily_tickets }}</p>
+                <div class="card shadow-sm text-center bg-white text-dark rounded-4 p-3">
+                    <h6>🏆 Performer of the Day</h6>
+                    <p class="highlight">{{ performer_of_day.name }}</p>
+                    <p>Tickets Today: {{ performer_of_day.daily_tickets }}</p>
+                </div>
             </div>
         </div>
 
+        <!-- 👨‍🔧 Technician Status Grid -->
         <div class="col-lg-9">
-            <div class="card shadow-sm p-4 bg-white text-dark">
-                <h4 class="text-center text-primary fw-bold mb-4">
-                    <i class="bi bi-person-lines-fill"></i> Technician Status
-                </h4>
-                <div class="row justify-content-center">
+            <div class="card shadow-sm p-4 bg-white text-dark mb-4">
+                <h4 class="text-primary fw-bold text-center mb-3"><i class="bi bi-person-lines-fill"></i> Technician Status</h4>
+                <div class="row justify-content-center g-3">
                     {% for tech in technicians %}
-                    <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6 mb-3" style="flex: 0 0 20%; max-width: 20%;">
-
-                        <div class="card technician-box text-white text-center {{ 'free-box' if tech.status == 'Free' else 'busy-box' }} h-100">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                        <div class="card technician-box text-white text-center {{ 'free-box' if tech.status == 'Free' else 'busy-box' }}">
                             <div class="card-body p-2">
-                                <h6 class="card-title text-truncate" title="{{ tech.name }}" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ tech.name }}</h6>
-                                <p class="mb-1"><small>Status: {{ tech.status }}</small></p>
+                                <h6 class="card-title text-truncate" title="{{ tech.name }}">{{ tech.name }}</h6>
+                                <p><small>Status: <span class="badge {{ 'bg-success' if tech.status == 'Free' else 'bg-danger' }}">{{ tech.status }}</span></small></p>
                                 <p class="mb-0"><small>Tickets Today: {{ tech.tickets_handled_today }}</small></p>
                                 {% if tech.name in exceeded_time_techs %}
-                                <div class="text-warning small mt-1 text-truncate" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="⚠ Exceeded Estimated Time!">⚠ Exceeded Estimated Time!</div>
+                                <div class="text-warning small mt-1" title="⚠ Exceeded Estimated Time!">⚠ Exceeded Time</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -52,110 +62,86 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <!-- 📈 Workload Chart -->
+            <div class="card shadow-sm p-4 bg-white text-dark">
+                <h5 class="text-center text-secondary mb-3">📈 Technician Workload (Tickets Handled)</h5>
+                <canvas id="workloadChart" height="120"></canvas>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- JS & Chart Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     let ticketChartInstance = null;
+    let workloadChartInstance = null;
 
     function updateDashboard() {
         fetch("/dashboard/dashboard-data", { credentials: "include" })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error("Failed to fetch dashboard data");
+            return response.json();
+        })
         .then(data => {
-            const ctx = document.getElementById("ticketChart").getContext("2d");
-            if (ticketChartInstance) {
-                ticketChartInstance.destroy();
-            }
-            ticketChartInstance = new Chart(ctx, {
+            // Ticket Chart
+            const ticketCtx = document.getElementById("ticketChart").getContext("2d");
+            if (ticketChartInstance) ticketChartInstance.destroy();
+            ticketChartInstance = new Chart(ticketCtx, {
                 type: "doughnut",
                 data: {
                     labels: ["Completed", "Pending"],
+                    datasets: [{ data: [data.completed_tickets, data.pending_tickets], backgroundColor: ["#28a745", "#dc3545"] }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            // Workload Chart
+            const loadCtx = document.getElementById("workloadChart").getContext("2d");
+            if (workloadChartInstance) workloadChartInstance.destroy();
+            workloadChartInstance = new Chart(loadCtx, {
+                type: "bar",
+                data: {
+                    labels: data.workload.map(w => w.name),
                     datasets: [{
-                        data: [data.completed_tickets, data.pending_tickets],
-                        backgroundColor: ["#28a745", "#dc3545"]
+                        label: "Tickets",
+                        data: data.workload.map(w => w.count),
+                        backgroundColor: "#0d6efd"
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { position: 'bottom' } }
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
                 }
             });
         })
         .catch(error => console.error("Dashboard load failed:", error));
     }
 
-    setInterval(updateDashboard, 60000);
+    function toggleTheme() {
+        document.body.classList.toggle('bg-dark');
+        document.body.classList.toggle('text-white');
+        document.body.classList.toggle('bg-light');
+        document.body.classList.toggle('text-dark');
+    }
+
+    setInterval(updateDashboard, 10000);
     updateDashboard();
 </script>
 
+<!-- Styles -->
 <style>
-    body {
-        background-color: #f8f9fa;
-        font-size: 1.2rem;
-    }
-    .highlight { font-weight: bold; color: #007BFF; }
     .technician-box {
-        transition: transform 0.3s ease;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.3s ease;
+        padding: 15px;
+        border-radius: 10px;
     }
-    .technician-box:hover {
-        transform: scale(1.05);
-    }
-    .free-box { background: #28a745; color: white; }
-    .busy-box { background: #dc3545; color: white; }
+    .technician-box:hover { transform: scale(1.05); }
+    .free-box { background: #28a745 !important; }
+    .busy-box { background: #dc3545 !important; }
+    .highlight { font-weight: bold; color: #007BFF; }
 </style>
-    <script>
-        let ticketChartInstance = null;
-
-            function updateDashboard() {
-        fetch("/dashboard/dashboard-data", { credentials: "include" })
-
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Failed to fetch dashboard data");
-            }
-            return response.json();
-        })
-        .then(data => {
-            let ctx = document.getElementById("ticketChart").getContext("2d");
-            if (ticketChartInstance) {
-                ticketChartInstance.destroy();
-            }
-            ticketChartInstance = new Chart(ctx, {
-                type: "doughnut",
-                data: {
-                    labels: ["Completed", "Pending"],
-                    datasets: [{
-                        data: [data.completed_tickets, data.pending_tickets],
-                        backgroundColor: ["#28a745", "#dc3545"]
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        })
-        .catch(error => console.error("Error loading dashboard:", error));
-    }
-
-
-        setInterval(updateDashboard, 10000);
-        updateDashboard();
-    </script>
-
-    <style>
-        .technician-box {
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease;
-            padding: 15px;
-            background: white;
-        }
-        .technician-box:hover {
-            transform: scale(1.05);
-        }
-        .free-box { background: #28a745; color: white; }
-        .busy-box { background: #dc3545; color: white; }
-        .highlight { font-weight: bold; color: #007BFF; }
-    </style>
 {% endblock %}

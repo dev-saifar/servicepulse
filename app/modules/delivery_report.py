@@ -11,7 +11,17 @@ from app.models import Ticket
 from flask import render_template
 
 from datetime import datetime
+from flask import Blueprint, request, jsonify, send_file
+from flask_login import login_required, current_user
+from app import db
+from app.models import toner_request, TonerCosting
+from app.utils.permission_required import permission_required
+import pandas as pd
+import io
+import traceback
+
 delivery_report_bp = Blueprint('delivery_report', __name__)
+
 @delivery_report_bp.route('/export/toner', methods=['GET'])
 @login_required
 @permission_required('can_export_financials')
@@ -19,6 +29,10 @@ def export_toner_deliveries():
     from_date = request.args.get('start_date')
     to_date = request.args.get('end_date')
     customer = request.args.get('customer')
+
+    print("📤 Exporting toner deliveries...")
+    print(f"➡ Date range: {from_date} to {to_date}")
+    print(f"➡ Customer filter: {customer}")
 
     query = db.session.query(toner_request).filter(toner_request.delivery_status == 'Delivered')
 
@@ -31,41 +45,50 @@ def export_toner_deliveries():
 
     results = query.all()
     data = []
+    error_count = 0
 
-    for t in results:
-        # Try fetching cost from TonerCosting
-        cost_entry = TonerCosting.query.filter_by(
-            toner_model=t.toner_model,
+    for idx, t in enumerate(results):
+        try:
+            # Fetch cost
+            cost_entry = TonerCosting.query.filter_by(
+                toner_model=t.toner_model,
+                source=t.toner_source
+            ).first()
 
-            source=t.toner_source
-        ).first()
+            unit_cost = cost_entry.unit_cost if cost_entry else 0.0
+            total_cost = unit_cost * (t.issued_qty or 0)
 
-        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
-        total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
+            data.append({
+                "Date Issued": t.date_issued.strftime('%Y-%m-%d') if t.date_issued else '',
+                "Serial Number": t.serial_number,
+                "Asset Code": t.asset_code,
+                "Asset Description": t.asset_description,
+                "Customer Code": t.cust_code,
+                "Customer Name": t.customer_name,
+                "Billing Company": t.billing_company,
+                "Contract Code": t.contract_code,
+                "Service Location": t.service_location,
+                "Toner Type": t.toner_type,
+                "Toner Model": t.toner_model,
+                "Toner Source": t.toner_source,
+                "Issued Qty": t.issued_qty,
+                "Unit Cost": round(unit_cost, 2),
+                "Total Cost": round(total_cost, 2),
+                "Dispatch Time": t.dispatch_time.strftime('%Y-%m-%d %H:%M') if t.dispatch_time else '',
+                "Delivery Date": t.delivery_date.strftime('%Y-%m-%d') if t.delivery_date else '',
+                "Receiver Name": t.receiver_name,
+                "Requested By": t.requested_by,
+                "Request Type": t.request_type,
+                "FOC": t.foc
+            })
 
-        data.append({
-            "Date Issued": t.date_issued.strftime('%Y-%m-%d') if t.date_issued else '',
-            "Serial Number": t.serial_number,
-            "Asset Code": t.asset_code,
-            "Asset Description": t.asset_description,
-            "Customer Code": t.cust_code,
-            "Customer Name": t.customer_name,
-            "Billing Company": t.billing_company,
-            "Contract Code": t.contract_code,
-            "Service Location": t.service_location,
-            "Toner Type": t.toner_type,
-            "Toner Model": t.toner_model,
-            "Toner Source": t.toner_source,
-            "Issued Qty": t.issued_qty,
-            "Unit Cost": round(unit_cost, 2),
-            "Total Cost": round(total_cost, 2),
-            "Dispatch Time": t.dispatch_time.strftime('%Y-%m-%d %H:%M') if t.dispatch_time else '',
-            "Delivery Date": t.delivery_date.strftime('%Y-%m-%d') if t.delivery_date else '',
-            "Receiver Name": t.receiver_name,
-            "Requested By": t.requested_by,
-            "Request Type": t.request_type,
-            "FOC": t.foc
-        })
+        except Exception as e:
+            error_count += 1
+            print(f"⚠️ Row {idx+1} failed: ID={t.id if hasattr(t, 'id') else 'N/A'}")
+            print(f"    Toner Model: {t.toner_model}, Source: {t.toner_source}")
+            traceback.print_exc()
+
+    print(f"✅ Export completed: {len(data)} rows included, {error_count} rows skipped.")
 
     df = pd.DataFrame(data)
     output = io.BytesIO()

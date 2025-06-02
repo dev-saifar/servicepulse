@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  body.light-mode {
+    background-color: #f8f9fa;
+    color: #212529;
+  }
+
+  body.dark-mode {
+    background-color: #000;
+    color: white;
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .summary-card {
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    margin-bottom: 10px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    background-color: var(--card-bg);
+    transition: background-color 0.3s;
+  }
+
+  .summary-card span {
+    font-size: 24px;
+    display: block;
+    margin-top: 5px;
+    font-weight: bold;
+  }
+
+  .ticket-count {
+    font-size: 14px;
+    font-weight: normal;
+    margin-top: 5px;
+  }
+
+  .clock {
+    font-size: 24px;
+  }
+
+  .tech-box {
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255,255,255,0.15);
+    height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.3s ease;
+  }
+
+  .tech-box:hover {
+    transform: scale(1.03);
+  }
+
+  .green { background-color: #28a745; }
+  .orange { background-color: #fd7e14; }
+  .red { background-color: #dc3545; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+  }
+
+  .mode-toggle input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Light/Dark card colors */
+  body.light-mode .summary-card {
+    background-color: #ffffff;
+  }
+
+  body.dark-mode .summary-card {
+    background-color: #1a1a1a;
+  }
+</style>
+
+<div class="container-fluid py-3">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h2>📺 Technician Dashboard</h2>
+    <div class="d-flex align-items-center gap-4">
+      <div class="clock" id="liveClock">--:--:--</div>
+      <div class="mode-toggle">
+        🌗 Dark Mode
+        <input type="checkbox" id="modeSwitch">
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+ <!-- Summary Cards + Top 3 Performer Button in One Row -->
+<div class="row text-center mb-4 align-items-end">
+  <div class="col-md-2">
+    <div class="summary-card text-success">🟢 Free<span>{{ total_free }}</span></div>
+  </div>
+  <div class="col-md-2">
+    <div class="summary-card text-warning">🟠 Busy<span>{{ total_busy }}</span></div>
+  </div>
+  <div class="col-md-3">
+    <div class="summary-card text-primary">
+      🎖️ Day<br>
+      <span>{{ performer_of_day.name }}</span>
+      <div class="ticket-count">{{ performer_of_day.count }} tickets</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="summary-card text-primary">
+      🏆 Month<br>
+      <span>{{ performer_of_month.name }}</span>
+      <div class="ticket-count">{{ performer_of_month.count }} tickets</div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <a href="{{ url_for('technician_performance.show_top3_performers_tv') }}" class="btn btn-outline-primary btn-lg shadow w-100">
+      🏆 Top 3<br>Performers
+    </a>
+  </div>
+</div>
+
+  </div>
+
+  <!-- Technician Grid -->
+  <div class="grid mb-5">
+    {% for tech in technicians %}
+      {% if tech.status == 'Free' %}
+        <div class="tech-box green">
+          {{ tech.name }}
+          <div class="ticket-count">🟢 Free · {{ tech.tickets_handled_today or 0 }} today</div>
+        </div>
+      {% elif tech.name in exceeded_time_techs %}
+        <div class="tech-box red">
+          {{ tech.name }}
+          <div class="ticket-count">🔴 Busy-Exceeded Time · {{ tech.tickets_handled_today or 0 }} today</div>
+        </div>
+      {% else %}
+        <div class="tech-box orange">
+          {{ tech.name }}
+          <div class="ticket-count">🟠 Busy · {{ tech.tickets_handled_today or 0 }} today</div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+  // ⏰ Live Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById("liveClock").textContent = now.toLocaleTimeString();
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // 🌗 Theme Toggle Logic
+  const modeSwitch = document.getElementById('modeSwitch');
+  const currentMode = localStorage.getItem('mode') || 'dark';
+  document.body.classList.add(currentMode + '-mode');
+  modeSwitch.checked = currentMode === 'dark';
+
+  modeSwitch.addEventListener('change', function () {
+    document.body.classList.toggle('light-mode');
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('mode', this.checked ? 'dark' : 'light');
+  });
+</script>
+{% endblock %}

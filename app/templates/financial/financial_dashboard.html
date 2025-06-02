@@ -6,8 +6,13 @@
 
   <!-- 🔍 Filters -->
   <form id="filterForm" class="row g-2 mb-4">
-    <div class="col-md-3"><input class="form-control" name="start_date" type="date" id="startDateInput" /></div>
-    <div class="col-md-3"><input class="form-control" name="end_date" type="date" id="endDateInput" /></div>
+    <div class="col-md-3">
+  <input class="form-control" name="start_date" type="date" id="startDateInput" />
+</div>
+<div class="col-md-3">
+  <input class="form-control" name="end_date" type="date" id="endDateInput" />
+</div>
+
     <div class="col-md-3">
       <input class="form-control" id="customerInput" name="customer" placeholder="Customer Name" autocomplete="off" />
     </div>
@@ -139,24 +144,9 @@ $('#filterForm').on('submit', function(e) {
     ['Serial Number', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
 });
 
-
-$(document).ready(function () {
-  // 🗓 Set default date range: Jan 1st to today
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-
-  const todayStr = `${yyyy}-${mm}-${dd}`;
-  const janFirstStr = `${yyyy}-04-01`;
-
-  $('#startDateInput').val(janFirstStr);
-  $('#endDateInput').val(todayStr);
-
-  // ✅ Submit the form AFTER setting the date values
+$(document).ready(function() {
   $('#filterForm').submit();
 
-  // 🧾 Set export URLs on click
   $('#exportCustomer').on('mousedown', function() {
     this.href = '/financial/export_excel?type=customer&' + $('#filterForm').serialize();
   });
@@ -178,6 +168,22 @@ $(document).ready(function () {
   });
 });
 
+// Set default start_date to Jan 1 of current year, and end_date to today
+$(document).ready(function () {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
 
+  const startOfYear = `${yyyy}-01-01`;
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  if (!$('#startDateInput').val()) {
+    $('#startDateInput').val(startOfYear);
+  }
+  if (!$('#endDateInput').val()) {
+    $('#endDateInput').val(todayStr);
+  }
+});
 </script>
 {% endblock %}

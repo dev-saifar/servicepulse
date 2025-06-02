@@ -3,36 +3,118 @@
 <head>
     <title>License Activation</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 40px; background-color: #f5f5f5; }
-        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        textarea, input, button, select {
-            width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px; border-radius: 5px;
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background-color: #f5f5f5;
         }
-        button { cursor: pointer; border: none; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .alert-success { background-color: #d4edda; }
-        .alert-warning { background-color: #fff3cd; }
-        .alert-danger { background-color: #f8d7da; }
-        h2 { margin-bottom: 20px; }
+        .container {
+            max-width: 750px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .branding {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .branding img {
+            height: 60px;
+            margin: 0 10px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #333;
+        }
+        textarea, input, button, select {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-light {
+            background: #f8f9fa;
+            color: #000;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+        }
+        .card {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 25px;
+        }
+        .card h5 {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="branding">
+            <img src="{{ url_for('static', filename='logo1.png') }}" alt="Logo 1">
+            <img src="{{ url_for('static', filename='logo2.png') }}" alt="Logo 2">
+        </div>
+
         <h2>🔐 License Activation</h2>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        <div id="flash-messages">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+</div>
+
+<script>
+  // Auto-hide flash messages after 5 seconds
+  setTimeout(() => {
+    const flashContainer = document.getElementById('flash-messages');
+    if (flashContainer) {
+      flashContainer.style.transition = "opacity 0.5s ease";
+      flashContainer.style.opacity = "0";
+      setTimeout(() => flashContainer.remove(), 500);
+    }
+  }, 5000);
+</script>
+
 
         <form method="post">
             <label><strong>Paste License Key (.lic content):</strong></label>
-            <textarea name="license_key" rows="6" placeholder="Paste your encrypted license key here..."></textarea>
+            <textarea name="license_key" rows="6" placeholder="Paste your encrypted license key here..." required></textarea>
             <button type="submit" class="btn-primary">Activate License</button>
         </form>
 
@@ -46,6 +128,17 @@
             <textarea name="address" placeholder="Address" rows="2" required></textarea>
             <button type="submit" class="btn-success">Activate Trial License</button>
         </form>
+
+        <div class="card">
+            <h5>📥 Download License Info</h5>
+            <p>Send this file to the ServPulse team for license generation.</p>
+            <form method="post" action="{{ url_for('about.download_license_info') }}">
+                <input type="hidden" name="client_name" value="{{ license.client_name }}">
+                <input type="hidden" name="email" value="{{ license.email }}">
+                <input type="hidden" name="address" value="{{ license.address }}">
+                <button type="submit" class="btn-light">Download License Info JSON</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>

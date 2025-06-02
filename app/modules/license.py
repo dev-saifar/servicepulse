@@ -31,5 +31,12 @@ def license_page():
                 flash(f"✅ Trial license activated! Valid until {trial_info['expiry_date']}", "success")
             return redirect(url_for('about.about'))
 
-    # ✅ ALWAYS return the license.html on GET
-    return render_template("license.html", domain=get_domain(), hardware_id=get_hardware_id())
+    # ✅ ALWAYS return the license.html on GET with license data for download info
+    valid, existing = is_license_valid()
+    license_info = existing if valid else {}
+    return render_template(
+        "license.html",
+        domain=get_domain(),
+        hardware_id=get_hardware_id(),
+        license=license_info
+    )

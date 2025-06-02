@@ -5,6 +5,9 @@ from app.models import Technician, Ticket
 from sqlalchemy import func
 from flask_login import login_required
 from app.utils.permission_required import permission_required
+import os
+from flask import current_app
+from sqlalchemy import and_
 
 technicians_bp = Blueprint('technicians', __name__, template_folder='../templates/technicians')
 
@@ -98,18 +101,100 @@ def import_technicians():
 
     return render_template('technicians/import_technicians.html')
 
+from PIL import Image
+
 
 @technicians_bp.route('/edit/<int:tech_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required('can_edit_technicians')
 def edit_technician(tech_id):
     technician = Technician.query.get_or_404(tech_id)
-    if request.method == 'POST':
-        technician.name = request.form['name']
-        db.session.commit()
-        return redirect(url_for('technicians.index'))
-    return render_template('technicians/edit.html', technician=technician)
 
+    if request.method == 'POST':
+        try:
+            # Update basic info
+            technician.name = request.form.get('name')
+            technician.mobile = request.form.get('mobile')
+            technician.email = request.form.get('email')
+            technician.status = request.form.get('status')
+
+            # Handle DOB
+            dob_str = request.form.get('dob')
+            technician.dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
+
+            # Handle file uploads
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+
+            # Photo upload
+            if 'photo' in request.files:
+                photo = request.files['photo']
+                if photo.filename != '':
+                    filename = f"tech_{tech_id}_photo.{photo.filename.split('.')[-1]}"
+                    photo_path = os.path.join(upload_folder, filename)
+                    photo.save(photo_path)
+                    technician.photo_url = f"/static/uploads/{filename}"
+
+            # ID card upload
+            if 'id_card' in request.files:
+                id_card = request.files['id_card']
+                if id_card.filename != '':
+                    filename = f"tech_{tech_id}_id.{id_card.filename.split('.')[-1]}"
+                    id_path = os.path.join(upload_folder, filename)
+                    id_card.save(id_path)
+                    technician.id_card_url = f"/static/uploads/{filename}"
+
+            # CV upload
+            if 'cv' in request.files:
+                cv = request.files['cv']
+                if cv.filename != '':
+                    filename = f"tech_{tech_id}_cv.{cv.filename.split('.')[-1]}"
+                    cv_path = os.path.join(upload_folder, filename)
+                    cv.save(cv_path)
+                    technician.cv_url = f"/static/uploads/{filename}"
+
+            db.session.commit()
+            flash('Technician updated successfully!', 'success')
+            return redirect(url_for('technicians.index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating technician: {str(e)}', 'danger')
+
+    return render_template('technicians/edit.html', technician=technician)
+@technicians_bp.route('/remove_id/<int:tech_id>', methods=['POST'])
+@login_required
+def remove_id(tech_id):
+    technician = Technician.query.get_or_404(tech_id)
+    if technician.id_card_url:
+        try:
+            path = os.path.join(current_app.root_path, technician.id_card_url[1:])
+            if os.path.exists(path):
+                os.remove(path)
+            technician.id_card_url = None
+            db.session.commit()
+            flash('ID proof removed successfully', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error removing ID: {str(e)}', 'danger')
+    return redirect(url_for('technicians.edit_technician', tech_id=tech_id))
+
+@technicians_bp.route('/remove_cv/<int:tech_id>', methods=['POST'])
+@login_required
+def remove_cv(tech_id):
+    technician = Technician.query.get_or_404(tech_id)
+    if technician.cv_url:
+        try:
+            path = os.path.join(current_app.root_path, technician.cv_url[1:])
+            if os.path.exists(path):
+                os.remove(path)
+            technician.cv_url = None
+            db.session.commit()
+            flash('CV removed successfully', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error removing CV: {str(e)}', 'danger')
+    return redirect(url_for('technicians.edit_technician', tech_id=tech_id))
 
 @technicians_bp.route('/delete/<int:tech_id>', methods=['POST'])
 @login_required

@@ -381,3 +381,64 @@ def export_technician_excel():
     df.to_excel(filepath, index=False, engine="openpyxl")
 
     return send_file(filepath, as_attachment=True)
+@technician_performance_bp.route("/top3_tv", methods=["GET"])
+def show_top3_performers_tv():
+    today = datetime.today()
+    start_of_month = today.replace(day=1)
+
+    # Step 1: Get top 3 technician IDs by number of closed tickets
+    top3_query = (
+        db.session.query(
+            Technician.id,
+            db.func.count(Ticket.id).label("ticket_count")
+        )
+        .join(Ticket, Ticket.technician_id == Technician.id)
+        .filter(
+            Ticket.status == "Closed",
+            Ticket.closed_at != None,
+            Ticket.closed_at >= start_of_month
+        )
+        .group_by(Technician.id)
+        .order_by(db.func.count(Ticket.id).desc())
+        .limit(3)
+        .all()
+    )
+
+    top_ids = [t.id for t in top3_query]
+
+    if not top_ids:
+        return render_template("tv/top3_performers.html", top_performers=[], current_month=today.strftime("%B %Y"))
+
+    # Step 2: Fetch analytics and match
+    from_str = start_of_month.strftime("%Y-%m-%d")
+    to_str = today.strftime("%Y-%m-%d")
+    analytics_data = get_technician_analytics_data(from_str, to_str)
+
+    top_performers = []
+    for tech_id, count in top3_query:
+        tech = Technician.query.get(tech_id)
+        if not tech:
+            continue
+
+        analytics = next((a for a in analytics_data if a["Technician"] == tech.name), None)
+        if analytics:
+            top_performers.append({
+                "name": tech.name,
+                "photo_url": tech.photo_url,
+                "tickets_closed": count,
+                "avg_resolution_time": analytics["Avg Resolution Time (Hours)"],
+                "PM": analytics["PM"],
+                "CM": analytics["CM"],
+                "MYQ": analytics["MYQ"],
+                "Install": analytics["Install"],
+                "MFI-Central": analytics["MFI-Central"],
+                "Other": analytics["Other"],
+                "Open": analytics["Open"],
+                "Closed": analytics["Closed"]
+            })
+
+    return render_template(
+        "tv/top3_performers.html",
+        top_performers=top_performers,
+        current_month=today.strftime("%B %Y")
+    )

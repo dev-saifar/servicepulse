@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    body {
+        background: url('{{ url_for('static', filename='bg-tech.jpg') }}') no-repeat center center fixed;
+        background-size: cover;
+        backdrop-filter: blur(5px);
+    }
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 25px rgba(0,0,0,0.3);
+    }
+    .logo-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 0 50px;
+    }
+    .logo-bar img {
+        height: 60px;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <h2 class="text-center text-success fw-bold mb-4">🏆 Top Technicians - {{ current_month }}</h2>
+
+
+    {% if top_performers|length > 0 %}
+        <!-- 🥇 Top Performer -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-6">
+                <div class="card border-success shadow-lg">
+                    <div class="card-body text-center bg-white">
+                        <h4 class="text-success fw-bold">🥇 {{ top_performers[0].name }}</h4>
+                        <img src="{{ top_performers[0].photo_url or url_for('static', filename='default-user.png') }}"
+                             class="rounded-circle my-3 shadow" style="width: 180px; height: 180px; object-fit: cover;">
+                        <p class="mb-1"><strong>Total Closed:</strong> {{ top_performers[0].tickets_closed }}</p>
+                        <p class="mb-3"><strong>Avg Resolution:</strong> {{ top_performers[0].avg_resolution_time }} hrs</p>
+
+                        <div class="row text-start">
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>PM:</strong> {{ top_performers[0].PM }}</li>
+                                    <li class="list-group-item"><strong>CM:</strong> {{ top_performers[0].CM }}</li>
+                                    <li class="list-group-item"><strong>MYQ:</strong> {{ top_performers[0].MYQ }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>Install:</strong> {{ top_performers[0].Install }}</li>
+                                    <li class="list-group-item"><strong>MFI-Central:</strong> {{ top_performers[0]["MFI-Central"] }}</li>
+                                    <li class="list-group-item"><strong>Other:</strong> {{ top_performers[0].Other }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>Open:</strong> {{ top_performers[0].Open }}</li>
+                                    <li class="list-group-item"><strong>Closed:</strong> {{ top_performers[0].Closed }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🥈 & 🥉 Other Top Performers -->
+        <div class="row justify-content-center">
+            {% for performer in top_performers[1:] %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow border-secondary h-100">
+                    <div class="card-body text-center bg-white">
+                        <h5 class="fw-bold text-dark">{{ performer.name }}</h5>
+                        <img src="{{ performer.photo_url or url_for('static', filename='default-user.png') }}"
+                             class="rounded-circle shadow mb-3" style="width: 140px; height: 140px; object-fit: cover;">
+                        <p><strong>Total Closed:</strong> {{ performer.tickets_closed }}</p>
+                        <p><strong>Avg Time:</strong> {{ performer.avg_resolution_time }} hrs</p>
+
+                        <div class="row text-start">
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>PM:</strong> {{ performer.PM }}</li>
+                                    <li class="list-group-item"><strong>CM:</strong> {{ performer.CM }}</li>
+                                    <li class="list-group-item"><strong>MYQ:</strong> {{ performer.MYQ }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>Install:</strong> {{ performer.Install }}</li>
+                                    <li class="list-group-item"><strong>MFI-Central:</strong> {{ performer["MFI-Central"] }}</li>
+                                    <li class="list-group-item"><strong>Other:</strong> {{ performer.Other }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <ul class="list-group list-group-flush small">
+                                    <li class="list-group-item"><strong>Open:</strong> {{ performer.Open }}</li>
+                                    <li class="list-group-item"><strong>Closed:</strong> {{ performer.Closed }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning text-center">⚠️ No data available for this month.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -5,16 +5,26 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 # ✅ Technician Model
+from app.extensions import db
+
 class Technician(db.Model):
+    __tablename__ = 'technician'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    mobile = db.Column(db.String(15), nullable=True)
-    email = db.Column(db.String(100), nullable=True)
-    status = db.Column(db.String(10), nullable=True)  # Free/Busy
-    dob = db.Column(db.Date, nullable=True)
+    mobile = db.Column(db.String(15))
+    email = db.Column(db.String(100))
+    status = db.Column(db.String(10))
+    dob = db.Column(db.Date)
 
-    # Relationship: A technician can have multiple tickets
-    tickets = db.relationship("Ticket", backref="technician", lazy=True)
+    # 🆕 New fields for files
+    photo_url = db.Column(db.Text)       # /static/uploads/technicians/abc.jpg
+    id_card_url = db.Column(db.Text)     # /static/uploads/technicians/id_abc.pdf
+    cv_url = db.Column(db.Text)          # /static/uploads/technicians/cv_abc.pdf
+
+    # relationship with tickets if needed
+    tickets = db.relationship('Ticket', backref='technician', lazy=True)
+
 
 
 # ✅ Ticket Model

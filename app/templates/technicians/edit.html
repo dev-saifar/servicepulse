@@ -1,28 +1,89 @@
-<!-- File: C:\ServicePulse\app\templates\technicians\edit.html -->
 {% extends 'base.html' %}
-
 {% block content %}
-    <div class="container mt-4">
-        <h1 class="text-center text-primary fw-bold">Edit Technician</h1>
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Edit Technician</h1>
+    <form method="POST" enctype="multipart/form-data"
+          action="{{ url_for('technicians.edit_technician', tech_id=technician.id) }}">
 
-        <form method="POST" action="{{ url_for('technicians.edit_technician', tech_id=technician.id) }}">
-            <div class="mb-3">
-                <label class="form-label">Name:</label>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👤 Name:</label>
                 <input type="text" class="form-control" name="name" value="{{ technician.name }}" required>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Status:</label>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📱 Mobile:</label>
+                <input type="text" class="form-control" name="mobile" value="{{ technician.mobile }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📧 Email:</label>
+                <input type="email" class="form-control" name="email" value="{{ technician.email }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📅 Date of Birth:</label>
+                <input type="date" class="form-control" name="dob" value="{{ technician.dob.strftime('%Y-%m-%d') if technician.dob }}">
+
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">🔧 Status:</label>
                 <select class="form-control" name="status">
                     <option value="Free" {% if technician.status == 'Free' %}selected{% endif %}>Free</option>
                     <option value="Busy" {% if technician.status == 'Busy' %}selected{% endif %}>Busy</option>
                 </select>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Last Location:</label>
-                <input type="text" class="form-control" name="last_location" value="{{ technician.last_location }}">
-            </div>
-            <button type="submit" class="btn btn-success">Save Changes</button>
-            <a href="{{ url_for('technicians.index') }}" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
+        </div>
+
+        <hr>
+
+        <!-- Profile Photo -->
+        <div class="mb-3">
+            <label class="form-label">🖼️ Profile Photo:</label><br>
+            <img id="photoPreview" src="{{ technician.photo_url or url_for('static', filename='default-user.png') }}"
+                 class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+            <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewPhoto(event)">
+        </div>
+
+        <!-- ID Proof -->
+        <div class="mb-3">
+            <label class="form-label">🆔 ID Proof (PDF/JPG):</label>
+            <input type="file" class="form-control" name="id_card" accept=".pdf,image/*">
+            {% if technician.id_card_url %}
+                <div class="mt-2 d-flex gap-2">
+                    <a href="{{ technician.id_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔎 View ID</a>
+                    <form method="POST" action="{{ url_for('technicians.remove_id', tech_id=technician.id) }}">
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete ID Proof?')">🗑️ Delete</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- CV Upload -->
+        <div class="mb-3">
+            <label class="form-label">📄 CV (PDF):</label>
+            <input type="file" class="form-control" name="cv" accept=".pdf">
+            {% if technician.cv_url %}
+                <div class="mt-2 d-flex gap-2">
+                    <a href="{{ technician.cv_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">📥 View CV</a>
+                    <form method="POST" action="{{ url_for('technicians.remove_cv', tech_id=technician.id) }}">
+                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete CV?')">🗑️ Delete</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+            <button type="submit" class="btn btn-success">💾 Save Changes</button>
+            <a href="{{ url_for('technicians.index') }}" class="btn btn-secondary">⬅ Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function previewPhoto(event) {
+    const reader = new FileReader();
+    reader.onload = function () {
+        document.getElementById('photoPreview').src = reader.result;
+    };
+    reader.readAsDataURL(event.target.files[0]);
+}
+</script>
 {% endblock %}
