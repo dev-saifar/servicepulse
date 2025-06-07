@@ -1,10 +1,198 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Assets Management Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* General Body and Container Styling */
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Modern sans-serif font stack */
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa; /* Light grey background */
+            color: #343a40; /* Darker text color */
+        }
+
+        .container.mt-4 {
+            width: 95%; /* Wider container */
+            max-width: 1600px; /* Max width to prevent it from getting too wide on huge screens */
+            margin: 25px auto; /* Center with more vertical margin */
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 10px; /* Slightly more rounded corners */
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08); /* Softer, more prominent shadow */
+        }
+
+        h2.mb-4 {
+            text-align: center;
+            color: #0056b3; /* Darker blue for heading */
+            margin-bottom: 30px !important; /* Ensure margin bottom */
+            font-size: 2.2em; /* Slightly larger heading */
+            font-weight: 600; /* Medium-bold */
+        }
+
+        /* Action Buttons Card Styling */
+        .card-body.d-flex.flex-wrap.gap-2 {
+            padding: 20px 0; /* Adjust padding for button section */
+            justify-content: center; /* Center the action buttons */
+            margin-bottom: 25px; /* Space below action buttons */
+        }
+
+        .card-body.d-flex.flex-wrap.gap-2 .btn {
+            padding: 12px 25px; /* Larger padding for action buttons */
+            font-size: 1.05em; /* Slightly larger font */
+            border-radius: 8px; /* More rounded buttons */
+            transition: all 0.3s ease; /* Smooth transitions */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Subtle shadow for buttons */
+        }
+
+        .card-body.d-flex.flex-wrap.gap-2 .btn:hover {
+            transform: translateY(-2px); /* Slight lift on hover */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* More prominent shadow on hover */
+        }
+
+        /* Filters Card Styling */
+        .card.mb-4 {
+            border: none; /* Remove default card border */
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05); /* Subtle shadow for filter card */
+            margin-bottom: 30px !important;
+        }
+
+        .card-header.bg-secondary {
+            background-color: #6c757d !important; /* Darker grey for header */
+            color: white;
+            border-radius: 10px 10px 0 0; /* Rounded top corners */
+            padding: 15px 20px;
+            font-size: 1.1em;
+        }
+
+        .card-body .form-control {
+            border-radius: 5px;
+            border: 1px solid #ced4da;
+            padding: 10px 12px;
+            font-size: 0.95em;
+        }
+
+        .card-body .row.g-3 {
+            gap: 15px 0; /* Space between rows and columns */
+            margin-left: 0;
+            margin-right: 0;
+        }
+        .card-body .col-md-2,
+        .card-body .col-md-12 {
+            padding-left: 10px; /* Adjust padding for columns */
+            padding-right: 10px;
+        }
+
+        .card-body .btn-primary,
+        .card-body .btn-secondary {
+            padding: 10px 20px;
+            font-size: 0.95em;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Assets Table Styling */
+        .table-responsive.mb-4 {
+            margin-bottom: 30px !important;
+        }
+
+        .table.table-bordered {
+            border: 1px solid #dee2e6; /* Light border for the whole table */
+            border-radius: 8px; /* Rounded corners for the table */
+            overflow: hidden; /* Ensures rounded corners apply */
+        }
+
+        .table thead.table-light th {
+            background-color: #e9ecef; /* Lighter header background */
+            color: #495057;
+            border-bottom: 2px solid #dee2e6; /* Stronger bottom border */
+            padding: 15px 12px;
+            font-size: 0.95em;
+            font-weight: 600;
+            white-space: nowrap; /* Prevent headers from wrapping */
+        }
+
+        .table tbody tr td {
+            padding: 12px;
+            border-top: 1px solid #e9ecef; /* Lighter row separator */
+            vertical-align: middle; /* Vertically align content */
+            font-size: 0.9em;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f2f7fb; /* Subtle hover effect */
+        }
+
+        /* Action buttons within table */
+        .table tbody td:last-child {
+            white-space: nowrap; /* Prevent buttons from wrapping */
+            min-width: 100px; /* Ensure enough space for icons */
+            text-align: center;
+        }
+
+        .table tbody td:last-child .btn-sm {
+            padding: 5px 8px; /* Smaller padding for icons */
+            font-size: 0.8em; /* Smaller font size for icons */
+            border-radius: 5px;
+            margin: 0 2px; /* Space between icons */
+        }
+
+        /* Modal styling */
+        .modal-content {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background-color: #f0f2f5;
+            border-bottom: 1px solid #e0e2e6;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .modal-title {
+            color: #343a40;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e0e2e6;
+            background-color: #f0f2f5;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* Pagination & Controls */
+        .d-flex.justify-content-between.align-items-center {
+            padding: 15px 0;
+            border-top: 1px solid #e9ecef; /* Separator line */
+            color: #555;
+        }
+
+        .form-select.d-inline-block.w-auto {
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            border: 1px solid #ced4da;
+        }
+
+        .btn-outline-secondary {
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
 <div class="container mt-4">
     <h2 class="mb-4 text-primary fw-bold">Assets Management</h2>
 
-    <!-- Action Buttons Card -->
     <div class="card-body d-flex flex-wrap gap-2">
     <a href="{{ url_for('assets.manage_assets') }}" class="btn btn-warning btn-lg">
         <i class="fas fa-plus-circle"></i> Add Asset
@@ -15,14 +203,8 @@
     <a href="{{ url_for('assets.export_to_excel') }}" class="btn btn-success btn-lg">
         <i class="fas fa-file-export"></i> Export to Excel
     </a>
-
-    <!-- 🔧 New PM Buttons -->
-
-
 </div>
 
-
-    <!-- Filters -->
     <div class="card mb-4">
         <div class="card-header bg-secondary text-white">Filters</div>
         <div class="card-body">
@@ -41,7 +223,6 @@
         </div>
     </div>
 
-    <!-- Assets Table -->
     <div class="table-responsive mb-4">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
@@ -65,18 +246,22 @@
                     <td>{{ asset.technician_name }}</td>
                     <td>{{ asset.asset_Description }}</td>
                     <td>
-                        <a href="{{ url_for('assets.edit_asset', asset_id=asset.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.id }}">Del</button>
-                        <!-- Modal -->
-                        <div class="modal fade" id="deleteModal{{ asset.id }}" tabindex="-1">
+                        <a href="{{ url_for('assets.edit_asset', asset_id=asset.id) }}" class="btn btn-sm btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.id }}" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                        <div class="modal fade" id="deleteModal{{ asset.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ asset.id }}" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
-                                    <div class="modal-header"><h5 class="modal-title">Confirm Deletion</h5></div>
-                                    <div class="modal-body">Are you sure you want to delete this asset?</div>
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="deleteModalLabel{{ asset.id }}">Confirm Deletion</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        Are you sure you want to delete this asset? This action cannot be undone.
+                                    </div>
                                     <div class="modal-footer">
                                         <form action="{{ url_for('assets.delete_asset', asset_id=asset.id) }}" method="POST">
-                                            <button type="submit" class="btn btn-danger">Delete</button>
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-danger">Delete</button>
                                         </form>
                                     </div>
                                 </div>
@@ -89,7 +274,6 @@
         </table>
     </div>
 
-    <!-- Pagination & Controls -->
     <div class="d-flex justify-content-between align-items-center">
         <div>
             <label for="pageSize">Show:</label>
@@ -107,6 +291,7 @@
     function changePageSize(size) {
         const url = new URL(window.location.href);
         url.searchParams.set('per_page', size);
+        url.searchParams.set('page', 1); // Reset to page 1 when changing page size
         window.location.href = url.toString();
     }
 
@@ -117,4 +302,6 @@
         window.location.href = url.toString();
     }
 </script>
+</body>
+</html>
 {% endblock %}

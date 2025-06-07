@@ -7,56 +7,217 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Material Movement Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    body { font-family: Arial, sans-serif; }
-    .container { width: 100%; margin: auto; }
-    .filter-section { margin-bottom: 8px; }
-    .table-container { overflow-x: auto; max-width: 100%; }
+    /* General Body and Container Styling */
+    body {
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Modern sans-serif font stack */
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7f6; /* Light grey background */
+      color: #333; /* Darker text color */
+    }
+
+    .container {
+      width: 95%; /* Make it wider */
+      max-width: 1400px; /* Increased max-width for more space */
+      margin: 25px auto; /* Center with more vertical margin */
+      padding: 25px;
+      background-color: #ffffff;
+      border-radius: 10px; /* Slightly more rounded corners */
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50; /* Darker blue-grey for heading */
+      margin-bottom: 30px;
+      font-size: 2em; /* Slightly larger heading */
+    }
+
+    /* Filter Section Styling */
+    .filter-section {
+      display: flex;
+      flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+      gap: 15px; /* Space between filter elements */
+      margin-bottom: 25px;
+      padding: 20px;
+      background-color: #eaf1f8; /* Light blue background for filter section */
+      border-radius: 8px;
+      align-items: center; /* Vertically align items */
+      justify-content: flex-start; /* Align items to the start */
+    }
+
+    .filter-section label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95em;
+      color: #555;
+    }
+
+    .filter-section input[type="date"],
+    .filter-section input[type="text"] {
+      padding: 10px;
+      border: 1px solid #cce0f5; /* Lighter border color */
+      border-radius: 5px;
+      font-size: 0.9em;
+      min-width: 120px; /* Ensure date inputs have a minimum width */
+    }
+
+    /* Table Container and Table Styling */
+    .table-container {
+      overflow-x: auto; /* Ensures horizontal scroll on small screens */
+      max-width: 100%;
+      margin-top: 20px;
+      border: 1px solid #e0e0e0; /* Soft border around the table */
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Subtle shadow for the table */
+    }
 
     .table {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+      border-collapse: separate; /* Allows border-radius on cells */
+      border-spacing: 0; /* Remove space between cell borders */
+      margin-top: 0; /* No margin here as it's inside container */
+      background-color: #fff;
     }
 
     .table th, .table td {
-      border: 1px solid black;
-      padding: 6px;
+      border: 1px solid #e0e0e0; /* Softer border */
+      padding: 12px 15px; /* Increased padding for more space */
       text-align: left;
-      font-size: 13px;
+      font-size: 0.9em; /* Slightly smaller font for data rows */
+      vertical-align: top; /* Align cell content to top */
+    }
+
+    .table thead th {
+      background-color: #edf2f7; /* Light grey-blue for headers */
+      font-weight: bold;
+      color: #333;
+      position: sticky;
+      top: 0; /* Makes header sticky */
+      z-index: 10;
+      white-space: nowrap; /* Prevent header text from wrapping */
+    }
+
+    .table tbody tr:nth-child(even) {
+      background-color: #f9f9f9; /* Zebra striping */
+    }
+
+    .table tbody tr:hover {
+      background-color: #e6f7ff; /* Light blue on hover */
+      cursor: pointer; /* Indicate rows are clickable/interactive */
     }
 
     .table thead input {
-      width: 100%;
+      width: calc(100% - 10px); /* Adjust for padding, ensure it fits */
       box-sizing: border-box;
-      padding: 4px;
-      font-size: 12px;
+      padding: 8px;
+      font-size: 0.85em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-top: 5px;
+      background-color: #fff;
     }
 
-    .table thead tr:nth-child(2) {
-      background-color: #f9f9f9;
-      position: sticky;
-      top: 0;
-      z-index: 2;
+    .table thead tr:nth-child(2) th {
+      background-color: #f5f8fb; /* Slightly different background for filter row */
+      z-index: 11; /* Ensure filter row stays on top of data rows */
+      padding-top: 8px; /* Adjust padding for filter row */
+      padding-bottom: 8px;
     }
 
-    .pagination { margin-top: 10px; }
+    /* Actions Column specific styling to ensure visibility */
+    .table td:last-child {
+        white-space: nowrap; /* Prevents buttons from wrapping */
+        min-width: 100px; /* Ensure enough space for two icons */
+        text-align: center; /* Center buttons */
+    }
+
+    .table td:last-child .btn {
+        margin: 0 4px; /* Space between buttons */
+        padding: 6px 8px; /* Smaller padding for actions buttons to fit */
+        font-size: 0.8em; /* Smaller font for actions buttons */
+    }
+
+    /* Pagination Styling */
+    .pagination {
+      margin-top: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-top: 1px solid #eee; /* Separator line */
+      color: #555;
+    }
+
+    /* Button Styling */
     .btn {
-      padding: 6px 10px;
+      padding: 10px 20px;
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95em;
+      transition: background-color 0.3s ease, transform 0.1s ease; /* Smooth transitions */
+      white-space: nowrap; /* Prevent button text from wrapping */
+    }
+
+    .btn-primary {
       background-color: #007bff;
       color: white;
-      border: none;
-      border-radius: 4px;
-      margin-right: 5px;
+    }
+    .btn-primary:hover:not(:disabled) { /* Add :not(:disabled) for hover */
+      background-color: #0056b3;
+      transform: translateY(-1px); /* Slight lift on hover */
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    .btn-success:hover:not(:disabled) {
+        background-color: #218838;
+        transform: translateY(-1px);
     }
 
     .btn-danger {
       background-color: #dc3545;
+      color: white;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background-color: #c82333;
+      transform: translateY(-1px);
     }
 
-    .btn:hover {
-      opacity: 0.9;
+    .btn:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: none;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db; /* Blue spinner */
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin-left: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* No Records Message */
+    .no-records-message {
+        text-align: center;
+        padding: 20px;
+        color: #777;
+        font-style: italic;
     }
   </style>
 </head>
@@ -67,9 +228,10 @@
     <div class="filter-section">
       <label>From Date: <input type="date" id="fromDate" /></label>
       <label>To Date: <input type="date" id="toDate" /></label>
-      <button class="btn" onclick="fetchRequests(1)">Filter</button>
-      <button class="btn" onclick="exportToExcel()">Export</button>
-      <button class="btn" onclick="window.location.href='/material/movement'">New Request</button>
+      <button class="btn btn-primary" id="filterBtn" onclick="fetchRequests(1)">Filter</button>
+      <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()">Export</button>
+      <button class="btn btn-primary" id="newRequestBtn" onclick="window.location.href='/material/movement'">New Request</button>
+      <div id="loadingSpinner" class="loading-spinner"></div>
     </div>
 
     <div class="table-container">
@@ -90,27 +252,28 @@
             <th>Actions</th>
           </tr>
           <tr>
-            <th><input type="text" id="filterId" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterDate" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterCustomer" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterFOC" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterSerial" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterAsset" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterTechnician" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterWarehouse" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterProduct" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterDescription" onkeyup="filterTable()"/></th>
-            <th><input type="text" id="filterStatus" onkeyup="filterTable()"/></th>
+            <th><input type="text" id="filterId" oninput="debounceFilter()" placeholder="Filter ID" /></th>
+            <th><input type="text" id="filterDate" oninput="debounceFilter()" placeholder="Filter Date" /></th>
+            <th><input type="text" id="filterCustomer" oninput="debounceFilter()" placeholder="Filter Customer" /></th>
+            <th><input type="text" id="filterFOC" oninput="debounceFilter()" placeholder="Filter FOC" /></th>
+            <th><input type="text" id="filterSerial" oninput="debounceFilter()" placeholder="Filter Serial" /></th>
+            <th><input type="text" id="filterAsset" oninput="debounceFilter()" placeholder="Filter Asset" /></th>
+            <th><input type="text" id="filterTechnician" oninput="debounceFilter()" placeholder="Filter Technician" /></th>
+            <th><input type="text" id="filterWarehouse" oninput="debounceFilter()" placeholder="Filter Warehouse" /></th>
+            <th><input type="text" id="filterProduct" oninput="debounceFilter()" placeholder="Filter Product" /></th>
+            <th><input type="text" id="filterDescription" oninput="debounceFilter()" placeholder="Filter Description" /></th>
+            <th><input type="text" id="filterStatus" oninput="debounceFilter()" placeholder="Filter Status" /></th>
             <th></th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+          </tbody>
       </table>
     </div>
 
     <div class="pagination">
       <p id="paginationText">Page 1 of X</p>
-      <button id="loadMoreBtn" class="btn" onclick="loadMore()">Load More</button>
+      <button id="loadMoreBtn" class="btn btn-primary" onclick="loadMore()">Load More</button>
     </div>
   </div>
 
@@ -118,63 +281,124 @@
     let currentPage = 1;
     let totalPages = 1;
     let isLoading = false;
+    let filterTimeout; // For debouncing filter inputs
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+
+    function showLoadingSpinner() {
+      document.getElementById("loadingSpinner").style.display = "block";
+    }
+
+    function hideLoadingSpinner() {
+      document.getElementById("loadingSpinner").style.display = "none";
+    }
+
+    function toggleButtons(disable) {
+      document.getElementById("filterBtn").disabled = disable;
+      document.getElementById("exportBtn").disabled = disable;
+      document.getElementById("newRequestBtn").disabled = disable;
+      document.getElementById("loadMoreBtn").disabled = disable;
+    }
+
+    function getFilterParams() {
+      return new URLSearchParams({
+        page: currentPage,
+        fromDate: document.getElementById("fromDate").value,
+        toDate: document.getElementById("toDate").value,
+        filterId: document.getElementById("filterId").value,
+        filterDate: document.getElementById("filterDate").value,
+        filterCustomer: document.getElementById("filterCustomer").value,
+        filterFOC: document.getElementById("filterFOC").value,
+        filterSerial: document.getElementById("filterSerial").value,
+        filterAsset: document.getElementById("filterAsset").value,
+        filterTechnician: document.getElementById("filterTechnician").value,
+        filterWarehouse: document.getElementById("filterWarehouse").value,
+        filterProduct: document.getElementById("filterProduct").value,
+        filterDescription: document.getElementById("filterDescription").value,
+        filterStatus: document.getElementById("filterStatus").value,
+        sortColumn: currentSortColumn, // Pass sort parameters to backend
+        sortDirection: currentSortDirection // Pass sort parameters to backend
+      });
+    }
 
     function fetchRequests(page) {
       if (isLoading) return;
       isLoading = true;
-      const fromDate = document.getElementById("fromDate").value;
-      const toDate = document.getElementById("toDate").value;
+      showLoadingSpinner();
+      toggleButtons(true); // Disable buttons
+      currentPage = page;
+      const params = getFilterParams();
 
-      fetch(`/material/fetch_requests?page=${page}&fromDate=${fromDate}&toDate=${toDate}`)
-        .then(res => res.json())
+      fetch(`/material/fetch_requests?${params.toString()}`)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then(data => {
           const tbody = document.querySelector("#requestTable tbody");
-          if (page === 1) tbody.innerHTML = "";
+          if (page === 1) { // Clear table only if it's a new filter/initial load
+            tbody.innerHTML = "";
+          }
 
-          data.requests.forEach(req => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${req.id}</td>
-              <td>${req.date}</td>
-              <td>${req.customer_name}</td>
-              <td>${req.foc_no}</td>
-              <td>${req.serial_number}</td>
-              <td>${req.asset_Description}</td>
-              <td>${req.technician_name}</td>
-              <td>${req.warehouse}</td>
-              <td>${req.product_code}</td>
-              <td>${req.description}</td>
-              <td>${req.warranty_status}</td>
-              <td>
-                <button class="btn" onclick="redirectToEditPage(${req.id})">Edit</button>
-                <button class="btn btn-danger" onclick="deleteRequest(${req.id})">Delete</button>
-              </td>
-            `;
-            tbody.appendChild(row);
-          });
+          if (data.requests && data.requests.length > 0) {
+            data.requests.forEach(req => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${req.id}</td>
+                <td>${req.date}</td>
+                <td>${req.customer_name}</td>
+                <td>${req.foc_no}</td>
+                <td>${req.serial_number}</td>
+                <td>${req.asset_Description}</td>
+                <td>${req.technician_name}</td>
+                <td>${req.warehouse}</td>
+                <td>${req.product_code}</td>
+                <td>${req.description}</td>
+                <td>${req.warranty_status}</td>
+                <td>
+                  <button class="btn btn-primary" onclick="redirectToEditPage(${req.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                  <button class="btn btn-danger" onclick="deleteRequest(${req.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </td>
+              `;
+              tbody.appendChild(row);
+            });
+          } else if (page === 1) { // Only show "No records" if it's the first page and no data
+            const noDataRow = document.createElement("tr");
+            noDataRow.innerHTML = `<td colspan="12" class="no-records-message">No records found for the current filters.</td>`;
+            tbody.appendChild(noDataRow);
+          }
+
 
           totalPages = data.total_pages;
-          document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages}`;
+          document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages} (Total Records: ${data.total_records || '...' })`;
           document.getElementById("loadMoreBtn").style.display = currentPage >= totalPages ? "none" : "inline-block";
+
           isLoading = false;
+          hideLoadingSpinner();
+          toggleButtons(false); // Re-enable buttons
         })
         .catch(err => {
           console.error("Error fetching data:", err);
+          alert("Error fetching data. Please try again.");
           isLoading = false;
+          hideLoadingSpinner();
+          toggleButtons(false); // Re-enable buttons on error
         });
     }
 
-    function filterTable() {
-      const filters = Array.from(document.querySelectorAll("thead input")).map(input => input.value.toLowerCase());
-      document.querySelectorAll("#requestTable tbody tr").forEach(row => {
-        const cells = Array.from(row.getElementsByTagName("td"));
-        const match = filters.every((filter, i) => !filter || cells[i].textContent.toLowerCase().includes(filter));
-        row.style.display = match ? "" : "none";
-      });
+    function debounceFilter() {
+      clearTimeout(filterTimeout);
+      filterTimeout = setTimeout(() => {
+        filterTable();
+      }, 500);
     }
 
-    function redirectToEditPage(id) {
-      window.location.href = `/material/edit_request/${id}`;
+    function filterTable() {
+      currentPage = 1; // Reset to first page on new filter
+      fetchRequests(currentPage);
+      saveFilterPreferences(); // Save filters when applied
     }
 
     function loadMore() {
@@ -184,48 +408,105 @@
       }
     }
 
+    function redirectToEditPage(id) {
+      window.location.href = `/material/edit_request/${id}`;
+    }
+
     function exportToExcel() {
-      const filters = new URLSearchParams({
-        fromDate: document.getElementById("fromDate").value,
-        toDate: document.getElementById("toDate").value,
-        filterId: document.getElementById("filterId").value,
-        filterCustomer: document.getElementById("filterCustomer").value,
-        filterSerial: document.getElementById("filterSerial").value,
-        filterAsset: document.getElementById("filterAsset").value,
-        filterTechnician: document.getElementById("filterTechnician").value,
-        filterWarehouse: document.getElementById("filterWarehouse").value,
-        filterProduct: document.getElementById("filterProduct").value,
-        filterDescription: document.getElementById("filterDescription").value,
-        filterStatus: document.getElementById("filterStatus").value
-      });
-      window.location.href = `/material/export_excel?${filters.toString()}`;
+      const params = getFilterParams();
+      window.location.href = `/material/export_excel?${params.toString()}`;
     }
 
     function deleteRequest(id) {
-      if (confirm("Delete this request?")) {
+      if (confirm("Are you sure you want to delete this request? This action cannot be undone.")) {
         fetch(`/material/delete_request/${id}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" }
         }).then(res => {
           if (res.ok) {
-            alert("Deleted successfully");
-            fetchRequests(1);
+            alert("Request deleted successfully!");
+            fetchRequests(1); // Refresh the table after deletion
           } else {
-            alert("Failed to delete");
+            // Attempt to read error message from response
+            res.json().then(errorData => {
+                alert(`Failed to delete request: ${errorData.message || res.statusText}`);
+            }).catch(() => {
+                alert("Failed to delete request. Please try again.");
+            });
           }
+        }).catch(err => {
+            console.error("Network error during delete:", err);
+            alert("Network error. Could not delete request.");
         });
       }
     }
 
     function sortTable(column) {
-      const rows = Array.from(document.querySelector("#requestTable tbody").rows);
-      const sorted = rows.sort((a, b) =>
-        a.cells[column].innerText.localeCompare(b.cells[column].innerText)
-      );
-      document.querySelector("#requestTable tbody").append(...sorted);
+      // If clicking the same column, toggle direction
+      if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc'; // Default to ascending when sorting a new column
+      }
+      fetchRequests(1); // Re-fetch data with new sort order from the server
+      saveFilterPreferences(); // Save sort preferences
     }
 
-    window.onload = () => fetchRequests(1);
+    function saveFilterPreferences() {
+        const preferences = {
+            fromDate: document.getElementById("fromDate").value,
+            toDate: document.getElementById("toDate").value,
+            filterId: document.getElementById("filterId").value,
+            filterDate: document.getElementById("filterDate").value,
+            filterCustomer: document.getElementById("filterCustomer").value,
+            filterFOC: document.getElementById("filterFOC").value,
+            filterSerial: document.getElementById("filterSerial").value,
+            filterAsset: document.getElementById("filterAsset").value,
+            filterTechnician: document.getElementById("filterTechnician").value,
+            filterWarehouse: document.getElementById("filterWarehouse").value,
+            filterProduct: document.getElementById("filterProduct").value,
+            filterDescription: document.getElementById("filterDescription").value,
+            filterStatus: document.getElementById("filterStatus").value,
+            sortColumn: currentSortColumn,
+            sortDirection: currentSortDirection
+        };
+        localStorage.setItem('materialDashboardFilters', JSON.stringify(preferences));
+    }
+
+    function loadFilterPreferences() {
+        const preferences = JSON.parse(localStorage.getItem('materialDashboardFilters'));
+        if (preferences) {
+            document.getElementById("fromDate").value = preferences.fromDate || '';
+            document.getElementById("toDate").value = preferences.toDate || '';
+            document.getElementById("filterId").value = preferences.filterId || '';
+            document.getElementById("filterDate").value = preferences.filterDate || '';
+            document.getElementById("filterCustomer").value = preferences.filterCustomer || '';
+            document.getElementById("filterFOC").value = preferences.filterFOC || '';
+            document.getElementById("filterSerial").value = preferences.filterSerial || '';
+            document.getElementById("filterAsset").value = preferences.filterAsset || '';
+            document.getElementById("filterTechnician").value = preferences.filterTechnician || '';
+            document.getElementById("filterWarehouse").value = preferences.warehouse || '';
+            document.getElementById("filterProduct").value = preferences.filterProduct || '';
+            document.getElementById("filterDescription").value = preferences.filterDescription || '';
+            document.getElementById("filterStatus").value = preferences.filterStatus || '';
+            currentSortColumn = preferences.sortColumn;
+            currentSortDirection = preferences.sortDirection;
+        } else {
+            // Set default dates if no preferences are found in local storage
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            document.getElementById("toDate").valueAsDate = today;
+            document.getElementById("fromDate").valueAsDate = thirtyDaysAgo;
+        }
+    }
+
+    window.onload = () => {
+      loadFilterPreferences(); // Load preferences first
+      fetchRequests(1); // Then fetch data based on loaded preferences
+    };
   </script>
 </body>
 </html>
