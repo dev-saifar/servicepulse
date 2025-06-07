@@ -1,91 +1,153 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="text-center text-primary fw-bold">Reports & Analytics</h1>
-    <p class="text-center text-muted">Select a report type to generate, export, or schedule</p>
+<!-- Font Awesome CDN for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Report Type Links -->
-    <div class="list-group mb-4">
-        <a href="{{ url_for('advance_report.ticket_report') }}" class="list-group-item list-group-item-action">📄 Ticket Report</a>
+<style>
+    /* Custom styles for a more polished look */
+    body {
+        background-color: #f8f9fa; /* Lighter gray background */
+    }
+    .card {
+        border: none; /* Remove default card borders */
+        transition: all 0.3s ease-in-out;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+    }
+    .list-group-item-action:hover {
+        background-color: #e9ecef;
+        color: #0d6efd;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+    .actions-dropdown .dropdown-menu {
+        min-width: auto;
+    }
+</style>
 
-        <a href="{{ url_for('technician_performance.technician_foc_war') }}" class="list-group-item list-group-item-action">🛠️ Technician FOC Warranty Report</a>
-        <a href="{{ url_for('delivery_report.toner_report_ui') }}" class="list-group-item list-group-item-action">📦 Toner Delivery Report</a>
-        <a href="{{ url_for('delivery_report.spare_report_ui') }}" class="list-group-item list-group-item-action">🔧 Spare Delivery Report</a>
-        <a href="{{ url_for('delivery_report.ticket_cost_report_ui') }}" class="list-group-item list-group-item-action">🎫 Ticket Cost Report</a>
-        <a href="{{ url_for('delivery_report.total_service_summary_ui') }}" class="list-group-item list-group-item-action">📊 Total Service Summary Report</a>
-        <a href="{{ url_for('hourly.hourly_report') }}" class="list-group-item list-group-item-action">🕒 Technician Hourly Report</a>
-        <a href="{{ url_for('advance_report.unified_scheduler') }}" class="list-group-item list-group-item-action">📅 Report Scheduler</a>
+<div class="container-fluid mt-4 p-lg-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800 fw-bold">Reports & Analytics Dashboard</h1>
+        <a href="{{ url_for('advance_report.unified_scheduler') }}" class="btn btn-primary shadow-sm">
+            <i class="fas fa-calendar-alt fa-sm text-white-50"></i> New Scheduled Report
+        </a>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="row text-center mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm border-primary">
+    <div class="row">
+
+        <!-- Left Column: Available Reports & Summary -->
+        <div class="col-lg-4 mb-4">
+
+            <!-- Summary Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-primary text-white">
+                    <h6 class="m-0 fw-bold">Summary</h6>
+                </div>
                 <div class="card-body">
-                    <h6 class="card-title text-primary">Scheduled Reports</h6>
-                    <h3 class="fw-bold">{{ scheduled_reports|length }}</h3>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Scheduled Reports</div>
+                        <div class="h1 mb-0 fw-bold text-gray-800">{{ scheduled_reports|length }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Reports Card -->
+            <div class="card shadow-sm">
+                <div class="card-header py-3">
+                    <h6 class="m-0 fw-bold text-primary">Available Reports</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('advance_report.ticket_report') }}" class="list-group-item list-group-item-action"><i class="fas fa-ticket-alt fa-fw me-2"></i> Ticket Report</a>
+                    <a href="{{ url_for('technician_performance.technician_foc_war') }}" class="list-group-item list-group-item-action"><i class="fas fa-tools fa-fw me-2"></i> Technician FOC Warranty</a>
+                    <a href="{{ url_for('delivery_report.toner_report_ui') }}" class="list-group-item list-group-item-action"><i class="fas fa-box fa-fw me-2"></i> Toner Delivery Report</a>
+                    <a href="{{ url_for('delivery_report.spare_report_ui') }}" class="list-group-item list-group-item-action"><i class="fas fa-cogs fa-fw me-2"></i> Spare Delivery Report</a>
+                    <a href="{{ url_for('delivery_report.ticket_cost_report_ui') }}" class="list-group-item list-group-item-action"><i class="fas fa-dollar-sign fa-fw me-2"></i> Ticket Cost Report</a>
+                    <a href="{{ url_for('delivery_report.total_service_summary_ui') }}" class="list-group-item list-group-item-action"><i class="fas fa-chart-bar fa-fw me-2"></i> Total Service Summary</a>
+                    <a href="{{ url_for('hourly.hourly_report') }}" class="list-group-item list-group-item-action"><i class="fas fa-clock fa-fw me-2"></i> Technician Hourly Report</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Scheduled Reports Table -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 fw-bold text-primary">Scheduled Reports</h6>
+                    <div class="w-50">
+                        <input type="text" id="search" class="form-control form-control-sm" placeholder="Search reports..." onkeyup="filterTable()">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Report Type</th>
+                                    <th>Schedule</th>
+                                    <th>Email To</th>
+                                    <th>Next Run On</th>
+                                    <th>Recent Logs</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in scheduled_reports %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold">{{ report.report_type }}</div>
+                                        <div class="small text-muted">Date Range: {{ report.start_date }} to {{ report.end_date }}</div>
+                                    </td>
+                                    <td><span class="badge rounded-pill bg-info-subtle text-info-emphasis">{{ report.schedule }}</span></td>
+                                    <td>{{ report.email }}</td>
+                                    <td>{{ report.next_run.strftime('%Y-%m-%d %H:%M') if report.next_run }}</td>
+                                    <td>
+                                        <ul class="list-unstyled mb-0">
+                                            {% for log in logs_by_report[report.id][:2] %}
+                                            <li class="small">
+                                                {% if log.status == 'Success' %}
+                                                    <span class="badge bg-success-subtle text-success-emphasis rounded-pill">{{ log.status }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill">{{ log.status }}</span>
+                                                {% endif %}
+                                                - {{ log.created_at.strftime('%b %d, %H:%M') }}
+                                            </li>
+                                            {% else %}
+                                            <li class="text-muted small">No logs yet</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                    <td class="text-center actions-dropdown">
+                                        <div class="dropdown">
+                                          <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                          </button>
+                                          <ul class="dropdown-menu">
+                                            <li>
+                                                <form method="POST" action="{{ url_for('advance_report.run_scheduled_report', report_id=report.id) }}" class="d-inline">
+                                                    <button type="submit" class="dropdown-item"><i class="fas fa-play fa-fw me-2"></i>Run Now</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="fas fa-trash-alt fa-fw me-2"></i>Delete</button>
+                                                </form>
+                                            </li>
+                                          </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Search -->
-    <div class="mb-3">
-        <input type="text" id="search" class="form-control" placeholder="Search reports..." onkeyup="filterTable()">
-    </div>
-
-    <!-- Scheduled Reports Table -->
-    <h2 class="text-center mb-3">Scheduled Reports</h2>
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
-<tr>
-    <th>Report Type</th>
-    <th>Start Date</th>
-    <th>End Date</th>
-    <th>Schedule</th>
-    <th>Email</th>
-    <th>Next Run</th>
-    <th>Recent Logs</th>
-    <th>Actions</th>
-</tr>
-</thead>
-<tbody>
-{% for report in scheduled_reports %}
-<tr>
-    <td>{{ report.report_type }}</td>
-    <td>{{ report.start_date }}</td>
-    <td>{{ report.end_date }}</td>
-    <td><span class="badge bg-info">{{ report.schedule }}</span></td>
-    <td>{{ report.email }}</td>
-    <td>{{ report.next_run.strftime('%Y-%m-%d %H:%M') if report.next_run }}</td>
-    <td>
-        <ul class="mb-0">
-            {% for log in logs_by_report[report.id][:3] %}
-            <li class="small">
-                <strong>{{ log.status }}</strong> -
-                {{ log.created_at.strftime('%b %d %H:%M') }}
-
-            </li>
-            {% else %}
-            <li class="text-muted small">No logs</li>
-            {% endfor %}
-        </ul>
-    </td>
-    <td class="d-flex gap-1">
-        <form method="POST" action="{{ url_for('advance_report.run_scheduled_report', report_id=report.id) }}">
-            <button type="submit" class="btn btn-success btn-sm">Run</button>
-        </form>
-        <form method="POST" action="{{ url_for('advance_report.delete_schedule', schedule_id=report.id) }}">
-            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
-        </form>
-    </td>
-</tr>
-{% endfor %}
-</tbody>
-
-        </table>
     </div>
 </div>
 
@@ -93,10 +155,25 @@
     function filterTable() {
         const input = document.getElementById("search");
         const filter = input.value.toLowerCase();
-        const rows = document.querySelectorAll("table tbody tr");
-        rows.forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
-        });
+        const table = document.getElementById("reports-table");
+        const rows = table.getElementsByTagName("tr");
+
+        // Loop through all table rows, and hide those who don't match the search query
+        for (let i = 1; i < rows.length; i++) { // Start from 1 to skip the header row
+            const row = rows[i];
+            const cells = row.getElementsByTagName("td");
+            let shouldDisplay = false;
+            for (let j = 0; j < cells.length; j++) {
+                const cell = cells[j];
+                if (cell) {
+                    if (cell.innerText.toLowerCase().indexOf(filter) > -1) {
+                        shouldDisplay = true;
+                        break;
+                    }
+                }
+            }
+            row.style.display = shouldDisplay ? "" : "none";
+        }
     }
 </script>
 {% endblock %}
