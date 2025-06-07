@@ -9,7 +9,10 @@ from app.models import ScheduledReport, ScheduledReportLog
 from flask_login import login_required
 from flask import current_app
 from app.utils.permission_required import permission_required
+from sqlalchemy import func, case, and_, or_, cast, Float
 import pandas as pd
+from app.models import toner_request, spare_req, spares, Ticket  # add Customer, Assets if needed
+
 import io
 from datetime import datetime, timedelta
 import smtplib
@@ -134,6 +137,10 @@ def generate_scheduled_reports():
             if report.report_type == "Ticket Report":
                 output, filename = generate_ticket_cost_excel(s_date, e_date)
 
+            elif report.report_type == "Entity Cost Summary":
+                from app.modules.advance_report import generate_entity_cost_summary_excel
+                output, filename = generate_entity_cost_summary_excel(s_date, e_date)
+
             elif report.report_type == "Total Summary":
                 output, filename = generate_total_service_summary_excel(s_date, e_date)
 
@@ -176,7 +183,8 @@ def run_scheduler():
         time.sleep(60)
 
 def run_report_job_with_context():
-    from app import app
+    from app import create_app
+    app = create_app()
     with app.app_context():
         generate_scheduled_reports()
 
@@ -723,4 +731,168 @@ def unified_scheduler():
         output.seek(0)
         return output, "total_service_summary.xlsx"
 
+# In advance_report.py
+# ... (existing imports and code) ...
 
+@advance_report_bp.route("/entity-cost-summary", methods=["GET"])
+@login_required
+@permission_required('can_export_financials')
+def generate_entity_cost_summary_excel():
+    try:
+        # ⏳ Filters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        customer = request.args.get('customer')
+        contract = request.args.get('contract')
+        serial_number = request.args.get('serial_number')
+
+        today = datetime.today()
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d") if start_date_str else today.replace(day=1)
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d") if end_date_str else today
+
+        # ✅ Toner Cost
+        toner_query = db.session.query(
+            toner_request.serial_number.label("serial_number"),
+            toner_request.customer_name,
+            toner_request.contract_code,
+            func.sum(toner_request.issued_qty * toner_request.unit_cost).label("toner_cost")
+        ).filter(
+            toner_request.date_issued.between(start_date, end_date)
+        )
+
+        if customer:
+            toner_query = toner_query.filter(toner_request.customer_name == customer)
+        if contract:
+            toner_query = toner_query.filter(toner_request.contract_code == contract)
+        if serial_number:
+            toner_query = toner_query.filter(toner_request.serial_number == serial_number)
+
+        toner_query = toner_query.group_by(
+            toner_request.serial_number,
+            toner_request.customer_name,
+            toner_request.contract_code
+        ).subquery()
+
+        # ✅ Spare Cost
+        spare_query = db.session.query(
+            spare_req.serial_number.label("serial_number"),
+            spare_req.customer_name,
+            spare_req.contract,
+            func.sum(spare_req.qty * spares.price).label("spare_cost")
+        ).join(spares, spares.material_nr == spare_req.product_code
+        ).filter(
+            spare_req.date.between(start_date, end_date)
+        )
+
+        if customer:
+            spare_query = spare_query.filter(spare_req.customer_name == customer)
+        if contract:
+            spare_query = spare_query.filter(spare_req.contract == contract)
+        if serial_number:
+            spare_query = spare_query.filter(spare_req.serial_number == serial_number)
+
+        spare_query = spare_query.group_by(
+            spare_req.serial_number,
+            spare_req.customer_name,
+            spare_req.contract
+        ).subquery()
+
+        # ✅ Service Cost
+        ticket_query = db.session.query(
+            Ticket.serial_number.label("serial_number"),
+            Ticket.customer,
+            Ticket.contract,
+            func.count(Ticket.id).label("ticket_count"),
+            (func.count(Ticket.id) * 10).label("service_cost")
+        ).filter(
+            Ticket.created_at.between(start_date, end_date)
+        )
+
+        if customer:
+            ticket_query = ticket_query.filter(Ticket.customer == customer)
+        if contract:
+            ticket_query = ticket_query.filter(Ticket.contract == contract)
+        if serial_number:
+            ticket_query = ticket_query.filter(Ticket.serial_number == serial_number)
+
+        ticket_query = ticket_query.group_by(
+            Ticket.serial_number,
+            Ticket.customer,
+            Ticket.contract
+        ).subquery()
+
+        # 🧩 Merge all
+        merged = db.session.query(
+            toner_query.c.serial_number,
+            toner_query.c.customer_name,
+            toner_query.c.contract_code,
+            toner_query.c.toner_cost,
+            spare_query.c.spare_cost,
+            ticket_query.c.service_cost
+        ).outerjoin(
+            spare_query, toner_query.c.serial_number == spare_query.c.serial_number
+        ).outerjoin(
+            ticket_query, toner_query.c.serial_number == ticket_query.c.serial_number
+        ).all()
+
+        # 🧾 Create Excel
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+
+        data = [{
+            "Serial Number": row.serial_number,
+            "Customer Name": row.customer_name,
+            "Contract Code": row.contract_code,
+            "Toner Cost": round(row.toner_cost or 0, 2),
+            "Spare Cost": round(row.spare_cost or 0, 2),
+            "Service Cost": round(row.service_cost or 0, 2),
+            "Total Cost": round((row.toner_cost or 0) + (row.spare_cost or 0) + (row.service_cost or 0), 2)
+        } for row in merged]
+
+        df = pd.DataFrame(data)
+        df.to_excel(writer, index=False, sheet_name='EntityCostSummary')
+        writer.close()
+        output.seek(0)
+
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            download_name='Entity_Cost_Summary.xlsx',
+            as_attachment=True
+        )
+
+    except Exception as e:
+        print(f"[ERROR] Report generation failed: {e}")
+        flash("Something went wrong while generating the entity cost summary.", "danger")
+        return redirect(url_for("advance_report.advance_report_home"))
+
+@advance_report_bp.route("/entity-cost-summary", methods=["GET"]) # Changed advance_report to advance_report_bp
+@login_required
+@permission_required("can_view_reports")
+def entity_cost_summary():
+    try:
+        # Extract filters from URL query parameters
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        customer_name = request.args.get("customer_name")
+
+        output, filename = generate_entity_cost_summary_excel(
+            start_date=start_date,
+            end_date=end_date,
+            customer_name=customer_name
+        )
+
+        if not output:
+            flash("Failed to generate the report.", "danger")
+            return redirect(request.referrer or url_for("advance_report.entity_cost_summary"))
+
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        print(f"[ERROR] Report generation failed: {e}")
+        flash("An unexpected error occurred while generating the report.", "danger")
+        return redirect(request.referrer or url_for("advance_report.entity_cost_summary"))

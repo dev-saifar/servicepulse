@@ -94,7 +94,12 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label">🛠️ Technician</label>
-                <select id="technician_name" name="technician_name" class="form-select" required></select>
+                <select id="technician_name" name="technician_name" class="form-select" required>
+    <option value="" disabled selected hidden>-- Select Technician --</option>
+    {% for tech in technicians %}
+        <option value="{{ tech.name }}">{{ tech.name }}</option>
+    {% endfor %}
+</select>
             </div>
 
             <div class="col-md-6">

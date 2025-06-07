@@ -16,7 +16,7 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             flash("Login successful!", "success")
-            return redirect(url_for("dashboard.index"))
+            return redirect(url_for("dashboard_rotator.tv_dashboard"))
         else:
             flash("Invalid username or password", "danger")
 

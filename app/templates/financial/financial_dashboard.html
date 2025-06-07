@@ -1,18 +1,33 @@
 {% extends 'base.html' %}
 {% block title %}Financial Dashboard{% endblock %}
 {% block content %}
+<style>
+  /* Your new CSS rules here */
+  .ui-autocomplete {
+    z-index: 1051 !important; /* Higher than Bootstrap modals (1050) and other overlays */
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .ui-menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .ui-menu-item:hover,
+  .ui-menu-item.ui-state-active {
+    background-color: #f0f0f0;
+    color: #333;
+  }
+</style>
+
 <div class="container mt-4">
   <h3 class="mb-3">📊 Financial Dashboard</h3>
 
-  <!-- 🔍 Filters -->
   <form id="filterForm" class="row g-2 mb-4">
-    <div class="col-md-3">
-  <input class="form-control" name="start_date" type="date" id="startDateInput" />
-</div>
-<div class="col-md-3">
-  <input class="form-control" name="end_date" type="date" id="endDateInput" />
-</div>
-
+    <div class="col-md-3"><input class="form-control" name="start_date" type="date" /></div>
+    <div class="col-md-3"><input class="form-control" name="end_date" type="date" /></div>
     <div class="col-md-3">
       <input class="form-control" id="customerInput" name="customer" placeholder="Customer Name" autocomplete="off" />
     </div>
@@ -21,40 +36,24 @@
     <div class="col-md-3"><button type="submit" class="btn btn-primary">🔎 Filter</button></div>
   </form>
 
-  <!-- 📊 Summary Cards -->
   <div class="row mb-4" id="summaryCards"></div>
 
-  <!-- 📈 Monthly Trends -->
   <div class="mb-5">
     <h5>📈 Monthly Cost Trends</h5>
     <canvas id="trendChart" height="100"></canvas>
   </div>
 
-  <!-- 📑 Tabs -->
-  <ul class="nav nav-tabs" id="financeTabs" role="tablist">
+  <ul class="nav nav-tabs" id="financeTabs">
     <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#byCustomer">By Customer</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#byContract">By Contract</a></li>
     <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#byAsset">By Asset</a></li>
   </ul>
 
-  <!-- 🔢 Tables -->
-  <div class="tab-content mt-3">
-    <div class="tab-pane fade show active" id="byCustomer">
-      <a href="#" id="exportCustomer" class="btn btn-outline-primary btn-sm mb-2">⬇️ Export to Excel</a>
-      <table class="table table-bordered table-sm" id="tableCustomer"></table>
-    </div>
-    <div class="tab-pane fade" id="byContract">
-      <a href="#" id="exportContract" class="btn btn-outline-success btn-sm mb-2">⬇️ Export to Excel</a>
-      <table class="table table-bordered table-sm" id="tableContract"></table>
-    </div>
-    <div class="tab-pane fade" id="byAsset">
-      <a href="#" id="exportAsset" class="btn btn-outline-warning btn-sm mb-2">⬇️ Export to Excel</a>
-      <table class="table table-bordered table-sm" id="tableAsset"></table>
-    </div>
+
   </div>
 </div>
 
-<!-- 🧩 Scripts -->
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
@@ -63,127 +62,177 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" />
 
 <script>
+function showLoading(element) {
+    $(element).html('<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Loading data...</p></div>');
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+}
+
 function fetchAndDisplay(url, tableId, columns) {
-  const formData = $('#filterForm').serialize();
-  $.get(url + '?' + formData, function(data) {
-    const table = $(`#${tableId}`);
-    table.DataTable().clear().destroy();
-    table.empty();
-    const header = '<thead><tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
-    const body = '<tbody>' + data.map(row => {
-      return '<tr>' + columns.map(c => {
-        const key = c.toLowerCase().replace(/ /g, '_');
-        return `<td>${row[key] || 0}</td>`;
-      }).join('') + '</tr>';
-    }).join('') + '</tbody>';
-    table.append(header + body);
-    table.DataTable({ pageLength: 10 });
-  });
+    showLoading(`#${tableId}`);
+    const formData = $('#filterForm').serialize();
+
+    $.get(url + '?' + formData, function(data) {
+        const table = $(`#${tableId}`);
+        if ($.fn.DataTable.isDataTable(table)) {
+            table.DataTable().clear().destroy();
+        }
+        table.empty();
+
+        if (data.length === 0) {
+            table.html('<div class="alert alert-info">No data found for the selected filters</div>');
+            return;
+        }
+
+        const header = '<thead><tr>' + columns.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
+        const body = '<tbody>' + data.map(row => {
+            return '<tr>' + columns.map(c => {
+                const key = c.toLowerCase().replace(/ /g, '_');
+                return `<td>${row[key] || 0}</td>`;
+            }).join('') + '</tr>';
+        }).join('') + '</tbody>';
+
+        table.append(header + body);
+        table.DataTable({ pageLength: 10, responsive: true, deferRender: true });
+    }).fail(function() {
+        $(`#${tableId}`).html('<div class="alert alert-danger">Failed to load data</div>');
+    });
 }
 
 function loadSummary() {
-  $.get('/financial/summary?' + $('#filterForm').serialize(), function(summary) {
-    $('#summaryCards').html(`
-      <div class="col-md-3"><div class="card text-bg-primary"><div class="card-body">💰 Toner Cost<br><strong>$${summary.toner_cost.toFixed(2)}</strong></div></div></div>
-      <div class="col-md-3"><div class="card text-bg-success"><div class="card-body">🔧 Spare Cost<br><strong>$${summary.spare_cost.toFixed(2)}</strong></div></div></div>
-      <div class="col-md-3"><div class="card text-bg-warning"><div class="card-body">🛠️ Service Cost<br><strong>$${summary.service_cost.toFixed(2)}</strong></div></div></div>
-      <div class="col-md-3"><div class="card text-bg-dark"><div class="card-body">📦 Total Cost<br><strong>$${summary.total_cost.toFixed(2)}</strong></div></div></div>
-    `);
-  });
-}
-
-function loadTrends() {
-  $.get('/financial/monthly_trends?' + $('#filterForm').serialize(), function(data) {
-    const labels = data.map(row => row.month);
-    const tonerData = data.map(row => row.toner_cost);
-    const spareData = data.map(row => row.spare_cost);
-    const serviceData = data.map(row => row.service_cost);
-
-    new Chart(document.getElementById('trendChart'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Toner Cost',
-            data: tonerData,
-            borderColor: '#007bff',
-            fill: false,
-            tension: 0.3
-          },
-          {
-            label: 'Spare Cost',
-            data: spareData,
-            borderColor: '#28a745',
-            fill: false,
-            tension: 0.3
-          },
-          {
-            label: 'Service Cost',
-            data: serviceData,
-            borderColor: '#ffc107',
-            fill: false,
-            tension: 0.3
-          }
-        ]
-      }
+    showLoading('#summaryCards');
+    $.get('/financial/summary?' + $('#filterForm').serialize(), function(summary) {
+        $('#summaryCards').html(`
+            <div class="col-md-3"><div class="card text-bg-primary"><div class="card-body">💰 Toner Cost<br><strong>$${summary.toner_cost.toFixed(2)}</strong></div></div></div>
+            <div class="col-md-3"><div class="card text-bg-success"><div class="card-body">🔧 Spare Cost<br><strong>$${summary.spare_cost.toFixed(2)}</strong></div></div></div>
+            <div class="col-md-3"><div class="card text-bg-warning"><div class="card-body">🛠️ Service Cost<br><strong>$${summary.service_cost.toFixed(2)}</strong></div></div></div>
+            <div class="col-md-3"><div class="card text-bg-dark"><div class="card-body">📦 Total Cost<br><strong>$${summary.total_cost.toFixed(2)}</strong></div></div></div>
+        `);
+    }).fail(function() {
+        $('#summaryCards').html('<div class="alert alert-danger col-12">Failed to load summary data</div>');
     });
-  });
 }
+
+let trendChart = null;
+function loadTrends() {
+    showLoading('#trendChart');
+    if (trendChart) trendChart.destroy();
+
+    $.get('/financial/monthly_trends?' + $('#filterForm').serialize(), function(data) {
+        if (data.length === 0) {
+            $('#trendChart').html('<div class="alert alert-info">No trend data available</div>');
+            return;
+        }
+
+        const labels = data.map(row => row.month);
+        trendChart = new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Toner Cost',
+                        data: data.map(row => row.toner_cost),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true
+                    },
+                    {
+                        label: 'Spare Cost',
+                        data: data.map(row => row.spare_cost),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true
+                    },
+                    {
+                        label: 'Service Cost',
+                        data: data.map(row => row.service_cost),
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => '$' + value.toFixed(2)
+                        }
+                    }
+                }
+            }
+        });
+    }).fail(function() {
+        $('#trendChart').html('<div class="alert alert-danger">Failed to load trend data</div>');
+    });
+}
+
+const debouncedFilterHandler = debounce(function() {
+    loadSummary();
+    loadTrends();
+    const activeTab = $('.nav-tabs .active a').attr('href');
+    if (activeTab === '#byCustomer') {
+        fetchAndDisplay('/financial/by_customer', 'tableCustomer',
+            ['Customer Name', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    } else if (activeTab === '#byContract') {
+        fetchAndDisplay('/financial/by_contract', 'tableContract',
+            ['Contract Code', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    } else if (activeTab === '#byAsset') {
+         fetchAndDisplay('/financial/by_asset', 'tableAsset',
+            ['Serial Number', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    }
+}, 500);
+
+$('#financeTabs a').on('shown.bs.tab', function(e) {
+    const target = $(e.target).attr('href');
+    if (target === '#byCustomer' && !$('#tableCustomer').html()) {
+        fetchAndDisplay('/financial/by_customer', 'tableCustomer',
+            ['Customer Name', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    } else if (target === '#byContract' && !$('#tableContract').html()) {
+        fetchAndDisplay('/financial/by_contract', 'tableContract',
+            ['Contract Code', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    } else if (target === '#byAsset' && !$('#tableAsset').html()) {
+        fetchAndDisplay('/financial/by_asset', 'tableAsset',
+            ['Serial Number', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    }
+});
 
 $('#filterForm').on('submit', function(e) {
-  e.preventDefault();
-  loadSummary();
-  loadTrends();
-
-  fetchAndDisplay('/financial/by_customer', 'tableCustomer',
-    ['Customer Name', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
-  fetchAndDisplay('/financial/by_contract', 'tableContract',
-    ['Contract Code', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
-  fetchAndDisplay('/financial/by_asset', 'tableAsset',
-    ['Serial Number', 'Toner Cost', 'Spare Cost', 'Service Cost', 'Total']);
+    e.preventDefault();
+    debouncedFilterHandler();
 });
 
 $(document).ready(function() {
-  $('#filterForm').submit();
+    const currentYear = new Date().getFullYear();
+    const firstDayOfYear = `${currentYear}-01-01`; // Directly construct 'YYYY-01-01'
+    const today = new Date().toISOString().split('T')[0];
 
-  $('#exportCustomer').on('mousedown', function() {
-    this.href = '/financial/export_excel?type=customer&' + $('#filterForm').serialize();
-  });
-  $('#exportContract').on('mousedown', function() {
-    this.href = '/financial/export_excel?type=contract&' + $('#filterForm').serialize();
-  });
-  $('#exportAsset').on('mousedown', function() {
-    this.href = '/financial/export_excel?type=asset&' + $('#filterForm').serialize();
-  });
+    $('input[name="start_date"]').val(firstDayOfYear);
+    $('input[name="end_date"]').val(today);
+    debouncedFilterHandler();
 
-  // 🧠 Auto-suggest for customer name
-  $("#customerInput").autocomplete({
-    source: function(request, response) {
-      $.getJSON("/financial/customers_suggest", {
-        term: request.term
-      }, response);
-    },
-    minLength: 2
-  });
-});
-
-// Set default start_date to Jan 1 of current year, and end_date to today
-$(document).ready(function () {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-
-  const startOfYear = `${yyyy}-01-01`;
-  const todayStr = `${yyyy}-${mm}-${dd}`;
-
-  if (!$('#startDateInput').val()) {
-    $('#startDateInput').val(startOfYear);
-  }
-  if (!$('#endDateInput').val()) {
-    $('#endDateInput').val(todayStr);
-  }
+    $("#customerInput").autocomplete({
+        source: function(request, response) {
+            $.getJSON("/financial/customers_suggest", { term: request.term }, response);
+        },
+        minLength: 2,
+        delay: 300,
+        select: function(event, ui) {
+            $(this).val(ui.item.value);
+            debouncedFilterHandler();
+            return false;
+        }
+    });
 });
 </script>
 {% endblock %}

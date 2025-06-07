@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, send_file, render_template, redirect, url_for
-from sqlalchemy import func, case, and_, cast, Float
+from flask import Blueprint, request, jsonify, send_file, render_template, make_response, current_app
+from sqlalchemy import func, case, and_, cast, Float, or_
 from app import db
 from app.models import toner_request, TonerCosting, spare_req, spares, Ticket, Assets, Customer
 from flask_login import login_required, current_user
@@ -8,276 +8,522 @@ import pandas as pd
 import io
 from collections import defaultdict
 from datetime import datetime
+from flask_caching import Cache
+import os # Added for favicon route
 
 financial_bp = Blueprint('financial', __name__)
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
 
 HOURLY_SERVICE_RATE = 10
 
+
 def apply_filters(query, model):
-    from datetime import datetime
-
-    today = datetime.today().date()
-    default_start = datetime(today.year, 1, 1).date()
-
-    def safe_date(date_str, fallback):
+    """Applies date and keyword filters to a given SQLAlchemy query."""
+    def safe_date(date_str):
         try:
+            # Attempt to parse the date; return None if parsing fails
             return datetime.strptime(date_str, '%Y-%m-%d').date()
-        except:
-            return fallback
+        except (ValueError, TypeError):
+            return None # Return None if date_str is invalid or not provided
 
     start_str = request.args.get('start_date')
     end_str = request.args.get('end_date')
 
-    start_date = safe_date(start_str, default_start)
-    end_date = safe_date(end_str, today)
-
-    print(f"[FILTER] {model.__name__} | {start_date} to {end_date}")
+    start_date = safe_date(start_str)
+    end_date = safe_date(end_str)
 
     customer = request.args.get('customer')
     contract = request.args.get('contract')
     serial = request.args.get('serial_number')
 
-    if query is None:
-        query = db.session.query(model)
-
-    date_field = getattr(model, 'date_issued', None) or \
+    # Determine the correct date field dynamically
+    date_field_mapping = {
+        Ticket: Ticket.created_at,
+        toner_request: toner_request.date_issued,
+        spare_req: spare_req.date,
+        # Add other models and their respective date fields if needed
+    }
+    date_field = date_field_mapping.get(model) or \
+                 getattr(model, 'date_issued', None) or \
                  getattr(model, 'req_date', None) or \
                  getattr(model, 'created_at', None) or \
                  getattr(model, 'date', None)
 
-    if date_field is not None:
+    # Apply date filter only if both start_date and end_date are valid
+    if start_date and end_date and date_field is not None:
         query = query.filter(date_field.between(start_date, end_date))
 
-    if hasattr(model, 'customer_name') and customer:
-        query = query.filter(model.customer_name.ilike(f"%{customer}%"))
-    if hasattr(model, 'contract_code') and contract:
-        query = query.filter(model.contract_code.ilike(f"%{contract}%"))
-    if hasattr(model, 'contract') and contract:
-        query = query.filter(model.contract.ilike(f"%{contract}%"))
-    if hasattr(model, 'serial_number') and serial:
+
+    # Apply keyword filters based on model attributes
+    if customer:
+        if hasattr(model, 'customer_name'):
+            query = query.filter(model.customer_name.ilike(f"%{customer}%"))
+        elif hasattr(model, 'customer') and model == Ticket:  # Specific for Ticket model
+            query = query.filter(model.customer.ilike(f"%{customer}%"))
+
+    if contract:
+        # Use or_ for contract fields that might vary
+        contract_filters = []
+        if hasattr(model, 'contract_code'):
+            contract_filters.append(model.contract_code.ilike(f"%{contract}%"))
+        if hasattr(model, 'contract'):
+            contract_filters.append(model.contract.ilike(f"%{contract}%"))
+        if contract_filters:
+            query = query.filter(or_(*contract_filters))
+
+    if serial and hasattr(model, 'serial_number'):
         query = query.filter(model.serial_number.ilike(f"%{serial}%"))
 
     return query
 
 
-# 🔹 Updated Logic with Manual Spare and Ticket Calculation
-
-def get_customer_data():
-    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
-
-    toner_query = apply_filters(db.session.query(toner_request), toner_request)
-    for t in toner_query.all():
-        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
-        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
-        total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
-        toner_costs[t.customer_name] += total_cost
-
-    spare_query = apply_filters(db.session.query(spare_req), spare_req)
-    for s in spare_query.all():
-        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
-        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
-        total_cost = unit_cost * s.qty
-        spare_costs[s.customer_name] += total_cost
-
-    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
-    for t in ticket_query.all():
-        customer = t.customer or "Unknown"
-        service_costs[customer] += HOURLY_SERVICE_RATE
-
-    all_customers = set(toner_costs) | set(spare_costs) | set(service_costs)
-    return [{
-        "customer_name": cust,
-        "toner_cost": round(toner_costs.get(cust, 0), 2),
-        "spare_cost": round(spare_costs.get(cust, 0), 2),
-        "service_cost": round(service_costs.get(cust, 0), 2),
-        "total": round(toner_costs.get(cust, 0) + spare_costs.get(cust, 0) + service_costs.get(cust, 0), 2)
-    } for cust in all_customers]
-
-def get_contract_data():
-    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
-
-    # === TONER ===
-    toner_query = apply_filters(db.session.query(toner_request), toner_request)
-    for t in toner_query.all():
-        contract = str(t.contract_code) if t.contract_code else ""
-        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
-        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
-        total_cost = unit_cost * (t.issued_qty or 0)
-        toner_costs[contract] += total_cost
-
-    # === SPARE ===
-    spare_query = apply_filters(db.session.query(spare_req), spare_req)
-    for s in spare_query.all():
-        contract = str(s.contract) if s.contract else ""
-        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
-        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
-        total_cost = unit_cost * s.qty
-        spare_costs[contract] += total_cost
-
-    # === SERVICE ===
-    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
-    for t in ticket_query.all():
-        contract = str(t.contract) if t.contract else ""
-        service_costs[contract] += HOURLY_SERVICE_RATE
-
-    # === COMBINE ===
-    all_contracts = set(toner_costs) | set(spare_costs) | set(service_costs)
-    data = []
-    for code in all_contracts:
-        toner = toner_costs.get(code, 0)
-        spare = spare_costs.get(code, 0)
-        service = service_costs.get(code, 0)
-        total = toner + spare + service
-        data.append({
-            "contract_code": code,
-            "toner_cost": round(toner, 2),
-            "spare_cost": round(spare, 2),
-            "service_cost": round(service, 2),
-            "total": round(total, 2)
-        })
-
-    return data
-
-def get_asset_data():
-    toner_costs, spare_costs, service_costs = defaultdict(float), defaultdict(float), defaultdict(float)
-
-    toner_query = apply_filters(db.session.query(toner_request), toner_request)
-    for t in toner_query.all():
-        cost_entry = TonerCosting.query.filter_by(toner_model=t.toner_model, source=t.toner_source).first()
-        unit_cost = cost_entry.unit_cost if cost_entry else 0.0
-        total_cost = unit_cost * t.issued_qty if t.issued_qty else 0.0
-        toner_costs[t.serial_number] += total_cost
-
-    spare_query = apply_filters(db.session.query(spare_req), spare_req)
-    for s in spare_query.all():
-        spare_info = spares.query.filter_by(material_nr=s.product_code).first()
-        unit_cost = 0.0 if s.warehouse and s.warehouse.upper() == 'WORKSHOP' else (spare_info.price if spare_info else 0.0)
-        total_cost = unit_cost * s.qty
-        spare_costs[s.serial_number] += total_cost
-
-    ticket_query = apply_filters(db.session.query(Ticket), Ticket)
-    for t in ticket_query.all():
-        key = t.serial_number or "Unspecified"
-        service_costs[key] += HOURLY_SERVICE_RATE
-
-    all_assets = set(toner_costs) | set(spare_costs) | set(service_costs)
-    return [{
-        "serial_number": sn,
-        "toner_cost": round(toner_costs.get(sn, 0), 2),
-        "spare_cost": round(spare_costs.get(sn, 0), 2),
-        "service_cost": round(service_costs.get(sn, 0), 2),
-        "total": round(toner_costs.get(sn, 0) + spare_costs.get(sn, 0) + service_costs.get(sn, 0), 2)
-    } for sn in all_assets]
-
-# Routes
-
 @financial_bp.route('/summary')
+@login_required
+@permission_required('can_view_financials')
+@cache.cached(timeout=300, query_string=True)
 def summary():
-    toner_cost = sum([r['toner_cost'] for r in get_customer_data()])
-    spare_cost = sum([r['spare_cost'] for r in get_customer_data()])
-    service_cost = sum([r['service_cost'] for r in get_customer_data()])
-    return jsonify({
-        "toner_cost": round(toner_cost, 2),
-        "spare_cost": round(spare_cost, 2),
-        "service_cost": round(service_cost, 2),
-        "total_cost": round(toner_cost + spare_cost + service_cost, 2)
-    })
+    """Calculates and returns a summary of toner, spare, and service costs."""
+    try:
+        # Optimize subqueries to directly get the sum
+        toner_cost_subquery = db.session.query(
+            func.coalesce(func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost), 0.0)
+        ).select_from(toner_request).join(
+            TonerCosting,
+            and_(
+                toner_request.toner_model == TonerCosting.toner_model,
+                toner_request.toner_source == TonerCosting.source
+            )
+        )
+        toner_query_result = apply_filters(toner_cost_subquery, toner_request).scalar() or 0.0
 
-@financial_bp.route('/by_customer')
-def by_customer():
-    return jsonify(get_customer_data())
-
-@financial_bp.route('/by_contract')
-def by_contract():
-    return jsonify(get_contract_data())
-
-@financial_bp.route('/by_asset')
-def by_asset():
-    return jsonify(get_asset_data())
-
-@financial_bp.route('/monthly_trends')
-def monthly_trends():
-    toner = apply_filters(
-        db.session.query(
-            func.strftime('%Y-%m', toner_request.date_issued).label('month'),
-            func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
-        ).join(TonerCosting, and_(
-            toner_request.toner_model == TonerCosting.toner_model,
-
-            toner_request.toner_source == TonerCosting.source
-        )),
-        toner_request
-    ).group_by('month').subquery()
-
-    spare = apply_filters(
-        db.session.query(
-            func.strftime('%Y-%m', spare_req.date).label('month'),
-            func.sum(case(
+        spare_cost_subquery = db.session.query(
+            func.coalesce(func.sum(case(
                 (spare_req.warehouse.ilike('WORKSHOP'), 0),
                 else_=(spare_req.qty * spares.price)
-            )).label('spare_cost')
-        ).join(spares, spare_req.product_code == spares.material_nr),
-        spare_req
-    ).group_by('month').subquery()
+            )), 0.0)
+        ).join(spares, spare_req.product_code == spares.material_nr)
+        spare_query_result = apply_filters(spare_cost_subquery, spare_req).scalar() or 0.0
 
-    service = apply_filters(
-        db.session.query(
-            func.strftime('%Y-%m', Ticket.created_at).label('month'),
-            func.count(Ticket.id).label('service_count')
-        ).join(Assets, Ticket.serial_number == Assets.serial_number),
-        Ticket
-    ).group_by('month').subquery()
+        ticket_count_subquery = db.session.query(func.count(Ticket.id))
+        ticket_count_result = apply_filters(ticket_count_subquery, Ticket).scalar() or 0
+        service_cost = ticket_count_result * HOURLY_SERVICE_RATE
 
-    results = db.session.query(
-        toner.c.month,
-        func.coalesce(toner.c.toner_cost, 0),
-        func.coalesce(spare.c.spare_cost, 0),
-        func.coalesce(service.c.service_count, 0)
-    ).outerjoin(spare, toner.c.month == spare.c.month
-    ).outerjoin(service, toner.c.month == service.c.month).order_by(toner.c.month).all()
+        return jsonify({
+            "toner_cost": round(float(toner_query_result), 2),
+            "spare_cost": round(float(spare_query_result), 2),
+            "service_cost": round(float(service_cost), 2),
+            "total_cost": round(float(toner_query_result + spare_query_result + service_cost), 2)
+        })
+    except Exception as e:
+        db.session.rollback() # VERY IMPORTANT: Rollback the session on error
+        print(f"Error in summary: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
 
-    return jsonify([{
-        "month": r[0],
-        "toner_cost": round(r[1], 2),
-        "spare_cost": round(r[2], 2),
-        "service_cost": r[3] * HOURLY_SERVICE_RATE,
-        "total": round(r[1] + r[2] + r[3] * HOURLY_SERVICE_RATE, 2)
-    } for r in results])
 
-@financial_bp.route('/export_excel')
-def export_excel():
-    data_type = request.args.get('type', 'customer')
-    if data_type == 'customer':
-        data = get_customer_data()
-    elif data_type == 'contract':
-        data = get_contract_data()
-    elif data_type == 'asset':
-        data = get_asset_data()
-    else:
-        return jsonify({"error": "Invalid export type"}), 400
+@financial_bp.route('/by_customer')
+@login_required
+@permission_required('can_view_financials')
+@cache.cached(timeout=300, query_string=True)
+def by_customer():
+    """Retrieves financial data grouped by customer."""
+    try:
+        query = db.session.query(
+            Customer.cust_name.label('customer_name'),
+            func.coalesce(func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost), 0.0).label(
+                'toner_cost'),
+            func.coalesce(func.sum(case(
+                (spare_req.warehouse.ilike('WORKSHOP'), 0),
+                else_=(spare_req.qty * spares.price)
+            )), 0.0).label('spare_cost'),
+            func.coalesce(func.count(Ticket.id) * HOURLY_SERVICE_RATE, 0.0).label('service_cost')
+        ).outerjoin(toner_request, Customer.cust_name == toner_request.customer_name) \
+            .outerjoin(TonerCosting, and_(
+            toner_request.toner_model == TonerCosting.toner_model,
+            toner_request.toner_source == TonerCosting.source
+        )) \
+            .outerjoin(spare_req, Customer.cust_name == spare_req.customer_name) \
+            .outerjoin(spares, spare_req.product_code == spares.material_nr) \
+            .outerjoin(Ticket, Customer.cust_name == Ticket.customer) \
+            .group_by(Customer.cust_name)
 
-    df = pd.DataFrame(data)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name=data_type.title())
-    output.seek(0)
-    return send_file(output, as_attachment=True, download_name=f"{data_type}_financial_report.xlsx")
+        query = apply_filters(query, Customer)
+        results = query.all()
+        return jsonify([{
+            "customer_name": r.customer_name,
+            "toner_cost": round(float(r.toner_cost), 2),
+            "spare_cost": round(float(r.spare_cost), 2),
+            "service_cost": round(float(r.service_cost), 2),
+            "total": round(float(r.toner_cost + r.spare_cost + r.service_cost), 2)
+        } for r in results])
+    except Exception as e:
+        db.session.rollback() # VERY IMPORTANT: Rollback the session on error
+        print(f"Error in by_customer: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@financial_bp.route('/by_contract')
+@login_required
+@permission_required('can_view_financials')
+@cache.cached(timeout=300, query_string=True)
+def by_contract():
+    """Retrieves financial data grouped by contract."""
+    try:
+        # Define subqueries for each cost type, applying filters
+        toner_subq = apply_filters(
+            db.session.query(
+                toner_request.contract_code.label('contract_code'),
+                func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
+            ).join(TonerCosting, and_(
+                toner_request.toner_model == TonerCosting.toner_model,
+                toner_request.toner_source == TonerCosting.source
+            )).group_by(toner_request.contract_code),
+            toner_request
+        ).subquery()
+
+        spare_subq = apply_filters(
+            db.session.query(
+                spare_req.contract.label('contract_code'),
+                func.sum(case(
+                    (spare_req.warehouse.ilike('WORKSHOP'), 0),
+                    else_=(spare_req.qty * spares.price)
+                )).label('spare_cost')
+            ).join(spares, spare_req.product_code == spares.material_nr).group_by(spare_req.contract),
+            spare_req
+        ).subquery()
+
+        service_subq = apply_filters(
+            db.session.query(
+                Ticket.contract.label('contract_code'),
+                (func.count(Ticket.id) * HOURLY_SERVICE_RATE).label('service_cost')
+            ).group_by(Ticket.contract),
+            Ticket
+        ).subquery()
+
+        # Combine results using full outer joins on the 'contract_code'
+        results = db.session.query(
+            func.coalesce(toner_subq.c.contract_code, spare_subq.c.contract_code, service_subq.c.contract_code).label(
+                'contract_code'),
+            func.coalesce(toner_subq.c.toner_cost, 0.0).label('toner_cost'),
+            func.coalesce(spare_subq.c.spare_cost, 0.0).label('spare_cost'),
+            func.coalesce(service_subq.c.service_cost, 0.0).label('service_cost')
+        ).outerjoin(spare_subq, toner_subq.c.contract_code == spare_subq.c.contract_code) \
+            .outerjoin(service_subq, or_(
+            toner_subq.c.contract_code == service_subq.c.contract_code,
+            spare_subq.c.contract_code == service_subq.c.contract_code
+        )).all()
+
+        # Aggregate the results into a single dictionary to ensure correct totals
+        contract_data = defaultdict(
+            lambda: {'contract_code': '', 'toner_cost': 0.0, 'spare_cost': 0.0, 'service_cost': 0.0})
+
+        for r in results:
+            key = r.contract_code
+            if key:
+                contract_data[key]['contract_code'] = key
+                contract_data[key]['toner_cost'] += float(r.toner_cost or 0)
+                contract_data[key]['spare_cost'] += float(r.spare_cost or 0)
+                contract_data[key]['service_cost'] += float(r.service_cost or 0)
+
+        return jsonify([{
+            "contract_code": data['contract_code'],
+            "toner_cost": round(data['toner_cost'], 2),
+            "spare_cost": round(data['spare_cost'], 2),
+            "service_cost": round(data['service_cost'], 2),
+            "total": round(data['toner_cost'] + data['spare_cost'] + data['service_cost'], 2)
+        } for data in contract_data.values()])
+    except Exception as e:
+        db.session.rollback() # VERY IMPORTANT: Rollback the session on error
+        print(f"Error in by_contract: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@financial_bp.route('/monthly_trends')
+@login_required
+@permission_required('can_view_financials')
+@cache.cached(timeout=300, query_string=True)
+def monthly_trends():
+    """Retrieves monthly financial trends."""
+    try:
+        # Subqueries for each cost type, grouped by month and filtered
+        toner_subq = apply_filters(
+            db.session.query(
+                func.strftime('%Y-%m', toner_request.date_issued).label('month'),
+                func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
+            ).join(TonerCosting, and_(
+                toner_request.toner_model == TonerCosting.toner_model,
+                toner_request.toner_source == TonerCosting.source
+            )).group_by('month'),
+            toner_request
+        ).subquery()
+
+        spare_subq = apply_filters(
+            db.session.query(
+                func.strftime('%Y-%m', spare_req.date).label('month'),
+                func.sum(case(
+                    (spare_req.warehouse.ilike('WORKSHOP'), 0),
+                    else_=(spare_req.qty * spares.price)
+                )).label('spare_cost')
+            ).join(spares, spare_req.product_code == spares.material_nr).group_by('month'),
+            spare_req
+        ).subquery()
+
+        service_subq = apply_filters(
+            db.session.query(
+                func.strftime('%Y-%m', Ticket.created_at).label('month'),
+                (func.count(Ticket.id) * HOURLY_SERVICE_RATE).label('service_cost')
+            ).group_by('month'),
+            Ticket
+        ).subquery()
+
+        # Outer join the subqueries on the 'month' field
+        results = db.session.query(
+            func.coalesce(toner_subq.c.month, spare_subq.c.month, service_subq.c.month).label('month'),
+            func.coalesce(toner_subq.c.toner_cost, 0.0).label('toner_cost'),
+            func.coalesce(spare_subq.c.spare_cost, 0.0).label('spare_cost'),
+            func.coalesce(service_subq.c.service_cost, 0.0).label('service_cost')
+        ).outerjoin(spare_subq, toner_subq.c.month == spare_subq.c.month) \
+            .outerjoin(service_subq, or_(
+            toner_subq.c.month == service_subq.c.month,
+            spare_subq.c.month == service_subq.c.month
+        )).order_by('month').all()
+
+        return jsonify([{
+            "month": r.month,
+            "toner_cost": round(float(r.toner_cost), 2),
+            "spare_cost": round(float(r.spare_cost), 2),
+            "service_cost": round(float(r.service_cost), 2),
+            "total": round(float(r.toner_cost + r.spare_cost + r.service_cost), 2)
+        } for r in results])
+    except Exception as e:
+        db.session.rollback() # VERY IMPORTANT: Rollback the session on error
+        print(f"Error in monthly_trends: {e}")
+        return jsonify({"error": "An internal server error occurred."}), 500
+
 
 @financial_bp.route('/dashboard')
 @login_required
 @permission_required('can_view_financials')
 def financial_dashboard():
+    """Renders the financial dashboard HTML page."""
     return render_template('financial/financial_dashboard.html')
-from app.models import Customer
+
 
 @financial_bp.route('/customers_suggest')
 def customers_suggest():
+    """Provides customer name suggestions for autocompletion."""
     term = request.args.get('term', '')
-    customers = Customer.query.filter(Customer.cust_name.ilike(f"%{term}%")).limit(10).all()
-    return jsonify([c.cust_name for c in customers])
-@financial_bp.route('/')
+    if not term:
+        return jsonify([])
+
+    suggestions = (
+        Customer.query
+        .filter(Customer.cust_name.ilike(f'%{term}%'))
+        .order_by(Customer.cust_name.asc())
+        .limit(10)
+        .all()
+    )
+
+    return jsonify([cust.cust_name for cust in suggestions])
+
+
+@financial_bp.route('/export_excel')
 @login_required
 @permission_required('can_view_financials')
-def financial_home():
-    return redirect(url_for('financial.financial_dashboard'))
+def export_excel():
+    report_type = request.args.get('type')
+    # Using apply_filters for date arguments here too for consistency,
+    # though it needs to be adapted slightly as apply_filters works on a query.
+    # For now, manually parse dates to keep it simple.
+    # Updated: Use safe_date_export with None as fallback
+    def safe_date_export(date_str):
+        try:
+            return datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None
 
+    start_date_param = request.args.get('start_date')
+    end_date_param = request.args.get('end_date')
+
+    start_date = safe_date_export(start_date_param)
+    end_date = safe_date_export(end_date_param)
+
+    customer_filter = request.args.get('customer')
+    contract_filter = request.args.get('contract')
+    serial_filter = request.args.get('serial_number')
+
+    data_for_export = []
+    file_name = "financial_report.xlsx"
+
+    try:
+        if report_type == 'customer':
+            query = db.session.query(
+                Customer.cust_name.label('customer_name'),
+                func.coalesce(func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost), 0.0).label('toner_cost'),
+                func.coalesce(func.sum(case((spare_req.warehouse.ilike('WORKSHOP'), 0), else_=(spare_req.qty * spares.price))), 0.0).label('spare_cost'),
+                func.coalesce(func.count(Ticket.id) * HOURLY_SERVICE_RATE, 0.0).label('service_cost')
+            ).outerjoin(toner_request, Customer.cust_name == toner_request.customer_name) \
+             .outerjoin(TonerCosting, and_(
+                 toner_request.toner_model == TonerCosting.toner_model,
+                 toner_request.toner_source == TonerCosting.source
+             )) \
+             .outerjoin(spare_req, Customer.cust_name == spare_req.customer_name) \
+             .outerjoin(spares, spare_req.product_code == spares.material_nr) \
+             .outerjoin(Ticket, Customer.cust_name == Ticket.customer) \
+             .group_by(Customer.cust_name)
+
+            # Apply date filters to the joined tables if present
+            date_filters = []
+            if start_date and end_date:
+                date_filters.append(toner_request.date_issued.between(start_date, end_date))
+                date_filters.append(spare_req.date.between(start_date, end_date))
+                date_filters.append(Ticket.created_at.between(start_date, end_date))
+                query = query.filter(or_(*date_filters))
+
+            if customer_filter:
+                query = query.filter(Customer.cust_name.ilike(f"%{customer_filter}%"))
+            # Apply contract and serial filters if they can apply across joined tables
+            if contract_filter:
+                query = query.filter(or_(
+                    toner_request.contract_code.ilike(f"%{contract_filter}%"),
+                    spare_req.contract.ilike(f"%{contract_filter}%"),
+                    Ticket.contract.ilike(f"%{contract_filter}%")
+                ))
+            if serial_filter:
+                 # This filtering needs careful consideration as serial_number might only be on Assets
+                 # For simplicity, if Assets is relevant to the query context, add a join and filter.
+                 # Otherwise, if serial_number is implicitly linked via other models, filter accordingly.
+                 # Assuming for now it's not directly in Customer, toner_request, spare_req, Ticket
+                 # Add specific serial_number filtering if necessary, potentially by joining Assets
+                 query = query.outerjoin(Assets, or_(
+                     toner_request.serial_number == Assets.serial_number,
+                     spare_req.serial_number == Assets.serial_number,
+                     Ticket.serial_number == Assets.serial_number
+                 ))
+                 query = query.filter(Assets.serial_number.ilike(f"%{serial_filter}%"))
+
+
+            results = query.all()
+
+            for r in results:
+                total_cost = round(float(r.toner_cost + r.spare_cost + r.service_cost), 2)
+                data_for_export.append({
+                    "Customer Name": r.customer_name,
+                    "Toner Cost": round(float(r.toner_cost), 2),
+                    "Spare Cost": round(float(r.spare_cost), 2),
+                    "Service Cost": round(float(r.service_cost), 2),
+                    "Total Cost": total_cost
+                })
+            file_name = "financial_by_customer.xlsx"
+
+        elif report_type == 'contract':
+            # Replicate the by_contract logic here, applying filters carefully
+            toner_subq_base = db.session.query(
+                toner_request.contract_code.label('contract_code'),
+                func.sum(cast(toner_request.issued_qty, Float) * TonerCosting.unit_cost).label('toner_cost')
+            ).join(TonerCosting, and_(
+                toner_request.toner_model == TonerCosting.toner_model,
+                toner_request.toner_source == TonerCosting.source
+            ))
+            if start_date and end_date:
+                toner_subq_base = toner_subq_base.filter(toner_request.date_issued.between(start_date, end_date))
+            if customer_filter:
+                toner_subq_base = toner_subq_base.filter(toner_request.customer_name.ilike(f"%{customer_filter}%"))
+            if contract_filter:
+                toner_subq_base = toner_subq_base.filter(toner_request.contract_code.ilike(f"%{contract_filter}%"))
+            if serial_filter:
+                toner_subq_base = toner_subq_base.filter(toner_request.serial_number.ilike(f"%{serial_filter}%"))
+            toner_subq = toner_subq_base.group_by(toner_request.contract_code).subquery()
+
+            spare_subq_base = db.session.query(
+                spare_req.contract.label('contract_code'),
+                func.sum(case(
+                    (spare_req.warehouse.ilike('WORKSHOP'), 0),
+                    else_=(spare_req.qty * spares.price)
+                )))
+            if start_date and end_date:
+                spare_subq_base = spare_subq_base.filter(spare_req.date.between(start_date, end_date))
+            if customer_filter:
+                spare_subq_base = spare_subq_base.filter(spare_req.customer_name.ilike(f"%{customer_filter}%"))
+            if contract_filter:
+                spare_subq_base = spare_subq_base.filter(spare_req.contract.ilike(f"%{contract_filter}%"))
+            if serial_filter:
+                spare_subq_base = spare_subq_base.filter(spare_req.serial_number.ilike(f"%{serial_filter}%"))
+            spare_subq = spare_subq_base.join(spares, spare_req.product_code == spares.material_nr).group_by(spare_req.contract).subquery()
+
+            service_subq_base = db.session.query(
+                Ticket.contract.label('contract_code'),
+                (func.count(Ticket.id) * HOURLY_SERVICE_RATE).label('service_cost')
+            )
+            if start_date and end_date:
+                service_subq_base = service_subq_base.filter(Ticket.created_at.between(start_date, end_date))
+            if customer_filter:
+                service_subq_base = service_subq_base.filter(Ticket.customer.ilike(f"%{customer_filter}%"))
+            if contract_filter:
+                service_subq_base = service_subq_base.filter(Ticket.contract.ilike(f"%{contract_filter}%"))
+            if serial_filter:
+                service_subq_base = service_subq_base.filter(Ticket.serial_number.ilike(f"%{serial_filter}%"))
+            service_subq = service_subq_base.group_by(Ticket.contract).subquery()
+
+            combined_results = db.session.query(
+                func.coalesce(toner_subq.c.contract_code, spare_subq.c.contract_code, service_subq.c.contract_code).label('contract_code'),
+                func.coalesce(toner_subq.c.toner_cost, 0.0).label('toner_cost'),
+                func.coalesce(spare_subq.c.spare_cost, 0.0).label('spare_cost'),
+                func.coalesce(service_subq.c.service_cost, 0.0).label('service_cost')
+            ).outerjoin(spare_subq, toner_subq.c.contract_code == spare_subq.c.contract_code) \
+             .outerjoin(service_subq, or_(
+                 toner_subq.c.contract_code == service_subq.c.contract_code,
+                 spare_subq.c.contract_code == service_subq.c.contract_code
+             )).all()
+
+            contract_data_dict = defaultdict(lambda: {'contract_code': '', 'toner_cost': 0.0, 'spare_cost': 0.0, 'service_cost': 0.0})
+            for r in combined_results:
+                key = r.contract_code
+                if key:
+                    contract_data_dict[key]['contract_code'] = key
+                    contract_data_dict[key]['toner_cost'] += float(r.toner_cost or 0)
+                    contract_data_dict[key]['spare_cost'] += float(r.spare_cost or 0)
+                    contract_data_dict[key]['service_cost'] += float(r.service_cost or 0)
+
+            for data in contract_data_dict.values():
+                total_cost = round(data['toner_cost'] + data['spare_cost'] + data['service_cost'], 2)
+                data_for_export.append({
+                    "Contract Code": data['contract_code'],
+                    "Toner Cost": round(data['toner_cost'], 2),
+                    "Spare Cost": round(data['spare_cost'], 2),
+                    "Service Cost": round(data['service_cost'], 2),
+                    "Total Cost": total_cost
+                })
+            file_name = "financial_by_contract.xlsx"
+
+        else:
+            return jsonify({"error": "Invalid report type specified."}), 400
+
+        # Create DataFrame and Excel file
+        df = pd.DataFrame(data_for_export)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Financial Report')
+        output.seek(0)
+
+        response = make_response(output.getvalue())
+        response.headers['Content-Disposition'] = f'attachment; filename={file_name}'
+        response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        return response
+
+    except Exception as e:
+        db.session.rollback() # VERY IMPORTANT: Rollback the session on error
+        print(f"Error during Excel export: {e}")
+        return jsonify({"error": f"An error occurred during export: {e}"}), 500
+    finally:
+        # Flask-SQLAlchemy usually handles session removal at the end of the request context.
+        # Explicit `db.session.rollback()` in `except` is the key for error recovery.
+        pass
+
+# Route for favicon.ico to prevent unnecessary errors
+@financial_bp.route('/favicon.ico')
+def favicon():
+    """Serves the favicon.ico file."""
+    # Ensure 'app' is accessible or use current_app.root_path
+    from flask import send_from_directory
+    return send_from_directory(os.path.join(current_app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')

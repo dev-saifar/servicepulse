@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-3">📊 Entity Cost Summary Report</h3>
+    <form method="POST" class="card p-4 shadow-sm bg-light">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-file-excel"></i> Download Report
+        </button>
+    </form>
+</div>
+{% endblock %}

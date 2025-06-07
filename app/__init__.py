@@ -57,7 +57,8 @@ def create_app():
             db.session.commit()
         except:
             pass  # Avoid logging loop
-        return "An error occurred", 500
+        import traceback
+        return f"<pre>{traceback.format_exc()}</pre>", 500
 
     # Register custom datetimeformat filter
 
@@ -127,6 +128,8 @@ def create_app():
     from app.modules.assets_add import assets_add_bp
     from app.modules.toner import toner_bp
     from app.modules.financial import financial_bp
+    from app.modules import financial
+    financial.cache.init_app(app)
     from app.modules.delivery_report import delivery_report_bp
     from app.modules.dashboard_rotator import dashboard_rotator_bp
     app.register_blueprint(dashboard_rotator_bp)

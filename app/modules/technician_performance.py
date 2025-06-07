@@ -9,9 +9,7 @@ technician_performance_bp = Blueprint("technician_performance", __name__)
 
 
 # ✅ Render the UI when accessed normally
-@technician_performance_bp.route("/", methods=["GET"])
-def technician_performance():
-    return render_template("advance_report/technician_performance.html")
+
 
 
 # ✅ API to return JSON when requested (Renamed to avoid conflicts)
