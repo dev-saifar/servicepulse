@@ -1,298 +1,541 @@
-{% extends 'base.html' %}
-{% block content %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Contract List</title>
+    <title>Contract List - Enhanced</title>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
         body { background-color: #f8f9fa; }
+        /* Adjusted to allow space for the back button */
+        .card-header-pills { margin-left: auto; }
         .table-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-        .search-bar { max-width: 300px; }
-        .expired { background-color: #ffcccc !important; }
-        .sortable { cursor: pointer; }
+        .sortable { cursor: pointer; user-select: none; }
+        .sort-icon { font-size: 0.8em; margin-left: 5px; color: #999; }
+        .sort-icon.active { color: #000; }
         .billing-cycle-yearly { background-color: #d1e7dd; padding: 5px; border-radius: 5px; }
         .billing-cycle-monthly { background-color: #cfe2ff; padding: 5px; border-radius: 5px; }
         .billing-cycle-weekly { background-color: #ffe69c; padding: 5px; border-radius: 5px; }
+        .loading-spinner {
+            display: none; /* Hidden by default */
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .column-hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container mt-5">
-    <h2 class="text-center text-primary mb-4"><i class="bi bi-journal-text"></i> Contract List</h2>
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex align-items-center">
+            <button class="btn btn-outline-secondary me-3" onclick="window.history.back()" title="Go Back">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <h4 class="mb-0"><i class="bi bi-journal-text"></i> Contract List</h4>
+            <div class="card-header-pills d-flex gap-2">
+                 <button class="btn btn-success" onclick="addContract()">
+                    <i class="bi bi-plus-circle"></i> Add Contract
+                </button>
+                <button class="btn btn-secondary" onclick="exportExcel()"><i class="bi bi-file-earmark-excel"></i> Export</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 mb-3 align-items-center">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search any contract field...">
+                </div>
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text">From</span>
+                        <input type="date" id="startDate" class="form-control">
+                        <span class="input-group-text">To</span>
+                        <input type="date" id="endDate" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button class="btn btn-primary w-50" onclick="applyFilters()">Filter</button>
+                    <button class="btn btn-outline-secondary w-50" onclick="clearFilters()">Clear</button>
+                </div>
+            </div>
 
-    <!-- Filters & Actions -->
-    <div class="d-flex justify-content-between mb-3">
-        <input type="text" id="searchInput" class="form-control search-bar" onkeyup="liveSearch()" placeholder="🔍 Search Contract...">
-        <input type="date" id="startDate" class="form-control mx-2" placeholder="Start Date">
-        <input type="date" id="endDate" class="form-control mx-2" placeholder="End Date">
-        <button class="btn btn-primary" onclick="filterContracts()">Filter</button>
-        <button class="btn btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel"></i> Export Excel</button>
-        <button class="btn btn-success" onclick="addContract()">
-            <i class="bi bi-plus-circle"></i> Add Contract
-        </button>
-    </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <label for="rowsPerPage" class="form-label me-2 d-inline-block">Show</label>
+                    <select id="rowsPerPage" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-eye"></i> Columns
+                    </button>
+                    <ul class="dropdown-menu" id="columnToggler">
+                        </ul>
+                </div>
+            </div>
 
-    <!-- Contract Table -->
-    <div class="table-container">
-        <table class="table table-hover table-striped table-bordered" id="contractTable">
-            <thead class="table-dark">
-                <tr>
-                    <th>#</th>
-                    <th class="sortable" onclick="sortTable(1)">Contract Code ⬍</th>
-                    <th class="sortable" onclick="sortTable(2)">Customer ⬍</th>
-                    <th>Billing Company</th>
-                    <th>Description</th>
-                    <th>Sales Person</th>
-                    <th class="sortable" onclick="sortTable(3)">Start Date ⬍</th>
-                    <th class="sortable" onclick="sortTable(4)">End Date ⬍</th>
-                    <th>Billing Cycle</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="contractTableBody">
-                <!-- Dynamic contract rows will be inserted here -->
-            </tbody>
-        </table>
-    </div>
+            <div class="table-responsive table-container position-relative">
+                <div class="loading-spinner" id="loadingSpinner"></div>
+                <table class="table table-hover table-striped table-bordered" id="contractTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th data-column-key="index">#</th>
+                            <th data-column-key="contract_code" data-type="string" class="sortable">Contract Code</th>
+                            <th data-column-key="customer" data-type="string" class="sortable">Customer</th>
+                            <th data-column-key="billing_company">Billing Company</th>
+                            <th data-column-key="cont_discription">Description</th>
+                            <th data-column-key="sales_person">Sales Person</th>
+                            <th data-column-key="start_date" data-type="date" class="sortable">Start Date</th>
+                            <th data-column-key="end_date" data-type="date" class="sortable">End Date</th>
+                            <th data-column-key="status" data-type="string" class="sortable">Status</th>
+                            <th data-column-key="billing_cycle">Billing Cycle</th>
+                            <th data-column-key="actions" style="width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contractTableBody"></tbody>
+                </table>
+                 <div id="noResults" class="text-center p-4" style="display: none;">
+                    <h5>No contracts found matching your criteria.</h5>
+                </div>
+            </div>
 
-    <!-- Pagination -->
-    <div class="d-flex justify-content-center mt-3">
-        <div id="pagination"></div>
+            <nav class="d-flex justify-content-between align-items-center mt-3">
+                <div id="paginationInfo"></div>
+                <ul class="pagination mb-0" id="pagination"></ul>
+            </nav>
+        </div>
     </div>
 </div>
 
-<!-- Modal for View Contract -->
-<div class="modal fade" id="viewContractModal" tabindex="-1" aria-labelledby="viewContractLabel" aria-hidden="true">
+<div class="modal fade" id="viewContractModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="viewContractLabel">Contract Details</h5>
+                <h5 class="modal-title">Contract Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-            <div class="mb-2"><strong>Contract Code:</strong> <span id="modalContractCode"></span></div>
-            <div class="mb-2"><strong>Customer:</strong> <span id="modalCustomer"></span></div>
-            <div class="mb-2"><strong>Billing Company:</strong> <span id="modalBillingCompany"></span></div>
-            <div class="mb-2"><strong>Contract Description:</strong> <span id="modalDescription"></span></div>
-            <div class="mb-2"><strong>Sales Person:</strong> <span id="modalSalesPerson"></span></div>
-            <div class="mb-2"><strong>Start Date:</strong> <span id="modalStartDate"></span></div>
-            <div class="mb-2"><strong>End Date:</strong> <span id="modalEndDate"></span></div>
-            <div class="mb-2"><strong>Billing Cycle:</strong> <span id="modalBillingCycle"></span></div>
-            <div class="mb-2"><strong>Email:</strong> <span id="modalEmail"></span></div>
-            <div class="mb-2"><strong>Currency:</strong> <span id="modalCurrency"></span></div>
-            <div class="mb-2"><strong>Mono Commitment:</strong> <span id="modalMonoCommit"></span></div>
-            <div class="mb-2"><strong>Mono Charge:</strong> <span id="modalMonoCharge"></span></div>
-            <div class="mb-2"><strong>Mono Excess:</strong> <span id="modalMonoExcess"></span></div>
-            <div class="mb-2"><strong>Color Commitment:</strong> <span id="modalColorCommit"></span></div>
-            <div class="mb-2"><strong>Color Charge:</strong> <span id="modalColorCharge"></span></div>
-            <div class="mb-2"><strong>Color Excess:</strong> <span id="modalColorExcess"></span></div>
-            <div class="mb-2"><strong>Rental Charges:</strong> <span id="modalRental"></span></div>
-            <div class="mb-2"><strong>Software Rental:</strong> <span id="modalSoftware"></span></div>
-            <div class="mb-2"><strong>Duration (Months):</strong> <span id="modalDurations"></span></div>
-            <button class="btn btn-sm btn-outline-primary mt-3" onclick="copyContractDetails()">📋 Copy All</button>
-                <div id="downloadButtonContainer" class="mt-3 d-none">
-  <a id="downloadContractBtn" class="btn btn-sm btn-outline-success" target="_blank">
-    ⬇️ Download Contract
-  </a>
-</div>
-
-        </div>
-
+            <div class="modal-body" id="modalBodyContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-outline-primary" onclick="copyContractDetails()">📋 Copy All</button>
+                <a id="downloadContractBtn" class="btn btn-sm btn-outline-success d-none" target="_blank">⬇️ Download Contract</a>
+            </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // --- STATE MANAGEMENT ---
+    let allContracts = [];
+    let filteredContracts = [];
+    let state = {
+        currentPage: 1,
+        rowsPerPage: 10,
+        sortColumn: 'end_date',
+        sortDirection: 'asc',
+        columnVisibility: {} // Default: all columns visible
+    };
+
+    // --- INITIALIZATION ---
     document.addEventListener("DOMContentLoaded", function () {
-        loadContracts();
+        loadState();
+        initializeEventListeners();
+        fetchAndDisplayContracts();
     });
 
-    function viewContract(code) {
-    fetch(`/contracts/view?code=${code}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) return alert(data.error);
-
-            // Fill in modal content
-            document.getElementById("modalContractCode").innerText = data.contract_code;
-            document.getElementById("modalCustomer").innerText = data.customer;
-            document.getElementById("modalBillingCompany").innerText = data.billing_company;
-            document.getElementById("modalDescription").innerText = data.cont_discription;
-            document.getElementById("modalSalesPerson").innerText = data.sales_person;
-            document.getElementById("modalStartDate").innerText = data.start_date;
-            document.getElementById("modalEndDate").innerText = data.end_date;
-            document.getElementById("modalBillingCycle").innerText = data.billing_cycle;
-
-            // Advanced fields
-            document.getElementById("modalEmail").innerText = data.email;
-            document.getElementById("modalCurrency").innerText = data.contract_currency;
-            document.getElementById("modalMonoCommit").innerText = data.mono_commitment;
-            document.getElementById("modalMonoCharge").innerText = data.mono_charge;
-            document.getElementById("modalMonoExcess").innerText = data.mono_excess_charge;
-            document.getElementById("modalColorCommit").innerText = data.color_commitment;
-            document.getElementById("modalColorCharge").innerText = data.color_charge;
-            document.getElementById("modalColorExcess").innerText = data.color_excess_charge;
-            document.getElementById("modalRental").innerText = data.rental_charges;
-            document.getElementById("modalSoftware").innerText = data.software_rental;
-            document.getElementById("modalDurations").innerText = data.durations;
-            if (data.document_path) {
-    const downloadBtn = document.getElementById("downloadContractBtn");
-    downloadBtn.href = `/static/${data.document_path}`;
-    document.getElementById("downloadButtonContainer").classList.remove("d-none");
-} else {
-    document.getElementById("downloadButtonContainer").classList.add("d-none");
-}
-
-
-            // Show modal
-            new bootstrap.Modal(document.getElementById('viewContractModal')).show();
+    function initializeEventListeners() {
+        document.getElementById('searchInput').addEventListener('keyup', applyFilters);
+        document.getElementById('rowsPerPage').addEventListener('change', (e) => {
+            state.rowsPerPage = parseInt(e.target.value, 10);
+            state.currentPage = 1;
+            saveState();
+            renderTable();
         });
-}
 
-    function editContract(code) {
-        window.location.href = `/contracts/edit?code=${code}`;
+        document.querySelector('#contractTable thead').addEventListener('click', (e) => {
+            const header = e.target.closest('th.sortable');
+            if (header) {
+                const columnKey = header.dataset.columnKey;
+                if (state.sortColumn === columnKey) {
+                    state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.sortColumn = columnKey;
+                    state.sortDirection = 'asc';
+                }
+                saveState();
+                renderTable();
+            }
+        });
     }
 
-    function deleteContract(code) {
-        if (confirm("Are you sure you want to delete this contract?")) {
-            fetch(`/contracts/delete?code=${code}`, { method: "DELETE" })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert("✅ Contract deleted!");
-                        loadContracts();
-                    } else {
-                        alert("❌ Error deleting contract.");
-                    }
-                });
+    // --- DATA FETCHING & PROCESSING ---
+    async function fetchAndDisplayContracts() {
+        showLoading(true);
+        try {
+            const response = await fetch(`/contracts/fetch_contracts1`);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const contracts = await response.json();
+            allContracts = processContracts(contracts);
+            filteredContracts = [...allContracts];
+            renderTable();
+        } catch (error) {
+            console.error("❌ Failed to fetch contracts:", error);
+            alert("Could not load contract data.");
+        } finally {
+            showLoading(false);
         }
     }
 
-    function filterContracts() {
-        let startDate = document.getElementById("startDate").value;
-        let endDate = document.getElementById("endDate").value;
-        loadContracts(startDate, endDate);
+    function processContracts(contracts) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day for accurate comparison
+
+        return contracts.map(contract => {
+            const endDate = new Date(contract.end_date);
+            const diffTime = endDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let status = 'Active';
+            if (diffDays < 0) {
+                status = 'Expired';
+            } else if (diffDays <= 30) {
+                status = 'Expiring Soon';
+            }
+            return { ...contract, status }; // Add status property to each contract object
+        });
     }
 
-    function loadContracts(startDate = "", endDate = "") {
-        fetch(`/contracts/fetch_contracts1?start_date=${startDate}&end_date=${endDate}`)
-            .then(response => response.json())
-            .then(contracts => populateContracts(contracts));
+    // --- RENDERING LOGIC ---
+    function renderTable() {
+        sortData();
+        const paginatedData = paginateData();
+        populateTable(paginatedData);
+        setupPaginationControls();
+        updateColumnVisibility(); // Ensure visibility is applied after rendering
+        updateSortIcons();
     }
 
-    function populateContracts(contracts) {
+    function populateTable(contracts) {
         const tbody = document.getElementById("contractTableBody");
+        const noResultsDiv = document.getElementById("noResults");
         tbody.innerHTML = "";
-        const today = new Date().toISOString().split('T')[0];
+
+        if (contracts.length === 0) {
+            noResultsDiv.style.display = "block";
+            tbody.style.display = "none";
+            return;
+        }
+        noResultsDiv.style.display = "none";
+        tbody.style.display = "";
 
         contracts.forEach((contract, index) => {
-            let isExpired = contract.end_date < today ? "expired" : "";
-            let billingClass = contract.billing_cycle.includes("Year") ? "billing-cycle-yearly" :
-                               contract.billing_cycle.includes("Month") ? "billing-cycle-monthly" :
-                               "billing-cycle-weekly";
+            let statusBadge;
+            switch (contract.status) {
+                case 'Expired':
+                    statusBadge = '<span class="badge bg-danger">Expired</span>';
+                    break;
+                case 'Expiring Soon':
+                    statusBadge = '<span class="badge bg-warning text-dark">Expiring Soon</span>';
+                    break;
+                default:
+                    statusBadge = '<span class="badge bg-success">Active</span>';
+            }
+            const billingClass = contract.billing_cycle.includes("Year") ? "billing-cycle-yearly" :
+                                 contract.billing_cycle.includes("Month") ? "billing-cycle-monthly" : "billing-cycle-weekly";
 
             const row = document.createElement("tr");
-            row.className = isExpired;
             row.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${contract.contract_code}</td>
-                <td>${contract.customer}</td>
-                <td>${contract.billing_company}</td>
-                <td>${contract.cont_discription}</td>
-                <td>${contract.sales_person}</td>
-                <td>${contract.start_date}</td>
-                <td>${contract.end_date}</td>
-                <td class="${billingClass}">${contract.billing_cycle}</td>
-                <td>
-                    <button class="btn btn-info btn-sm" onclick="viewContract('${contract.contract_code}')">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-warning btn-sm" onclick="editContract('${contract.contract_code}')">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteContract('${contract.contract_code}')">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                <td data-column-key="index">${(state.currentPage - 1) * state.rowsPerPage + index + 1}</td>
+                <td data-column-key="contract_code">${contract.contract_code}</td>
+                <td data-column-key="customer">${contract.customer}</td>
+                <td data-column-key="billing_company">${contract.billing_company}</td>
+                <td data-column-key="cont_discription">${contract.cont_discription}</td>
+                <td data-column-key="sales_person">${contract.sales_person}</td>
+                <td data-column-key="start_date">${contract.start_date}</td>
+                <td data-column-key="end_date">${contract.end_date}</td>
+                <td data-column-key="status">${statusBadge}</td>
+                <td data-column-key="billing_cycle" class="${billingClass}">${contract.billing_cycle}</td>
+                <td data-column-key="actions">
+                    <button class="btn btn-info btn-sm" onclick="viewContract('${contract.contract_code}')" title="View"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-warning btn-sm" onclick="editContract('${contract.contract_code}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteContract('${contract.contract_code}')" title="Delete"><i class="bi bi-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(row);
         });
     }
 
-    function sortTable(columnIndex) {
-        let table = document.querySelector("table tbody");
-        let rows = Array.from(table.rows);
-        let isAscending = table.getAttribute("data-sort") === "asc";
+    // --- FEATURE IMPLEMENTATIONS ---
+    function applyFilters() {
+        const searchText = document.getElementById("searchInput").value.toLowerCase();
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
 
-        rows.sort((a, b) => {
-            let valA = a.cells[columnIndex].innerText;
-            let valB = b.cells[columnIndex].innerText;
-            return isAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        filteredContracts = allContracts.filter(contract => {
+            const contractEndDate = contract.end_date;
+            const matchesSearch = Object.values(contract).some(val => String(val).toLowerCase().includes(searchText));
+            const matchesStartDate = !startDate || contractEndDate >= startDate;
+            const matchesEndDate = !endDate || contractEndDate <= endDate;
+            return matchesSearch && matchesStartDate && matchesEndDate;
         });
-
-        table.innerHTML = "";
-        rows.forEach(row => table.appendChild(row));
-        table.setAttribute("data-sort", isAscending ? "desc" : "asc");
+        state.currentPage = 1;
+        renderTable();
     }
 
-    function exportExcel() {
-        window.location.href = "/contracts/export_excel";
+    function clearFilters() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("startDate").value = "";
+        document.getElementById("endDate").value = "";
+        filteredContracts = [...allContracts];
+        state.currentPage = 1;
+        renderTable();
     }
 
-    function addContract() {
-    window.location.href = "{{ url_for('assets.manage_contracts') }}";
-    }
+    function sortData() {
+        const header = document.querySelector(`th[data-column-key='${state.sortColumn}']`);
+        const type = header.dataset.type;
 
-    function liveSearch() {
-        let input = document.getElementById("searchInput").value.toLowerCase();
-        let rows = document.getElementById("contractTableBody").getElementsByTagName("tr");
-        for (let i = 0; i < rows.length; i++) {
-            let cells = rows[i].getElementsByTagName("td");
-            let found = false;
-            for (let j = 1; j < cells.length - 1; j++) {
-                if (cells[j].innerText.toLowerCase().includes(input)) {
-                    found = true;
-                    break;
-                }
+        filteredContracts.sort((a, b) => {
+            const valA = a[state.sortColumn];
+            const valB = b[state.sortColumn];
+
+            let comparison = 0;
+            if (type === 'date') {
+                comparison = new Date(valA) - new Date(valB);
+            } else if (type === 'number') {
+                comparison = parseFloat(valA) - parseFloat(valB);
+            } else {
+                comparison = String(valA).localeCompare(String(valB));
             }
-            rows[i].style.display = found ? "" : "none";
+            return state.sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }
+
+    function paginateData() {
+        const start = (state.currentPage - 1) * state.rowsPerPage;
+        const end = start + state.rowsPerPage;
+        return filteredContracts.slice(start, end);
+    }
+
+    function setupPaginationControls() {
+        const paginationUl = document.getElementById("pagination");
+        const paginationInfo = document.getElementById("paginationInfo");
+        paginationUl.innerHTML = "";
+
+        const totalPages = Math.ceil(filteredContracts.length / state.rowsPerPage);
+        if (totalPages <= 1 && filteredContracts.length === 0) {
+            paginationInfo.textContent = "No entries found.";
+            return;
+        }
+        if (totalPages <= 1) {
+            paginationInfo.textContent = `Showing ${filteredContracts.length} of ${filteredContracts.length} entries.`;
+            return;
+        }
+
+        const startEntry = (state.currentPage - 1) * state.rowsPerPage + 1;
+        const endEntry = Math.min(startEntry + state.rowsPerPage - 1, filteredContracts.length);
+        paginationInfo.textContent = `Showing ${startEntry} to ${endEntry} of ${filteredContracts.length} entries.`;
+
+        paginationUl.insertAdjacentHTML('beforeend', `<li class="page-item ${state.currentPage === 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${state.currentPage - 1})">Previous</a></li>`);
+        for (let i = 1; i <= totalPages; i++) {
+            paginationUl.insertAdjacentHTML('beforeend', `<li class="page-item ${state.currentPage === i ? 'active' : ''}"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`);
+        }
+        paginationUl.insertAdjacentHTML('beforeend', `<li class="page-item ${state.currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="changePage(${state.currentPage + 1})">Next</a></li>`);
+    }
+
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredContracts.length / state.rowsPerPage)
+        if (page < 1 || page > totalPages) return;
+        state.currentPage = page;
+        renderTable();
+    }
+
+    // --- LOCAL STORAGE & STATE ---
+    function saveState() {
+        localStorage.setItem('contractTableState', JSON.stringify(state));
+    }
+
+    function loadState() {
+        const savedState = localStorage.getItem('contractTableState');
+        if (savedState) {
+            Object.assign(state, JSON.parse(savedState));
+        }
+        console.log('State loaded from localStorage (columnVisibility):', state.columnVisibility); // DEBUG: Log loaded state
+        document.getElementById('rowsPerPage').value = state.rowsPerPage;
+        setupColumnToggler(); // Initialize toggler UI based on loaded state
+    }
+
+    // --- UI HELPERS ---
+    function showLoading(isLoading) {
+        document.getElementById('loadingSpinner').style.display = isLoading ? 'block' : 'none';
+    }
+
+    function updateSortIcons() {
+        document.querySelectorAll('#contractTable thead th .sort-icon').forEach(icon => icon.remove());
+        const header = document.querySelector(`th[data-column-key='${state.sortColumn}']`);
+        if (header) {
+            const icon = document.createElement('span');
+            icon.className = 'sort-icon active';
+            icon.innerHTML = state.sortDirection === 'asc' ? '▲' : '▼';
+            header.appendChild(icon);
         }
     }
-    function copyContractDetails() {
-    const fields = [
-        "modalContractCode", "modalCustomer", "modalBillingCompany", "modalDescription",
-        "modalSalesPerson", "modalStartDate", "modalEndDate", "modalBillingCycle",
-        "modalEmail", "modalCurrency", "modalMonoCommit", "modalMonoCharge", "modalMonoExcess",
-        "modalColorCommit", "modalColorCharge", "modalColorExcess",
-        "modalRental", "modalSoftware", "modalDurations"
-    ];
 
-    let output = '';
-    fields.forEach(id => {
-        const label = document.querySelector(`#${id}`).previousSibling?.textContent?.trim() || id;
-        const value = document.getElementById(id).innerText;
-        output += `${label}: ${value}\n`;
-    });
+    function setupColumnToggler() {
+        const toggler = document.getElementById('columnToggler');
+        toggler.innerHTML = '';
+        document.querySelectorAll('#contractTable thead th').forEach(th => {
+            const columnKey = th.dataset.columnKey;
+            if (!columnKey || columnKey === 'index' || columnKey === 'actions') return;
 
-    navigator.clipboard.writeText(output)
-        .then(() => alert("✅ Contract details copied to clipboard!"))
-        .catch(() => alert("❌ Copy failed"));
-}
+            // Determines initial checked state based on saved visibility
+            const isVisible = state.columnVisibility.hasOwnProperty(columnKey) ? state.columnVisibility[columnKey] : true;
+            // Ensure default visibility is saved in state (if not already there)
+            if (!state.columnVisibility.hasOwnProperty(columnKey)) {
+                state.columnVisibility[columnKey] = isVisible;
+            }
 
+            toggler.insertAdjacentHTML('beforeend', `
+                <li>
+                    <a class="dropdown-item" href="#">
+                        <input type="checkbox" class="form-check-input me-2" data-column-key="${columnKey}" ${isVisible ? 'checked' : ''}>
+                        ${th.innerText}
+                    </a>
+                </li>
+            `);
+        });
 
+        // Re-attach listener as innerHTML clears old ones
+        toggler.addEventListener('change', e => {
+            const checkbox = e.target;
+            if (checkbox.type === 'checkbox' && checkbox.dataset.columnKey) {
+                const columnKey = checkbox.dataset.columnKey;
+                state.columnVisibility[columnKey] = checkbox.checked;
+                saveState();
+                console.log('Column visibility changed:', columnKey, 'New state:', state.columnVisibility); // DEBUG: Log state after change
+                updateColumnVisibility();
+            }
+        });
+
+        toggler.addEventListener('click', e => e.stopPropagation());
+    }
+
+    function updateColumnVisibility() {
+        // Update table headers and cells
+        document.querySelectorAll('#contractTable th[data-column-key], #contractTable td[data-column-key]').forEach(el => {
+            const columnKey = el.dataset.columnKey;
+            // Apply visibility only if it's a togglable column (not index or actions)
+            if (columnKey && columnKey !== 'index' && columnKey !== 'actions') {
+                const isVisible = state.columnVisibility.hasOwnProperty(columnKey) ? state.columnVisibility[columnKey] : true;
+                el.classList.toggle('column-hidden', !isVisible);
+            }
+        });
+
+        // Update the checkboxes in the dropdown to reflect the current state
+        document.querySelectorAll('#columnToggler input[type="checkbox"]').forEach(checkbox => {
+            const columnKey = checkbox.dataset.columnKey;
+            if (state.columnVisibility.hasOwnProperty(columnKey)) {
+                checkbox.checked = state.columnVisibility[columnKey];
+            } else {
+                // If not in state, assume visible (checked) by default
+                checkbox.checked = true;
+            }
+        });
+    }
+
+    // --- EXISTING FUNCTIONS ---
+    async function viewContract(code) {
+        try {
+            const response = await fetch(`/contracts/view?code=${code}`);
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            const data = await response.json();
+            if (data.error) return alert(data.error);
+
+            document.getElementById("modalBodyContent").innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-2"><strong>Contract Code:</strong> <span id="modalContractCode">${data.contract_code || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Customer:</strong> <span id="modalCustomer">${data.customer || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Billing Company:</strong> <span id="modalBillingCompany">${data.billing_company || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Description:</strong> <span id="modalDescription">${data.cont_discription || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Sales Person:</strong> <span id="modalSalesPerson">${data.sales_person || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Start Date:</strong> <span id="modalStartDate">${data.start_date || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>End Date:</strong> <span id="modalEndDate">${data.end_date || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Billing Cycle:</strong> <span id="modalBillingCycle">${data.billing_cycle || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Email:</strong> <span id="modalEmail">${data.email || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Currency:</strong> <span id="modalCurrency">${data.currency || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Mono Commitment:</strong> <span id="modalMonoCommit">${data.mono_commitment || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Mono Charge:</strong> <span id="modalMonoCharge">${data.mono_charge || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Mono Excess:</strong> <span id="modalMonoExcess">${data.mono_excess || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Color Commitment:</strong> <span id="modalColorCommit">${data.color_commitment || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Color Charge:</strong> <span id="modalColorCharge">${data.color_charge || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Color Excess:</strong> <span id="modalColorExcess">${data.color_excess || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Rental Charges:</strong> <span id="modalRental">${data.rental_charges || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Software Rental:</strong> <span id="modalSoftware">${data.software_rental || 'N/A'}</span></div>
+                    <div class="col-md-6 mb-2"><strong>Duration:</strong> <span id="modalDurations">${data.duration || 'N/A'}</span></div>
+                </div>
+            `;
+
+            const downloadBtn = document.getElementById("downloadContractBtn");
+            if (data.document_path) {
+                downloadBtn.href = `/static/${data.document_path}`;
+                downloadBtn.classList.remove("d-none");
+            } else {
+                downloadBtn.classList.add("d-none");
+            }
+            new bootstrap.Modal(document.getElementById('viewContractModal')).show();
+        } catch(error) {
+            console.error("Error viewing contract:", error);
+            alert("Could not load contract details.");
+        }
+    }
+
+    async function deleteContract(code) {
+        if (!confirm("Are you sure you want to delete this contract?")) return;
+        try {
+            const response = await fetch(`/contracts/delete?code=${code}`, { method: "DELETE" });
+            const data = await response.json();
+            if (data.success) {
+                alert("✅ Contract deleted!");
+                await fetchAndDisplayContracts();
+            } else {
+                alert("❌ Error deleting contract.");
+            }
+        } catch(error) {
+            console.error("Error deleting contract:", error);
+            alert("Could not delete contract.");
+        }
+    }
+
+    async function copyContractDetails() {
+        const content = document.getElementById('modalBodyContent').innerText;
+        try {
+            await navigator.clipboard.writeText(content);
+            alert("✅ Contract details copied to clipboard!");
+        } catch (err) {
+            alert("❌ Copy failed. Your browser may not support this feature.");
+        }
+    }
+
+    const editContract = (code) => { window.location.href = `/contracts/edit?code=${code}`; };
+    const exportExcel = () => { window.location.href = "/contracts/export_excel"; };
+    const addContract = () => { window.location.href = "{{ url_for('assets.manage_contracts') }}"; };
 </script>
 
 </body>
 </html>
-{% endblock %}
