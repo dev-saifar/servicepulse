@@ -55,21 +55,81 @@ def index():
 @permission_required('can_add_technicians')
 def add_technician():
     if request.method == 'POST':
-        name = request.form['name']
-        mobile = request.form['mobile']
-        email = request.form['email']
+        try:
+            name = request.form.get('name')
+            mobile = request.form.get('mobile')
+            email = request.form.get('email')
+            dob_str = request.form.get('dob')
+            status = request.form.get('status', 'Free')
+            next_of_kin = request.form.get('next_of_kin')
+            kin_relation = request.form.get('kin_relation')
 
-        if not name or not mobile or not email:
-            flash("All fields are required!", "error")
-            return redirect(url_for('technicians.add_technician'))
+            dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
 
-        new_technician = Technician(name=name, mobile=mobile, email=email, status="Free")
-        db.session.add(new_technician)
-        db.session.commit()
-        flash("Technician added successfully!", "success")
-        return redirect(url_for('technicians.index'))
+            technician = Technician(
+                name=name,
+                mobile=mobile,
+                email=email,
+                dob=dob,
+                status=status,
+                next_of_kin=next_of_kin,
+                kin_relation=kin_relation
+            )
+
+            db.session.add(technician)
+            db.session.commit()
+
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+
+            # Handle profile photo
+            if 'photo' in request.files:
+                photo = request.files['photo']
+                if photo.filename != '':
+                    filename = f"tech_{technician.id}_photo.{photo.filename.split('.')[-1]}"
+                    photo_path = os.path.join(upload_folder, filename)
+                    try:
+                        img = Image.open(photo)
+                        img.thumbnail((400, 400))
+                        img.save(photo_path)
+                        technician.photo_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'Photo upload failed: {str(e)}', 'danger')
+
+            # Handle ID proof
+            if 'id_card' in request.files:
+                id_card = request.files['id_card']
+                if id_card.filename != '':
+                    filename = f"tech_{technician.id}_id.{id_card.filename.split('.')[-1]}"
+                    id_path = os.path.join(upload_folder, filename)
+                    try:
+                        id_card.save(id_path)
+                        technician.id_card_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'ID card upload failed: {str(e)}', 'danger')
+
+            # Handle CV
+            if 'cv' in request.files:
+                cv = request.files['cv']
+                if cv.filename != '':
+                    filename = f"tech_{technician.id}_cv.{cv.filename.split('.')[-1]}"
+                    cv_path = os.path.join(upload_folder, filename)
+                    try:
+                        cv.save(cv_path)
+                        technician.cv_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'CV upload failed: {str(e)}', 'danger')
+
+            db.session.commit()
+            flash('Technician added successfully!', 'success')
+            return redirect(url_for('technicians.index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding technician: {str(e)}', 'danger')
 
     return render_template('technicians/add_technician.html')
+
 
 
 @technicians_bp.route('/import', methods=['GET', 'POST'])

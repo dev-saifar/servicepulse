@@ -1,90 +1,67 @@
 {% extends 'base.html' %}
-
 {% block content %}
-    <div class="container">
-        <h2 class="title">Add Technician</h2>
+<div class="container mt-4">
+    <h1 class="text-center text-primary fw-bold">Add Technician</h1>
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('technicians.add_technician') }}">
 
-        <form action="{{ url_for('technicians.add_technician') }}" method="POST" class="technician-form">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👤 Name:</label>
+                <input type="text" class="form-control" name="name" placeholder="Enter Name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📱 Mobile:</label>
+                <input type="text" class="form-control" name="mobile" placeholder="Enter Mobile" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📧 Email:</label>
+                <input type="email" class="form-control" name="email" placeholder="Enter Email" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">📅 Date of Birth:</label>
+                <input type="date" class="form-control" name="dob" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">🔧 Status:</label>
+                <select class="form-control" name="status">
+                    <option value="Free" selected>Free</option>
+                    <option value="Busy">Busy</option>
+                </select>
+            </div>
 
-            <label for="name">👤 Name:</label>
-            <input type="text" name="name" placeholder="Enter Technician Name" required>
+            <!-- Next of Kin Section -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👪 Next of Kin Name and Phone:</label>
+                <input type="text" class="form-control" name="next_of_kin" placeholder="e.g. John Doe, 0700000000">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👤 Relation to Technician:</label>
+                <input type="text" class="form-control" name="kin_relation" placeholder="e.g. Brother">
+            </div>
+        </div>
 
-            <label for="mobile">📞 Mobile:</label>
-            <input type="text" name="mobile" placeholder="Enter Mobile Number" required>
+        <hr>
 
-            <label for="email">📧 Email:</label>
-            <input type="email" name="email" placeholder="Enter Email Address" required>
+        <!-- Upload Fields -->
+        <div class="mb-3">
+            <label class="form-label">🖼️ Profile Photo:</label>
+            <input type="file" class="form-control" name="photo" accept="image/*">
+        </div>
 
-            <label for="dob">📅 Date of Birth:</label>
-            <input type="date" name="dob" required>
+        <div class="mb-3">
+            <label class="form-label">🆔 ID Proof (PDF/JPG):</label>
+            <input type="file" class="form-control" name="id_card" accept=".pdf,image/*">
+        </div>
 
-            <button type="submit" class="button">✅ Add Technician</button>
-        </form>
+        <div class="mb-3">
+            <label class="form-label">📄 CV (PDF):</label>
+            <input type="file" class="form-control" name="cv" accept=".pdf">
+        </div>
 
-        <a href="{{ url_for('technicians.index') }}" class="back-button">⬅ Back to List</a>
-    </div>
-
-    <style>
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .title {
-            color: #007BFF;
-            margin-bottom: 20px;
-        }
-
-        .technician-form {
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            font-weight: bold;
-            margin-top: 10px;
-            text-align: left;
-            display: block;
-        }
-
-        input {
-            padding: 10px;
-            margin-top: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 100%;
-        }
-
-        .button {
-            background: #007BFF;
-            color: white;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-size: 16px;
-        }
-
-        .button:hover {
-            background: #0056b3;
-        }
-
-        .back-button {
-            display: inline-block;
-            margin-top: 15px;
-            text-decoration: none;
-            color: #007BFF;
-            font-weight: bold;
-        }
-
-        .back-button:hover {
-            text-decoration: underline;
-        }
-    </style>
+        <div class="d-flex justify-content-between mt-4">
+            <button type="submit" class="btn btn-success">➕ Add Technician</button>
+            <a href="{{ url_for('technicians.index') }}" class="btn btn-secondary">⬅ Cancel</a>
+        </div>
+    </form>
+</div>
 {% endblock %}
