@@ -16,6 +16,8 @@ class Technician(db.Model):
     email = db.Column(db.String(100))
     status = db.Column(db.String(10))
     dob = db.Column(db.Date)
+    next_of_kin = db.Column(db.String(100))
+    kin_relation = db.Column(db.String(100))
 
     # 🆕 New fields for files
     photo_url = db.Column(db.Text)       # /static/uploads/technicians/abc.jpg
