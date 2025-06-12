@@ -21,7 +21,6 @@
             <div class="col-md-6 mb-3">
                 <label class="form-label">📅 Date of Birth:</label>
                 <input type="date" class="form-control" name="dob" value="{{ technician.dob.strftime('%Y-%m-%d') if technician.dob }}">
-
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">🔧 Status:</label>
@@ -30,6 +29,16 @@
                     <option value="Busy" {% if technician.status == 'Busy' %}selected{% endif %}>Busy</option>
                 </select>
             </div>
+
+            <!-- Next of Kin Section -->
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👪 Next of Kin Name:</label>
+                <input type="text" class="form-control" name="next_of_kin" value="{{ technician.next_of_kin or '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">👤 Relation with Technician:</label>
+                <input type="text" class="form-control" name="kin_relation" value="{{ technician.kin_relation or '' }}">
+            </div>
         </div>
 
         <hr>
@@ -37,9 +46,22 @@
         <!-- Profile Photo -->
         <div class="mb-3">
             <label class="form-label">🖼️ Profile Photo:</label><br>
-            <img id="photoPreview" src="{{ technician.photo_url or url_for('static', filename='default-user.png') }}"
-                 class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+            {% if technician.photo_url %}
+    <img id="photoPreview" src="{{ technician.photo_url }}"
+{% else %}
+    <img id="photoPreview" src="/static/default-user.png"
+{% endif %}
+class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+
             <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewPhoto(event)">
+            {% if technician.photo_url %}
+            <div class="mt-2 d-flex gap-2">
+                <a href="{{ technician.photo_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 View Photo</a>
+                <form method="POST" action="{{ url_for('technicians.remove_photo', tech_id=technician.id) }}">
+                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete Profile Photo?')">🗑️ Delete</button>
+                </form>
+            </div>
+            {% endif %}
         </div>
 
         <!-- ID Proof -->

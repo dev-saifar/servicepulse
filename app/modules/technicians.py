@@ -117,6 +117,8 @@ def edit_technician(tech_id):
             technician.mobile = request.form.get('mobile')
             technician.email = request.form.get('email')
             technician.status = request.form.get('status')
+            technician.next_of_kin = request.form.get('next_of_kin')
+            technician.kin_relation = request.form.get('kin_relation')
 
             # Handle DOB
             dob_str = request.form.get('dob')
@@ -205,3 +207,19 @@ def delete_technician(tech_id):
     db.session.commit()
     flash('Technician deleted successfully!', 'success')
     return redirect(url_for('technicians.index'))
+@technicians_bp.route('/remove_photo/<int:tech_id>', methods=['POST'])
+@login_required
+def remove_photo(tech_id):
+    technician = Technician.query.get_or_404(tech_id)
+    if technician.photo_url:
+        try:
+            path = os.path.join(current_app.root_path, technician.photo_url[1:])
+            if os.path.exists(path):
+                os.remove(path)
+            technician.photo_url = None
+            db.session.commit()
+            flash('Profile photo removed successfully', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error removing profile photo: {str(e)}', 'danger')
+    return redirect(url_for('technicians.edit_technician', tech_id=tech_id))
