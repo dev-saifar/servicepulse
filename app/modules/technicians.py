@@ -8,6 +8,7 @@ from app.utils.permission_required import permission_required
 import os
 from flask import current_app
 from sqlalchemy import and_
+from PIL import Image # Import Image from Pillow for potential image processing
 
 technicians_bp = Blueprint('technicians', __name__, template_folder='../templates/technicians')
 
@@ -101,8 +102,6 @@ def import_technicians():
 
     return render_template('technicians/import_technicians.html')
 
-from PIL import Image
-
 
 @technicians_bp.route('/edit/<int:tech_id>', methods=['GET', 'POST'])
 @login_required
@@ -124,46 +123,100 @@ def edit_technician(tech_id):
             dob_str = request.form.get('dob')
             technician.dob = datetime.strptime(dob_str, '%Y-%m-%d').date() if dob_str else None
 
-            # Handle file uploads
+            # Define upload folder
             upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
             os.makedirs(upload_folder, exist_ok=True)
+
+            # Handle photo deletion
+            if request.form.get('delete_photo') == '1':
+                if technician.photo_url:
+                    try:
+                        path = os.path.join(current_app.root_path, technician.photo_url[1:])
+                        if os.path.exists(path):
+                            os.remove(path)
+                        technician.photo_url = None
+                        flash('Profile photo removed successfully!', 'success')
+                    except OSError as e:
+                        flash(f'Error deleting old photo file: {str(e)}', 'danger')
 
             # Photo upload
             if 'photo' in request.files:
                 photo = request.files['photo']
                 if photo.filename != '':
+                    # Delete old photo if it exists before saving new one
+                    if technician.photo_url:
+                        try:
+                            old_photo_path = os.path.join(current_app.root_path, technician.photo_url[1:])
+                            if os.path.exists(old_photo_path):
+                                os.remove(old_photo_path)
+                        except OSError as e:
+                            flash(f'Error deleting old photo file: {str(e)}', 'danger')
+
+                    # Save new photo
                     filename = f"tech_{tech_id}_photo.{photo.filename.split('.')[-1]}"
                     photo_path = os.path.join(upload_folder, filename)
-                    photo.save(photo_path)
-                    technician.photo_url = f"/static/uploads/{filename}"
+                    try:
+                        # Optional: Resize/compress image using Pillow
+                        img = Image.open(photo)
+                        img.thumbnail((400, 400)) # Resize to a max of 400x400
+                        img.save(photo_path)
+                        technician.photo_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'Error processing or saving photo: {str(e)}', 'danger')
+
 
             # ID card upload
             if 'id_card' in request.files:
                 id_card = request.files['id_card']
                 if id_card.filename != '':
+                    # Delete old ID card if it exists
+                    if technician.id_card_url:
+                        try:
+                            old_id_path = os.path.join(current_app.root_path, technician.id_card_url[1:])
+                            if os.path.exists(old_id_path):
+                                os.remove(old_id_path)
+                        except OSError as e:
+                            flash(f'Error deleting old ID card file: {str(e)}', 'danger')
+
                     filename = f"tech_{tech_id}_id.{id_card.filename.split('.')[-1]}"
                     id_path = os.path.join(upload_folder, filename)
-                    id_card.save(id_path)
-                    technician.id_card_url = f"/static/uploads/{filename}"
+                    try:
+                        id_card.save(id_path)
+                        technician.id_card_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'Error saving ID card: {str(e)}', 'danger')
 
             # CV upload
             if 'cv' in request.files:
                 cv = request.files['cv']
                 if cv.filename != '':
+                    # Delete old CV if it exists
+                    if technician.cv_url:
+                        try:
+                            old_cv_path = os.path.join(current_app.root_path, technician.cv_url[1:])
+                            if os.path.exists(old_cv_path):
+                                os.remove(old_cv_path)
+                        except OSError as e:
+                            flash(f'Error deleting old CV file: {str(e)}', 'danger')
+
                     filename = f"tech_{tech_id}_cv.{cv.filename.split('.')[-1]}"
                     cv_path = os.path.join(upload_folder, filename)
-                    cv.save(cv_path)
-                    technician.cv_url = f"/static/uploads/{filename}"
+                    try:
+                        cv.save(cv_path)
+                        technician.cv_url = f"/static/uploads/{filename}"
+                    except Exception as e:
+                        flash(f'Error saving CV: {str(e)}', 'danger')
 
             db.session.commit()
             flash('Technician updated successfully!', 'success')
-            return redirect(url_for('technicians.index'))
+            return redirect(url_for('technicians.edit_technician', tech_id=tech_id)) # Redirect back to edit page to show changes
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating technician: {str(e)}', 'danger')
 
     return render_template('technicians/edit.html', technician=technician)
+
 @technicians_bp.route('/remove_id/<int:tech_id>', methods=['POST'])
 @login_required
 def remove_id(tech_id):
@@ -207,19 +260,3 @@ def delete_technician(tech_id):
     db.session.commit()
     flash('Technician deleted successfully!', 'success')
     return redirect(url_for('technicians.index'))
-@technicians_bp.route('/remove_photo/<int:tech_id>', methods=['POST'])
-@login_required
-def remove_photo(tech_id):
-    technician = Technician.query.get_or_404(tech_id)
-    if technician.photo_url:
-        try:
-            path = os.path.join(current_app.root_path, technician.photo_url[1:])
-            if os.path.exists(path):
-                os.remove(path)
-            technician.photo_url = None
-            db.session.commit()
-            flash('Profile photo removed successfully', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error removing profile photo: {str(e)}', 'danger')
-    return redirect(url_for('technicians.edit_technician', tech_id=tech_id))
