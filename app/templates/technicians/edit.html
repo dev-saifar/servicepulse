@@ -30,7 +30,6 @@
                 </select>
             </div>
 
-            <!-- Next of Kin Section -->
             <div class="col-md-6 mb-3">
                 <label class="form-label">👪 Next of Kin Name and Phone Number:</label>
                 <input type="text" class="form-control" name="next_of_kin" value="{{ technician.next_of_kin or '' }}">
@@ -43,28 +42,25 @@
 
         <hr>
 
-        <!-- Profile Photo -->
         <div class="mb-3">
             <label class="form-label">🖼️ Profile Photo:</label><br>
             {% if technician.photo_url %}
-    <img id="photoPreview" src="{{ technician.photo_url }}"
-{% else %}
-    <img id="photoPreview" src="/static/default-user.png"
-{% endif %}
-class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+                <img id="photoPreview" src="{{ technician.photo_url }}"
+            {% else %}
+                <img id="photoPreview" src="/static/default-user.png"
+            {% endif %}
+            class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
 
             <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewPhoto(event)">
             {% if technician.photo_url %}
-            <div class="mt-2 d-flex gap-2">
-                <a href="{{ technician.photo_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 View Photo</a>
-                <form method="POST" action="{{ url_for('technicians.remove_photo', tech_id=technician.id) }}">
-                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete Profile Photo?')">🗑️ Delete</button>
-                </form>
-            </div>
+                <div class="mt-2 d-flex gap-2">
+                    <a href="{{ technician.photo_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 View Photo</a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="deletePhotoButton" onclick="confirmDeletePhoto()">🗑️ Delete</button>
+                    <input type="hidden" name="delete_photo" id="deletePhotoHiddenInput" value="0">
+                </div>
             {% endif %}
         </div>
 
-        <!-- ID Proof -->
         <div class="mb-3">
             <label class="form-label">🆔 ID Proof (PDF/JPG):</label>
             <input type="file" class="form-control" name="id_card" accept=".pdf,image/*">
@@ -78,7 +74,6 @@ class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: c
             {% endif %}
         </div>
 
-        <!-- CV Upload -->
         <div class="mb-3">
             <label class="form-label">📄 CV (PDF):</label>
             <input type="file" class="form-control" name="cv" accept=".pdf">
@@ -104,8 +99,27 @@ function previewPhoto(event) {
     const reader = new FileReader();
     reader.onload = function () {
         document.getElementById('photoPreview').src = reader.result;
+        // If a new photo is selected, ensure the delete flag is reset
+        document.getElementById('deletePhotoHiddenInput').value = '0';
+        // Hide the delete button if a new photo is being uploaded
+        const deletePhotoButton = document.getElementById('deletePhotoButton');
+        if (deletePhotoButton) {
+            deletePhotoButton.style.display = 'none';
+        }
     };
     reader.readAsDataURL(event.target.files[0]);
+}
+
+function confirmDeletePhoto() {
+    if (confirm('Are you sure you want to delete this profile photo? It will be removed when you save changes.')) {
+        document.getElementById('photoPreview').src = '/static/default-user.png';
+        document.getElementById('deletePhotoHiddenInput').value = '1';
+        // Hide the delete button
+        const deletePhotoButton = document.getElementById('deletePhotoButton');
+        if (deletePhotoButton) {
+            deletePhotoButton.style.display = 'none';
+        }
+    }
 }
 </script>
 {% endblock %}
