@@ -29,6 +29,8 @@ def fetch_asset(serial_number):
         "customer_name": asset.customer_name,
         "service_location": asset.service_location,
         "region": asset.region,
+        "asset_code": asset.asset_code,  # ✅ added
+        "install_date": asset.install_date,  # ✅ added
         "contract": asset.contract,
         "contract_expiry_date": asset.contract_expiry_date,
         "asset_Description": asset.asset_Description
@@ -173,7 +175,9 @@ def submit_request():
             spare_request = spare_req(
                 serial_number=item['serial_number'],
                 asset_Description=item['asset_Description'],
-                technician_id=int(item['technician_id']) if item['technician_id'].isdigit() else None,
+                code=item.get('asset_code'),
+
+                       technician_id=int(item['technician_id']) if item['technician_id'].isdigit() else None,
                 technician_name=item['technician_name'],
                 reading=int(item['reading']) if item['reading'].isdigit() else 0,
                 date=datetime.now(),
@@ -225,6 +229,10 @@ def print_request(request_id):
 
     # ✅ Fetch details from the first entry (all have the same metadata)
     request_entry = request_entries[0]
+
+    asset = Assets.query.filter_by(serial_number=request_entry.serial_number).first()
+
+    install_date = asset.install_date if asset else ""
 
     # ✅ Count number of warranty pending requests for this technician
     warranty_pending_count = spare_req.query.filter(
@@ -292,6 +300,8 @@ def print_request(request_id):
         "asset_Description": request_entry.asset_Description,
         "serial_number": request_entry.serial_number,
         "technician_name": request_entry.technician_name,
+        "asset_code": request_entry.code,  # ✅ Added here
+        "install_date": install_date,  # ✅ Fetched on the fly
         "warranty_pending": warranty_pending_count,
         "foc_pending": foc_pending_count,
         "spare_items": spare_items
