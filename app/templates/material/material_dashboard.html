@@ -6,205 +6,272 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Material Movement Dashboard</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    /* General Body and Container Styling */
+  <title>Enhanced Material Movement Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    /* ... (previous styles are the same) ... */
+    :root {
+      --primary-color: #007bff;
+      --primary-hover-color: #0056b3;
+      --success-color: #28a745;
+      --success-hover-color: #218838;
+      --danger-color: #dc3545;
+      --danger-hover-color: #c82333;
+      --text-color: #343a40;
+      --heading-color: #2c3e50;
+      --background-color: #f8f9fa;
+      --container-bg-color: #ffffff;
+      --table-border-color: #dee2e6;
+      --table-header-bg: #e9ecef;
+      --table-row-hover-bg: #e6f7ff;
+      --filter-section-bg: #f1f5f9;
+      --status-pending-bg: #fff3cd;
+      --status-pending-text: #664d03;
+      --status-approved-bg: #d1e7dd;
+      --status-approved-text: #0f5132;
+      --status-rejected-bg: #f8d7da;
+      --status-rejected-text: #58151c;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --border-radius: 0.5rem;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
     body {
-      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Modern sans-serif font stack */
+      font-family: var(--font-family);
       margin: 0;
       padding: 0;
-      background-color: #f4f7f6; /* Light grey background */
-      color: #333; /* Darker text color */
+      background-color: var(--background-color);
+      color: var(--text-color);
     }
 
     .container {
-      width: 95%; /* Make it wider */
-      max-width: 1400px; /* Increased max-width for more space */
-      margin: 25px auto; /* Center with more vertical margin */
-      padding: 25px;
-      background-color: #ffffff;
-      border-radius: 10px; /* Slightly more rounded corners */
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+      width: 95%;
+      max-width: 1600px;
+      margin: 30px auto;
+      padding: 30px;
+      background-color: var(--container-bg-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-md);
     }
 
     h1 {
       text-align: center;
-      color: #2c3e50; /* Darker blue-grey for heading */
+      color: var(--heading-color);
       margin-bottom: 30px;
-      font-size: 2em; /* Slightly larger heading */
+      font-size: 2.25em;
+      font-weight: 600;
     }
 
-    /* Filter Section Styling */
     .filter-section {
       display: flex;
-      flex-wrap: wrap; /* Allow items to wrap on smaller screens */
-      gap: 15px; /* Space between filter elements */
-      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 30px;
       padding: 20px;
-      background-color: #eaf1f8; /* Light blue background for filter section */
-      border-radius: 8px;
-      align-items: center; /* Vertically align items */
-      justify-content: flex-start; /* Align items to the start */
-    }
-
-    .filter-section label {
-      display: flex;
+      background-color: var(--filter-section-bg);
+      border-radius: var(--border-radius);
       align-items: center;
-      gap: 8px;
-      font-size: 0.95em;
-      color: #555;
     }
 
-    .filter-section input[type="date"],
-    .filter-section input[type="text"] {
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-group label {
+      font-size: 0.85em;
+      font-weight: 500;
+      color: #6c757d;
+      margin-bottom: 4px;
+    }
+
+    .filter-group input, .filter-group select {
       padding: 10px;
-      border: 1px solid #cce0f5; /* Lighter border color */
+      border: 1px solid var(--table-border-color);
       border-radius: 5px;
       font-size: 0.9em;
-      min-width: 120px; /* Ensure date inputs have a minimum width */
     }
 
-    /* Table Container and Table Styling */
+    .filter-buttons {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        margin-left: auto; /* Pushes buttons to the right */
+    }
+
     .table-container {
-      overflow-x: auto; /* Ensures horizontal scroll on small screens */
-      max-width: 100%;
-      margin-top: 20px;
-      border: 1px solid #e0e0e0; /* Soft border around the table */
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Subtle shadow for the table */
+      overflow-x: auto;
+      border: 1px solid var(--table-border-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
     }
 
     .table {
       width: 100%;
-      border-collapse: separate; /* Allows border-radius on cells */
-      border-spacing: 0; /* Remove space between cell borders */
-      margin-top: 0; /* No margin here as it's inside container */
-      background-color: #fff;
+      border-collapse: collapse;
+      table-layout: fixed;
     }
 
     .table th, .table td {
-      border: 1px solid #e0e0e0; /* Softer border */
-      padding: 12px 15px; /* Increased padding for more space */
+      border: 1px solid var(--table-border-color);
+      padding: 12px 8px;
       text-align: left;
-      font-size: 0.9em; /* Slightly smaller font for data rows */
-      vertical-align: top; /* Align cell content to top */
+      vertical-align: middle;
+      white-space: normal;
+      word-wrap: break-word;
+      /* CHANGE 1: Reduced font size for a more compact table */
+      font-size: 0.85em;
+    }
+
+    /* CHANGE 2: Added styles for the new clickable ID link */
+    .table td .id-link {
+        font-weight: 500;
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+    .table td .id-link:hover {
+        text-decoration: underline;
+        color: var(--primary-hover-color);
+    }
+
+    .table thead th:nth-child(1) { width: 5%; }
+    .table thead th:nth-child(2) { width: 8%; }
+    .table thead th:nth-child(3) { width: 12%; }
+    .table thead th:nth-child(4) { width: 7%; }
+    .table thead th:nth-child(5) { width: 10%; }
+    .table thead th:nth-child(6) { width: 15%; }
+    .table thead th:nth-child(7) { width: 10%; }
+    .table thead th:nth-child(8) { width: 8%; }
+    .table thead th:nth-child(9) { width: 8%; }
+    .table thead th:nth-child(10) { width: 15%; }
+    .table thead th:nth-child(11) { width: 8%; }
+    .table thead th:nth-child(12) { width: 8%; }
+
+    .table td:last-child {
+        white-space: nowrap;
     }
 
     .table thead th {
-      background-color: #edf2f7; /* Light grey-blue for headers */
-      font-weight: bold;
-      color: #333;
+      background-color: var(--table-header-bg);
+      font-weight: 600;
+      color: var(--heading-color);
       position: sticky;
-      top: 0; /* Makes header sticky */
+      top: 0;
       z-index: 10;
-      white-space: nowrap; /* Prevent header text from wrapping */
+      cursor: pointer;
+      user-select: none;
     }
 
-    .table tbody tr:nth-child(even) {
-      background-color: #f9f9f9; /* Zebra striping */
+    .table thead th .sort-indicator {
+        float: right;
+        color: #adb5bd;
+    }
+
+    .table thead th.sorted .sort-indicator {
+        color: var(--text-color);
     }
 
     .table tbody tr:hover {
-      background-color: #e6f7ff; /* Light blue on hover */
-      cursor: pointer; /* Indicate rows are clickable/interactive */
+      background-color: var(--table-row-hover-bg);
     }
 
-    .table thead input {
-      width: calc(100% - 10px); /* Adjust for padding, ensure it fits */
+    .table thead input,
+    .table thead select {
+      width: 100%;
       box-sizing: border-box;
-      padding: 8px;
+      padding: 8px 4px;
+      /* CHANGE 1 (cont.): Matching font size for filter inputs */
       font-size: 0.85em;
-      border: 1px solid #ccc;
+      border: 1px solid #ced4da;
       border-radius: 4px;
-      margin-top: 5px;
-      background-color: #fff;
     }
 
-    .table thead tr:nth-child(2) th {
-      background-color: #f5f8fb; /* Slightly different background for filter row */
-      z-index: 11; /* Ensure filter row stays on top of data rows */
-      padding-top: 8px; /* Adjust padding for filter row */
-      padding-bottom: 8px;
+    .status-badge {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.9em; /* Keep badge font size slightly larger for readability */
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.35rem;
     }
 
-    /* Actions Column specific styling to ensure visibility */
-    .table td:last-child {
-        white-space: nowrap; /* Prevents buttons from wrapping */
-        min-width: 100px; /* Ensure enough space for two icons */
-        text-align: center; /* Center buttons */
+    .status-badge.approved {
+        color: var(--status-approved-text);
+        background-color: var(--status-approved-bg);
+    }
+    .status-badge.pending {
+        color: var(--status-pending-text);
+        background-color: var(--status-pending-bg);
+    }
+    .status-badge.rejected {
+        color: var(--status-rejected-text);
+        background-color: var(--status-rejected-bg);
     }
 
-    .table td:last-child .btn {
-        margin: 0 4px; /* Space between buttons */
-        padding: 6px 8px; /* Smaller padding for actions buttons to fit */
-        font-size: 0.8em; /* Smaller font for actions buttons */
-    }
-
-    /* Pagination Styling */
     .pagination {
       margin-top: 25px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 15px 0;
-      border-top: 1px solid #eee; /* Separator line */
-      color: #555;
+      border-top: 1px solid var(--table-border-color);
+      color: #6c757d;
     }
 
-    /* Button Styling */
     .btn {
       padding: 10px 20px;
       cursor: pointer;
       border: none;
       border-radius: 5px;
       font-size: 0.95em;
-      transition: background-color 0.3s ease, transform 0.1s ease; /* Smooth transitions */
-      white-space: nowrap; /* Prevent button text from wrapping */
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-
-    .btn-primary {
-      background-color: #007bff;
-      color: white;
-    }
-    .btn-primary:hover:not(:disabled) { /* Add :not(:disabled) for hover */
-      background-color: #0056b3;
-      transform: translateY(-1px); /* Slight lift on hover */
-    }
-
-    .btn-success {
-        background-color: #28a745;
-        color: white;
-    }
-    .btn-success:hover:not(:disabled) {
-        background-color: #218838;
-        transform: translateY(-1px);
-    }
-
-    .btn-danger {
-      background-color: #dc3545;
-      color: white;
-    }
-    .btn-danger:hover:not(:disabled) {
-      background-color: #c82333;
-      transform: translateY(-1px);
-    }
+    .btn i { line-height: 1; }
 
     .btn:disabled {
         background-color: #cccccc;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
     }
 
-    /* Loading Spinner */
-    .loading-spinner {
+    .btn-primary { background-color: var(--primary-color); color: white; }
+    .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover-color); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-success { background-color: var(--success-color); color: white; }
+    .btn-success:hover:not(:disabled) { background-color: var(--success-hover-color); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-danger { background-color: var(--danger-color); color: white; }
+    .btn-danger:hover:not(:disabled) { background-color: var(--danger-hover-color); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-secondary { background-color: #6c757d; color: white; }
+    .btn-secondary:hover:not(:disabled) { background-color: #5a6268; transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+
+    .loading-spinner-container {
       display: none;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db; /* Blue spinner */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.7);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .loading-spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid var(--primary-color);
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 50px;
+      height: 50px;
       animation: spin 1s linear infinite;
-      margin-left: 15px;
     }
 
     @keyframes spin {
@@ -212,61 +279,100 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* No Records Message */
     .no-records-message {
         text-align: center;
-        padding: 20px;
-        color: #777;
-        font-style: italic;
+        padding: 40px;
+        color: #6c757d;
     }
-  </style>
+    .no-records-message i {
+        font-size: 3em;
+        margin-bottom: 10px;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .filter-section {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .filter-buttons {
+            width: 100%;
+            margin-left: 0;
+            flex-direction: column;
+        }
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        .pagination {
+            flex-direction: column;
+            gap: 15px;
+        }
+        h1 { font-size: 1.8em; }
+    }
+</style>
 </head>
 <body>
   <div class="container">
-    <h1>Material Movement Dashboard</h1>
+    <h1><i class="fas fa-truck-ramp-box"></i> Material Movement Dashboard</h1>
 
     <div class="filter-section">
-      <label>From Date: <input type="date" id="fromDate" /></label>
-      <label>To Date: <input type="date" id="toDate" /></label>
-      <button class="btn btn-primary" id="filterBtn" onclick="fetchRequests(1)">Filter</button>
-      <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()">Export</button>
-      <button class="btn btn-primary" id="newRequestBtn" onclick="window.location.href='/material/movement'">New Request</button>
-      <div id="loadingSpinner" class="loading-spinner"></div>
+        <div class="filter-group">
+            <label for="fromDate">From Date</label>
+            <input type="date" id="fromDate" />
+        </div>
+        <div class="filter-group">
+            <label for="toDate">To Date</label>
+            <input type="date" id="toDate" />
+        </div>
+        <div class="filter-buttons">
+            <button class="btn btn-primary" id="filterBtn" onclick="applyFilters()"><i class="fas fa-filter"></i> Apply Filters</button>
+            <button class="btn btn-secondary" id="clearBtn" onclick="clearFilters()"><i class="fas fa-times"></i> Clear</button>
+            <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Export</button>
+            <button class="btn btn-primary" id="newRequestBtn" onclick="window.location.href='/material/movement'"><i class="fas fa-plus"></i> New Request</button>
+        </div>
     </div>
 
     <div class="table-container">
       <table class="table" id="requestTable">
         <thead>
           <tr>
-            <th onclick="sortTable(0)">ID</th>
-            <th onclick="sortTable(1)">Date</th>
-            <th onclick="sortTable(2)">Customer</th>
+            <th onclick="sortTable('id')">ID <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
+            <th onclick="sortTable('date')">Date <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
+            <th onclick="sortTable('customer_name')">Customer <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
             <th>FOC</th>
             <th>Serial Number</th>
             <th>Asset Description</th>
-            <th>Technician</th>
-            <th>Warehouse</th>
+            <th onclick="sortTable('technician_name')">Technician <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
+            <th onclick="sortTable('warehouse')">Warehouse <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
             <th>Product Code</th>
             <th>Description</th>
-            <th>Status</th>
+            <th onclick="sortTable('warranty_status')">Status <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
             <th>Actions</th>
           </tr>
           <tr>
-            <th><input type="text" id="filterId" oninput="debounceFilter()" placeholder="Filter ID" /></th>
-            <th><input type="text" id="filterDate" oninput="debounceFilter()" placeholder="Filter Date" /></th>
-            <th><input type="text" id="filterCustomer" oninput="debounceFilter()" placeholder="Filter Customer" /></th>
-            <th><input type="text" id="filterFOC" oninput="debounceFilter()" placeholder="Filter FOC" /></th>
-            <th><input type="text" id="filterSerial" oninput="debounceFilter()" placeholder="Filter Serial" /></th>
-            <th><input type="text" id="filterAsset" oninput="debounceFilter()" placeholder="Filter Asset" /></th>
-            <th><input type="text" id="filterTechnician" oninput="debounceFilter()" placeholder="Filter Technician" /></th>
-            <th><input type="text" id="filterWarehouse" oninput="debounceFilter()" placeholder="Filter Warehouse" /></th>
-            <th><input type="text" id="filterProduct" oninput="debounceFilter()" placeholder="Filter Product" /></th>
-            <th><input type="text" id="filterDescription" oninput="debounceFilter()" placeholder="Filter Description" /></th>
-            <th><input type="text" id="filterStatus" oninput="debounceFilter()" placeholder="Filter Status" /></th>
+            <th><input type="text" id="filterId" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterDate" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterCustomer" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterFOC" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterSerial" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterAsset" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterTechnician" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterWarehouse" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterProduct" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th><input type="text" id="filterDescription" oninput="debounceFilter()" placeholder="Filter..." /></th>
+            <th>
+                <select id="filterStatus" onchange="debounceFilter()">
+                    <option value="">All</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Rejected">Rejected</option>
+                    </select>
+            </th>
             <th></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="tableBody">
           </tbody>
       </table>
     </div>
@@ -277,77 +383,105 @@
     </div>
   </div>
 
-  <script>
+  <div id="loadingOverlay" class="loading-spinner-container">
+    <div class="loading-spinner"></div>
+  </div>
+
+ <script>
     let currentPage = 1;
     let totalPages = 1;
     let isLoading = false;
-    let filterTimeout; // For debouncing filter inputs
-    let currentSortColumn = null;
-    let currentSortDirection = 'asc'; // 'asc' or 'desc'
+    let filterTimeout;
+    let currentSortColumn = 'id';
+    let currentSortDirection = 'desc';
+
+    const ALL_INPUT_IDS = [
+        "fromDate", "toDate", "filterId", "filterDate", "filterCustomer", "filterFOC",
+        "filterSerial", "filterAsset", "filterTechnician", "filterWarehouse",
+        "filterProduct", "filterDescription", "filterStatus"
+    ];
 
     function showLoadingSpinner() {
-      document.getElementById("loadingSpinner").style.display = "block";
+      document.getElementById("loadingOverlay").style.display = "flex";
     }
 
     function hideLoadingSpinner() {
-      document.getElementById("loadingSpinner").style.display = "none";
+      document.getElementById("loadingOverlay").style.display = "none";
     }
 
     function toggleButtons(disable) {
-      document.getElementById("filterBtn").disabled = disable;
-      document.getElementById("exportBtn").disabled = disable;
-      document.getElementById("newRequestBtn").disabled = disable;
-      document.getElementById("loadMoreBtn").disabled = disable;
+        document.querySelectorAll('.btn').forEach(button => {
+            button.disabled = disable;
+        });
+    }
+
+    function getStatusBadge(status) {
+        const lowerStatus = (status || 'pending').toLowerCase();
+        let badgeClass = '';
+        if (lowerStatus === 'approved') badgeClass = 'approved';
+        else if (lowerStatus === 'rejected') badgeClass = 'rejected';
+        else badgeClass = 'pending';
+
+        return `<span class="status-badge ${badgeClass}">${status}</span>`;
+    }
+
+    function updateSortIndicators() {
+        document.querySelectorAll("#requestTable thead th").forEach(th => {
+            th.classList.remove('sorted');
+            const icon = th.querySelector('.sort-indicator i');
+            if (icon) {
+                icon.className = 'fas fa-sort'; // Reset icon
+            }
+        });
+
+        const activeTh = document.querySelector(`th[onclick="sortTable('${currentSortColumn}')"]`);
+        if (activeTh) {
+            activeTh.classList.add('sorted');
+            const icon = activeTh.querySelector('.sort-indicator i');
+            if(icon){
+                icon.className = currentSortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+        }
     }
 
     function getFilterParams() {
-      return new URLSearchParams({
+      const params = new URLSearchParams({
         page: currentPage,
-        fromDate: document.getElementById("fromDate").value,
-        toDate: document.getElementById("toDate").value,
-        filterId: document.getElementById("filterId").value,
-        filterDate: document.getElementById("filterDate").value,
-        filterCustomer: document.getElementById("filterCustomer").value,
-        filterFOC: document.getElementById("filterFOC").value,
-        filterSerial: document.getElementById("filterSerial").value,
-        filterAsset: document.getElementById("filterAsset").value,
-        filterTechnician: document.getElementById("filterTechnician").value,
-        filterWarehouse: document.getElementById("filterWarehouse").value,
-        filterProduct: document.getElementById("filterProduct").value,
-        filterDescription: document.getElementById("filterDescription").value,
-        filterStatus: document.getElementById("filterStatus").value,
-        sortColumn: currentSortColumn, // Pass sort parameters to backend
-        sortDirection: currentSortDirection // Pass sort parameters to backend
+        sortColumn: currentSortColumn,
+        sortDirection: currentSortDirection
       });
+      ALL_INPUT_IDS.forEach(id => {
+          const element = document.getElementById(id);
+          if(element && element.value) {
+              params.append(id, element.value);
+          }
+      });
+      return params;
     }
 
-    function fetchRequests(page) {
+    function fetchRequests(page = 1) {
       if (isLoading) return;
       isLoading = true;
       showLoadingSpinner();
-      toggleButtons(true); // Disable buttons
+      toggleButtons(true);
+
       currentPage = page;
       const params = getFilterParams();
 
       fetch(`/material/fetch_requests?${params.toString()}`)
-        .then(res => {
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          return res.json();
-        })
+        .then(res => res.ok ? res.json() : Promise.reject(res))
         .then(data => {
-          const tbody = document.querySelector("#requestTable tbody");
-          if (page === 1) { // Clear table only if it's a new filter/initial load
+          const tbody = document.getElementById("tableBody");
+          if (page === 1) {
             tbody.innerHTML = "";
           }
 
           if (data.requests && data.requests.length > 0) {
             data.requests.forEach(req => {
-              const row = document.createElement("tr");
+              const row = tbody.insertRow();
               row.innerHTML = `
-                <td>${req.id}</td>
-                <td>${req.date}</td>
+                <td><a href="/material/edit_request/${req.id}" class="id-link" title="Edit Request #${req.id}">${req.id}</a></td>
+                <td>${new Date(req.date).toLocaleDateString()}</td>
                 <td>${req.customer_name}</td>
                 <td>${req.foc_no}</td>
                 <td>${req.serial_number}</td>
@@ -356,55 +490,63 @@
                 <td>${req.warehouse}</td>
                 <td>${req.product_code}</td>
                 <td>${req.description}</td>
-                <td>${req.warranty_status}</td>
+                <td>${getStatusBadge(req.warranty_status)}</td>
                 <td>
                   <button class="btn btn-primary" onclick="redirectToEditPage(${req.id})" title="Edit"><i class="fas fa-edit"></i></button>
                   <button class="btn btn-danger" onclick="deleteRequest(${req.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
                 </td>
               `;
-              tbody.appendChild(row);
             });
-          } else if (page === 1) { // Only show "No records" if it's the first page and no data
-            const noDataRow = document.createElement("tr");
-            noDataRow.innerHTML = `<td colspan="12" class="no-records-message">No records found for the current filters.</td>`;
-            tbody.appendChild(noDataRow);
+          } else if (page === 1) {
+            tbody.innerHTML = `<tr><td colspan="12" class="no-records-message"><i class="fas fa-info-circle"></i>No records found.</td></tr>`;
           }
 
-
           totalPages = data.total_pages;
-          document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages} (Total Records: ${data.total_records || '...' })`;
+          document.getElementById("paginationText").innerText = `Page ${currentPage} of ${totalPages} (Total Records: ${data.total_records || 'N/A'})`;
           document.getElementById("loadMoreBtn").style.display = currentPage >= totalPages ? "none" : "inline-block";
-
-          isLoading = false;
-          hideLoadingSpinner();
-          toggleButtons(false); // Re-enable buttons
         })
         .catch(err => {
           console.error("Error fetching data:", err);
-          alert("Error fetching data. Please try again.");
+          const tbody = document.getElementById("tableBody");
+          tbody.innerHTML = `<tr><td colspan="12" class="no-records-message"><i class="fas fa-exclamation-triangle"></i>Error fetching data. Please try again.</td></tr>`;
+        })
+        .finally(() => {
           isLoading = false;
           hideLoadingSpinner();
-          toggleButtons(false); // Re-enable buttons on error
+          toggleButtons(false);
+          updateSortIndicators();
         });
     }
 
     function debounceFilter() {
       clearTimeout(filterTimeout);
       filterTimeout = setTimeout(() => {
-        filterTable();
+        applyFilters();
       }, 500);
     }
 
-    function filterTable() {
-      currentPage = 1; // Reset to first page on new filter
-      fetchRequests(currentPage);
-      saveFilterPreferences(); // Save filters when applied
+    function applyFilters() {
+      fetchRequests(1);
+      saveFilterPreferences();
+    }
+
+    function clearFilters() {
+        ALL_INPUT_IDS.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = '';
+            }
+        });
+        currentSortColumn = 'id';
+        currentSortDirection = 'desc';
+        setDefaultDates();
+        applyFilters();
+        localStorage.removeItem('materialDashboardFilters');
     }
 
     function loadMore() {
-      if (currentPage < totalPages) {
-        currentPage++;
-        fetchRequests(currentPage);
+      if (currentPage < totalPages && !isLoading) {
+        fetchRequests(currentPage + 1);
       }
     }
 
@@ -418,96 +560,81 @@
     }
 
     function deleteRequest(id) {
-      if (confirm("Are you sure you want to delete this request? This action cannot be undone.")) {
-        fetch(`/material/delete_request/${id}`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" }
-        }).then(res => {
-          if (res.ok) {
-            alert("Request deleted successfully!");
-            fetchRequests(1); // Refresh the table after deletion
-          } else {
-            // Attempt to read error message from response
-            res.json().then(errorData => {
-                alert(`Failed to delete request: ${errorData.message || res.statusText}`);
-            }).catch(() => {
-                alert("Failed to delete request. Please try again.");
-            });
-          }
-        }).catch(err => {
-            console.error("Network error during delete:", err);
+      if (confirm("Are you sure you want to delete this request?")) {
+        const row = event.target.closest('tr');
+        if(row) row.style.opacity = '0.5';
+
+        fetch(`/material/delete_request/${id}`, { method: "DELETE" })
+          .then(res => {
+            if (res.ok) {
+              row.remove();
+            } else {
+              if(row) row.style.opacity = '1';
+              res.json().then(err => alert(`Failed to delete: ${err.message || 'Server error'}`));
+            }
+          })
+          .catch(err => {
+            if(row) row.style.opacity = '1';
             alert("Network error. Could not delete request.");
-        });
+          });
       }
     }
 
-    function sortTable(column) {
-      // If clicking the same column, toggle direction
-      if (currentSortColumn === column) {
+    function sortTable(columnKey) {
+      if (currentSortColumn === columnKey) {
         currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
       } else {
-        currentSortColumn = column;
-        currentSortDirection = 'asc'; // Default to ascending when sorting a new column
+        currentSortColumn = columnKey;
+        currentSortDirection = 'asc';
       }
-      fetchRequests(1); // Re-fetch data with new sort order from the server
-      saveFilterPreferences(); // Save sort preferences
+      fetchRequests(1);
+      saveFilterPreferences();
     }
 
     function saveFilterPreferences() {
-        const preferences = {
-            fromDate: document.getElementById("fromDate").value,
-            toDate: document.getElementById("toDate").value,
-            filterId: document.getElementById("filterId").value,
-            filterDate: document.getElementById("filterDate").value,
-            filterCustomer: document.getElementById("filterCustomer").value,
-            filterFOC: document.getElementById("filterFOC").value,
-            filterSerial: document.getElementById("filterSerial").value,
-            filterAsset: document.getElementById("filterAsset").value,
-            filterTechnician: document.getElementById("filterTechnician").value,
-            filterWarehouse: document.getElementById("filterWarehouse").value,
-            filterProduct: document.getElementById("filterProduct").value,
-            filterDescription: document.getElementById("filterDescription").value,
-            filterStatus: document.getElementById("filterStatus").value,
-            sortColumn: currentSortColumn,
-            sortDirection: currentSortDirection
-        };
+        const preferences = {};
+        ALL_INPUT_IDS.forEach(id => {
+            const element = document.getElementById(id);
+            if(element) preferences[id] = element.value;
+        });
+        preferences.sortColumn = currentSortColumn;
+        preferences.sortDirection = currentSortDirection;
         localStorage.setItem('materialDashboardFilters', JSON.stringify(preferences));
     }
 
     function loadFilterPreferences() {
         const preferences = JSON.parse(localStorage.getItem('materialDashboardFilters'));
         if (preferences) {
-            document.getElementById("fromDate").value = preferences.fromDate || '';
-            document.getElementById("toDate").value = preferences.toDate || '';
-            document.getElementById("filterId").value = preferences.filterId || '';
-            document.getElementById("filterDate").value = preferences.filterDate || '';
-            document.getElementById("filterCustomer").value = preferences.filterCustomer || '';
-            document.getElementById("filterFOC").value = preferences.filterFOC || '';
-            document.getElementById("filterSerial").value = preferences.filterSerial || '';
-            document.getElementById("filterAsset").value = preferences.filterAsset || '';
-            document.getElementById("filterTechnician").value = preferences.filterTechnician || '';
-            document.getElementById("filterWarehouse").value = preferences.warehouse || '';
-            document.getElementById("filterProduct").value = preferences.filterProduct || '';
-            document.getElementById("filterDescription").value = preferences.filterDescription || '';
-            document.getElementById("filterStatus").value = preferences.filterStatus || '';
-            currentSortColumn = preferences.sortColumn;
-            currentSortDirection = preferences.sortDirection;
+            ALL_INPUT_IDS.forEach(id => {
+                const element = document.getElementById(id);
+                if(element && preferences[id] !== undefined) {
+                    element.value = preferences[id];
+                }
+            });
+            currentSortColumn = preferences.sortColumn || 'id';
+            currentSortDirection = preferences.sortDirection || 'desc';
         } else {
-            // Set default dates if no preferences are found in local storage
-            const today = new Date();
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-
-            document.getElementById("toDate").valueAsDate = today;
-            document.getElementById("fromDate").valueAsDate = thirtyDaysAgo;
+            setDefaultDates();
         }
     }
 
+    /* CHANGE: Default 'To Date' is now set to tomorrow to include all of today's requests */
+    function setDefaultDates() {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1); // Set the date to the next day
+
+        const thirtyDaysAgo = new Date(new Date().setDate(today.getDate() - 30));
+
+        document.getElementById("toDate").valueAsDate = tomorrow;
+        document.getElementById("fromDate").valueAsDate = thirtyDaysAgo;
+    }
+
     window.onload = () => {
-      loadFilterPreferences(); // Load preferences first
-      fetchRequests(1); // Then fetch data based on loaded preferences
+      loadFilterPreferences();
+      fetchRequests(1);
     };
-  </script>
+</script>
 </body>
 </html>
 {% endblock %}
