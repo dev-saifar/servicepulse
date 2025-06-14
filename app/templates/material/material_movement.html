@@ -230,10 +230,11 @@ function calculateYield(input) {
     let technician_name = document.getElementById("technician").options[document.getElementById("technician").selectedIndex].text;
     let current_reading = document.getElementById("current_reading").value.trim();
 
-    if (serial_number === "" || technician_id === "") {
-        alert("Error: Please enter all required fields (Serial Number & Technician).");
-        return;
-    }
+    if (serial_number === "" || technician_id === "" || current_reading === "") {
+    alert("Error: Please enter all required fields (Serial Number, Technician, and Current Meter Reading).");
+    return;
+}
+
 
     let spare_requests = [];
     document.querySelectorAll(".spare_table tr").forEach((row, index) => {
@@ -377,10 +378,11 @@ function submitRequest() {
     let technician_name = document.getElementById("technician").options[document.getElementById("technician").selectedIndex].text;
     let current_reading = document.getElementById("current_reading").value.trim();
 
-    if (serial_number === "" || technician_id === "") {
-        alert("Error: Please enter all required fields (Serial Number & Technician).");
-        return;
-    }
+    if (serial_number === "" || technician_id === "" || current_reading === "") {
+    alert("Error: Please enter all required fields (Serial Number, Technician, and Current Meter Reading).");
+    return;
+}
+
 
     let spare_requests = [];
     document.querySelectorAll(".spare_table tr").forEach((row, index) => {
