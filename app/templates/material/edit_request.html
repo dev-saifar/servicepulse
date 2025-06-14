@@ -1,103 +1,122 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="container mt-4 mb-5 p-4 bg-white shadow rounded" style="max-width: 900px;">
+    <h3 class="text-center mb-4 text-primary">Edit Material Request</h3>
+    <form id="editForm">
+        <input type="hidden" id="edit_id">
+        <input type="hidden" id="edit_request_uuid">
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Request</title>
-    <style>
-        .grid-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Two equal columns */
-    gap: 10px; /* Spacing between columns */
-}
+        <!-- Section: Asset Information -->
+        <h5 class="text-secondary mb-3">Asset Information</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>Serial Number</label>
+                <input type="text" id="edit_serial_number" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Asset Description</label>
+                <input type="text" id="edit_asset_Description" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Product Code</label>
+                <input type="text" id="edit_product_code" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Description</label>
+                <input type="text" id="edit_description" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Code (Editable)</label>
+                <input type="text" id="edit_code" class="form-control">
+            </div>
+        </div>
 
-.grid-item {
-    display: flex;
-    flex-direction: column;
-}
+        <!-- Section: Technician -->
+        <h5 class="mt-4 text-secondary">Technician Details</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>Technician Name</label>
+                <input type="text" id="edit_technician_name" class="form-control" readonly>
+            </div>
+        </div>
 
-@media (max-width: 768px) {
-    .grid-container {
-        grid-template-columns: 1fr; /* Switch to a single column */
-    }
-}
+        <!-- Section: Contract and Service Info -->
+        <h5 class="mt-4 text-secondary">Service & Contract Details</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>Customer Name</label>
+                <input type="text" id="edit_customer_name" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Service Location</label>
+                <input type="text" id="edit_service_location" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Region</label>
+                <input type="text" id="edit_region" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Contract</label>
+                <input type="text" id="edit_contract" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+                <label>Contract Expiry Date</label>
+                <input type="text" id="edit_contract_expiry_date" class="form-control" readonly>
+            </div>
+        </div>
 
-        body { font-family: Arial, sans-serif; }
-        .container { width: 50%; margin: auto; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-        .input-field { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .btn { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
-        .btn:hover { background-color: #0056b3; }
-        .readonly { background-color: #e9ecef; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Edit Request</h2>
+        <!-- Section: Usage -->
+        <h5 class="mt-4 text-secondary">Spare Part & Usage</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>Reading</label>
+                <input type="number" id="edit_reading" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label>Warehouse</label>
+                <input type="text" id="edit_warehouse" class="form-control">
+            </div>
+        </div>
 
-        <form id="editForm">
-            <input type="hidden" id="edit_id">
+        <!-- Section: Additional Info -->
+        <h5 class="mt-4 text-secondary">Additional Information</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>FOC No</label>
+                <input type="text" id="edit_foc_no" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label>Any Remarks</label>
+                <input type="text" id="edit_any_remarks" class="form-control">
+            </div>
+        </div>
 
-            <h3>Asset Information</h3>
-            <label>Serial Number:</label>
-            <input type="text" id="edit_serial_number" class="input-field readonly" readonly>
-            <label>Asset Description:</label>
-            <input type="text" id="edit_asset_Description" class="input-field readonly" readonly>
-            <label>Product Code:</label>
-            <input type="text" id="edit_product_code" class="input-field readonly" readonly>
-            <label>Description:</label>
-            <input type="text" id="edit_description" class="input-field readonly" readonly>
-            <label>Code (Editable):</label>
-            <input type="text" id="edit_code" class="input-field">
+        <!-- Section: Warranty -->
+        <h5 class="mt-4 text-secondary">Warranty</h5>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label>Warranty Status</label>
+                <select id="edit_warranty_status" class="form-select">
+                    <option value="Claimed">Claimed</option>
+                    <option value="Warranty Over">Warranty Over</option>
+                    <option value="Non Claimable">Non Claimable</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label>Warranty Remarks</label>
+                <input type="text" id="edit_warranty_remarks" class="form-control">
+            </div>
+        </div>
 
-            <h3>Technician Details</h3>
-            <label>Technician Name:</label>
-            <input type="text" id="edit_technician_name" class="input-field readonly" readonly>
-
-            <h3>Service & Contract Details</h3>
-            <label>Customer Name:</label>
-            <input type="text" id="edit_customer_name" class="input-field readonly" readonly>
-            <label>Service Location:</label>
-            <input type="text" id="edit_service_location" class="input-field readonly" readonly>
-            <label>Region:</label>
-            <input type="hidden" id="edit_request_uuid">
-            <input type="text" id="edit_region" class="input-field readonly" readonly>
-            <label>Contract:</label>
-            <input type="text" id="edit_contract" class="input-field readonly" readonly>
-            <label>Contract Expiry Date:</label>
-            <input type="text" id="edit_contract_expiry_date" class="input-field readonly" readonly>
-
-            <h3>Spare Part & Usage Information</h3>
-            <label>Reading (Editable):</label>
-            <input type="number" id="edit_reading" class="input-field">
-
-            <label>Warehouse (Editable):</label>
-            <input type="text" id="edit_warehouse" class="input-field">
-
-            <h3>Additional Information</h3>
-            <label>FOC No (Editable):</label>
-            <input type="text" id="edit_foc_no" class="input-field">
-            <label>Any Remarks (Editable):</label>
-            <input type="text" id="edit_any_remarks" class="input-field">
-
-            <h3>Warranty Details</h3>
-            <label>Warranty Status (Editable):</label>
-            <select id="edit_warranty_status" class="input-field">
-            <option value="Claimed">Claimed</option>
-            <option value="Warranty Over">Warranty Over</option>
-            <option value="Non Claimable">Non Claimable</option>
-            <option value="Pending">Pending</option>
-            </select>
-            <label>Warranty Remarks (Editable):</label>
-            <input type="text" id="edit_warranty_remarks" class="input-field">
-
-            <button type="button" class="btn" onclick="saveChanges()">Save Changes</button>
-            <button type="button" class="btn" style="background-color: green;" onclick="reprintRequest()">Reprint</button>
-        </form>
-    </div>
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <button type="button" class="btn btn-success px-4" onclick="saveChanges()">Save</button>
+            <button type="button" class="btn btn-outline-primary px-4" onclick="reprintRequest()">Reprint</button>
+        </div>
+    </form>
+</div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
