@@ -93,6 +93,8 @@
             <strong>Technician Name:</strong> <span id="technician"></span>
         </div>
         <div class="pending-info">
+            <strong>Asset Code:</strong> <span id="asset_code"></span><br>
+            <strong>Install Date:</strong> <span id="install_date"></span><br>
             <p><strong>Warranty Pending:</strong> <span id="warranty_pending">{{ request_data.warranty_pending }}</span></p>
             <p><strong>FOC Pending:</strong> <span id="foc_pending">{{ request_data.foc_pending }}</span></p>
             <p><strong>Printed On:</strong> <span id="printed_on"></span></p>
@@ -169,6 +171,9 @@
             document.getElementById("serial_number").textContent = requestData.serial_number;
             document.getElementById("technician").textContent = requestData.technician_name;
             document.getElementById("printed_on").textContent = new Date().toLocaleString();
+            document.getElementById("asset_code").textContent = requestData.asset_code || '';
+            document.getElementById("install_date").textContent = requestData.install_date || '';
+
 
 
             // ✅ Check if contract code starts with "MDS" or "DS" and update title

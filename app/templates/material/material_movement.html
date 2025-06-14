@@ -36,6 +36,15 @@
             <label>Asset Description</label>
             <input type="text" id="asset_Description" class="form-control" readonly>
         </div>
+        <div class="col-md-4">
+    <label>Asset Code</label>
+    <input type="text" id="asset_code" class="form-control" readonly>
+</div>
+<div class="col-md-4">
+    <label>Install Date</label>
+    <input type="text" id="install_date" class="form-control" readonly>
+</div>
+
         <div class="col-md-6">
             <label>Technician Name</label>
             <select id="technician" class="form-select"></select>
@@ -141,6 +150,9 @@
                 document.getElementById("contract").value = data.contract;
                 document.getElementById("contract_expiry_date").value = data.contract_expiry_date;
                 document.getElementById("asset_Description").value = data.asset_Description;
+                document.getElementById("asset_code").value = data.asset_code || '';
+document.getElementById("install_date").value = data.install_date || '';
+
 
                 // Fetch and display history for this serial number
                 fetchHistory(serial);
@@ -245,6 +257,8 @@ function calculateYield(input) {
             customer_name: document.getElementById("customer_name").value,
             service_location: document.getElementById("service_location").value,
             region: document.getElementById("region").value,
+            asset_code: document.getElementById("asset_code").value,
+
             contract: document.getElementById("contract").value,
             contract_expiry_date: document.getElementById("contract_expiry_date").value,
             product_code: part_code,
