@@ -628,7 +628,11 @@ def delivery_dashboard():
             and r.delivery_date and r.delivery_date.date() == today
         )
 
-        pending = sum(1 for r in user_deliveries if r.delivery_status == 'Pending')
+        total_delivered = sum(
+            1 for r in user_deliveries
+            if r.delivery_status == 'Delivered'
+        )
+
         in_transit = sum(1 for r in user_deliveries if r.delivery_status == 'In Transit')
 
         # 🟡 Late Deliveries
@@ -672,8 +676,8 @@ def delivery_dashboard():
 
         stats.append({
             'name': member.name,
+            'total_delivered': total_delivered,
             'delivered_today': delivered_today,
-            'pending': pending,
             'in_transit': in_transit,
             'late': late,
             'avg_time': avg_minutes,

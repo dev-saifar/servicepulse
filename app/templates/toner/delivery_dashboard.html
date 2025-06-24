@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold text-primary">
+    <i class="fas fa-people-carry"></i> Toner Delivery Dashboard
+  </h2>
+</div>
+
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,7 +17,6 @@
   }
 </style>
 <!-- Summary Cards -->
-<!-- Global Toner Summary -->
 <div class="row text-center mb-4">
   <div class="col-md-3 mb-2">
     <div class="card border-dark shadow-sm">
@@ -32,8 +37,8 @@
   <div class="col-md-3 mb-2">
     <div class="card border-warning shadow-sm">
       <div class="card-body">
-        <h6 class="card-title text-warning"><i class="fas fa-hourglass-half"></i> Pending</h6>
-        <h4>{{ stats | sum(attribute='pending') }}</h4>
+        <h6 class="card-title text-warning"><i class="fas fa-box"></i> Total Delivered (Period)</h6>
+        <h4>{{ stats | sum(attribute='total_delivered') }}</h4>
       </div>
     </div>
   </div>
@@ -52,8 +57,7 @@
   <p class="text-muted small">
     <strong>Note:</strong> A delivery is marked as <strong>Late</strong> if the time taken from <code>date_issued</code> to <code>delivery_date</code> exceeds:
     <ul class="mb-2">
-      <li><code>6 hours</code> for deliveries in <strong>Kampala</strong></li>
-      <li><code>48 hours</code> for all <strong>other regions</strong></li>
+      <li><code>6 hours</code> for deliveries in <strong>Kampala</strong> 48 hours</code> for all <strong>other regions</strong></li>
     </ul>
   </p>
 
@@ -78,7 +82,7 @@
       <tr>
         <th>Name</th>
         <th>Delivered Today</th>
-        <th>Pending</th>
+        <th>Total Delivered</th>
         <th>In Transit</th>
         <th>Late</th>
         <th>Avg Delivery Time (mins)</th>
@@ -96,7 +100,7 @@
           {% endif %}
         </td>
         <td><span class="badge bg-success">{{ s.delivered_today }}</span></td>
-        <td><span class="badge bg-warning text-dark">{{ s.pending }}</span></td>
+        <td><span class="badge bg-primary">{{ s.total_delivered }}</span></td>
         <td><span class="badge bg-info text-white">{{ s.in_transit }}</span></td>
         <td><span class="badge bg-danger">{{ s.late }}</span></td>
         <td>
@@ -124,19 +128,11 @@
       <tr>
         <td>Total</td>
         <td>{{ stats | sum(attribute='delivered_today') }}</td>
-        <td>{{ stats | sum(attribute='pending') }}</td>
+        <td>{{ stats | sum(attribute='total_delivered') }}</td>
         <td>{{ stats | sum(attribute='in_transit') }}</td>
         <td>{{ stats | sum(attribute='late') }}</td>
-        <td>
-          {{ (
-              stats | map(attribute='avg_time') | sum
-            ) // (stats|length) if stats|length > 0 else 0 }}
-        </td>
-        <td>
-          {{ (
-              stats | map(attribute='avg_transit') | sum
-            ) // (stats|length) if stats|length > 0 else 0 }}
-        </td>
+        <td>{{ (stats | map(attribute='avg_time') | sum) // (stats|length) if stats|length > 0 else 0 }}</td>
+        <td>{{ (stats | map(attribute='avg_transit') | sum) // (stats|length) if stats|length > 0 else 0 }}</td>
       </tr>
     </tfoot>
   </table>
