@@ -17,8 +17,7 @@
     <div class="card border-dark shadow-sm">
       <div class="card-body">
         <h6 class="card-title text-dark"><i class="fas fa-layer-group"></i> Total Requests Today</h6>
-<h4>{{ today_request_count }}</h4>
-
+        <h4>{{ today_request_count }}</h4>
       </div>
     </div>
   </div>
@@ -50,17 +49,27 @@
 
 <div class="container mt-4">
   <h4>Delivery Team Performance</h4>
+  <p class="text-muted small">
+    <strong>Note:</strong> A delivery is marked as <strong>Late</strong> if the time taken from <code>date_issued</code> to <code>delivery_date</code> exceeds:
+    <ul class="mb-2">
+      <li><code>6 hours</code> for deliveries in <strong>Kampala</strong></li>
+      <li><code>48 hours</code> for all <strong>other regions</strong></li>
+    </ul>
+  </p>
 
   <!-- Filters -->
   <form method="get" class="row g-2 mb-3">
-    <div class="col-md-4">
-      <input type="text" name="delivery_boy" class="form-control" placeholder="Search Delivery Boy" value="{{ request.args.get('delivery_boy', '') }}">
+    <div class="col-md-3">
+      <input type="text" name="delivery_boy" class="form-control" placeholder="Search Delivery Boy" value="{{ filters.delivery_boy or '' }}">
     </div>
-    <div class="col-md-4">
-      <input type="date" name="filter_date" class="form-control" value="{{ request.args.get('filter_date', '') }}">
+    <div class="col-md-3">
+      <input type="date" name="from_date" class="form-control" value="{{ filters.from_date or '' }}">
     </div>
-    <div class="col-md-4">
-      <button type="submit" class="btn btn-primary">Apply Filters</button>
+    <div class="col-md-3">
+      <input type="date" name="to_date" class="form-control" value="{{ filters.to_date or '' }}">
+    </div>
+    <div class="col-md-3">
+      <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
     </div>
   </form>
 
@@ -71,6 +80,7 @@
         <th>Delivered Today</th>
         <th>Pending</th>
         <th>In Transit</th>
+        <th>Late</th>
         <th>Avg Delivery Time (mins)</th>
         <th>Avg Transit Time (mins)</th>
       </tr>
@@ -88,6 +98,7 @@
         <td><span class="badge bg-success">{{ s.delivered_today }}</span></td>
         <td><span class="badge bg-warning text-dark">{{ s.pending }}</span></td>
         <td><span class="badge bg-info text-white">{{ s.in_transit }}</span></td>
+        <td><span class="badge bg-danger">{{ s.late }}</span></td>
         <td>
           {% if s.avg_time > 60 %}
             <span class="badge bg-danger">{{ s.avg_time }}</span>
@@ -115,19 +126,16 @@
         <td>{{ stats | sum(attribute='delivered_today') }}</td>
         <td>{{ stats | sum(attribute='pending') }}</td>
         <td>{{ stats | sum(attribute='in_transit') }}</td>
+        <td>{{ stats | sum(attribute='late') }}</td>
         <td>
-          {{
-            (
+          {{ (
               stats | map(attribute='avg_time') | sum
-            ) // (stats|length) if stats|length > 0 else 0
-          }}
+            ) // (stats|length) if stats|length > 0 else 0 }}
         </td>
         <td>
-          {{
-            (
+          {{ (
               stats | map(attribute='avg_transit') | sum
-            ) // (stats|length) if stats|length > 0 else 0
-          }}
+            ) // (stats|length) if stats|length > 0 else 0 }}
         </td>
       </tr>
     </tfoot>
