@@ -8,7 +8,7 @@ from sqlalchemy.orm import aliased
 
 from app.utils.permission_required import permission_required
 from flask_login import login_required
-
+from sqlalchemy import func
 ticket1_bp = Blueprint("ticket1", __name__, template_folder="../templates/ticket1")
 
 
@@ -218,7 +218,7 @@ def ticket_dashboard():
         tickets=tickets,
         today=date.today(),
         total_open=sum(1 for t in tickets if t.status == 'Open'),
-        total_in_progress=sum(1 for t in tickets if t.status == 'In Process'),
+        total_in_progress=sum(1 for t in tickets if t.status == 'In Progress'),
         total_closed=sum(1 for t in tickets if t.status == 'Closed'),
         avg_resolution_time=round(
             sum((t.closed_at - t.created_at).total_seconds() for t in tickets if t.closed_at) / 3600 / max(1,
@@ -537,9 +537,12 @@ from app.models import Ticket  # or however you import it
 def ticket_dashboard_summary_page():
     from datetime import datetime, timedelta
 
-    now = datetime.today()
-    from_date = request.args.get('from_date') or (now - timedelta(days=90)).strftime("%Y-%m-%d")
-    to_date = request.args.get('to_date') or now.strftime("%Y-%m-%d")
+    now = datetime.now()
+    from_str = request.args.get('from_date')
+    to_str = request.args.get('to_date')
+
+    from_date = datetime.strptime(from_str, "%Y-%m-%d") if from_str else now - timedelta(days=90)
+    to_date = datetime.strptime(to_str, "%Y-%m-%d") + timedelta(days=1) if to_str else now
 
     technician = request.args.get('technician')
 
@@ -548,7 +551,7 @@ def ticket_dashboard_summary_page():
     if from_date:
         query = query.filter(Ticket.created_at >= from_date)
     if to_date:
-        query = query.filter(Ticket.created_at <= to_date)
+        query = query.filter(Ticket.created_at >= from_date, Ticket.created_at <= to_date)
     if technician:
         query = query.filter(Technician.name.ilike(f"%{technician}%"))
 
@@ -557,7 +560,7 @@ def ticket_dashboard_summary_page():
 
     summary = {
         'open': sum(1 for t in tickets if t.status == 'Open'),
-        'in_process': sum(1 for t in tickets if t.status == 'In Process'),
+        'in_process': sum(1 for t in tickets if t.status == 'In Progress'),
         'closed': sum(1 for t in tickets if t.status == 'Closed'),
         'overdue': sum(1 for t in tickets if t.status == 'Open' and (now - t.created_at).days > 3),
         'avg_resolution': round(
@@ -584,7 +587,12 @@ def ticket_dashboard_summary_page():
 
     # 🔸 Alarming serials (≥3 in last 90 days)
     recent_cutoff = now - timedelta(days=90)
-    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
+    recent_tickets = Ticket.query.filter(
+        Ticket.created_at >= recent_cutoff,
+        Ticket.call_type.ilike("CM"),
+        Ticket.serial_number.isnot(None),
+        func.length(func.trim(Ticket.serial_number)) > 0
+    ).all()
 
     counter = defaultdict(list)
     for t in recent_tickets:
@@ -618,10 +626,8 @@ def technician_analytics():
     from collections import defaultdict
     from app.models import Technician, Ticket, spare_req
 
-    # 📅 Set default date range from 1st Jan 2025 to today
     today = datetime.today()
     default_from = today - timedelta(days=90)
-
 
     from_date_str = request.args.get('from_date') or default_from.strftime("%Y-%m-%d")
     to_date_str = request.args.get('to_date') or today.strftime("%Y-%m-%d")
@@ -630,7 +636,7 @@ def technician_analytics():
     from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
     to_date = datetime.strptime(to_date_str, "%Y-%m-%d")
 
-    # 🔍 Resolve technician name to ID
+    # 🔍 Resolve technician name
     technician_id = None
     if technician_name:
         tech = Technician.query.filter(Technician.name.ilike(f"%{technician_name}%")).first()
@@ -650,7 +656,9 @@ def technician_analytics():
 
     for t in all_tickets:
         day = t.created_at.strftime('%Y-%m-%d')
-        ticket_type_trend[day][t.call_type] += 1
+        call_type = t.call_type.strip().upper() if t.call_type else "UNKNOWN"
+        ticket_type_trend[day][call_type] += 1
+
         if t.closed_at:
             hrs = (t.closed_at - t.created_at).total_seconds() / 3600
             resolution_trend[day].append(hrs)
@@ -663,17 +671,12 @@ def technician_analytics():
 
     # 🧮 Working Days
     def working_days(start, end):
-        count = 0
-        while start <= end:
-            if start.weekday() < 5:
-                count += 1
-            start += timedelta(days=1)
-        return count
+        return sum(1 for d in (start + timedelta(n) for n in range((end - start).days + 1)) if d.weekday() < 5)
 
     wd_total = working_days(from_date, to_date)
     total_closed = len(closed_tickets)
     avg_resolution = round(
-        sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed_tickets if t.closed_at and t.created_at) / total_closed, 1
+        sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed_tickets) / total_closed, 1
     ) if total_closed else 0
     overall_productivity = round(total_closed / max(wd_total, 1), 1)
 
@@ -687,33 +690,41 @@ def technician_analytics():
         (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
     ).count()
 
-    # 👨 Technician Stats
-    if technician_id:
-        technicians = Technician.query.filter_by(id=technician_id).all()
-    else:
-        technicians = Technician.query.all()
+    # 👨 Per-Technician Analysis
+    tech_filter = Technician.query.filter_by(id=technician_id) if technician_id else Technician.query.all()
+    technicians = tech_filter if technician_id else tech_filter
 
     data = []
     for tech in technicians:
-        t_q = Ticket.query.filter(Ticket.technician_id == tech.id, Ticket.created_at.between(from_date, to_date))
+        t_q = Ticket.query.filter(
+            Ticket.technician_id == tech.id,
+            Ticket.created_at.between(from_date, to_date)
+        )
         tickets = t_q.all()
-        closed = [t for t in tickets if t.status == "Closed"]
-        open_count = len([t for t in tickets if t.status != "Closed"])
 
-        pm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "pm")
-        cm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "cm")
-        myq = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "myq")
-        inst = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "installation")
-        mfi_central = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "mfi-central")
-        other = sum(1 for t in tickets if t.call_type not in ["PM", "CM", "MYQ", "Installation", "MFI-CENTRAL"])
-        # 🔢 Totals for footer row
+        closed = [t for t in tickets if t.status and t.status.strip().lower() == "closed"]
+        open_count = len([t for t in tickets if t.status and t.status.strip().lower() != "closed"])
 
+        def count_type(call_type):
+            return sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == call_type)
+
+        call_types = ["pm", "cm", "myq", "installation", "mfi-central"]
+        pm = count_type("pm")
+        cm = count_type("cm")
+        myq = count_type("myq")
+        inst = count_type("installation")
+        mfi_central = count_type("mfi-central")
+
+        other = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() not in call_types)
 
         avg_res_time = round(
-            sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed if t.closed_at and t.created_at) / len(closed), 1
+            sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed) / len(closed), 1
         ) if closed else 0
 
-        spare_q = spare_req.query.filter(spare_req.technician_id == tech.id, spare_req.date.between(from_date, to_date))
+        spare_q = spare_req.query.filter(
+            spare_req.technician_id == tech.id,
+            spare_req.date.between(from_date, to_date)
+        )
         warranty_pending = spare_q.filter(spare_req.warranty_status == "Pending").count()
         foc_pending = spare_q.filter(
             (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
@@ -736,6 +747,7 @@ def technician_analytics():
             "foc_pending": foc_pending,
             "productivity": productivity
         })
+
     totals = {
         "open": sum(t["open"] for t in data),
         "closed": sum(t["closed"] for t in data),
@@ -748,6 +760,7 @@ def technician_analytics():
         "warranty_pending": sum(t["warranty_pending"] for t in data),
         "foc_pending": sum(t["foc_pending"] for t in data),
     }
+
     all_techs = Technician.query.order_by(Technician.name).all()
 
     return render_template("ticket1/technician_analytics.html",
@@ -768,8 +781,8 @@ def technician_analytics():
                                "productivity": overall_productivity
                            },
                            all_technicians=all_techs,
-                           totals=totals  # ✅ newly added
-                           )
+                           totals=totals)
+
 @ticket1_bp.route('/export_technician_excel')
 @login_required
 @permission_required('can_export_data')
@@ -845,7 +858,12 @@ def export_alarming_cases():
 
     now = datetime.utcnow()
     recent_cutoff = now - timedelta(days=90)
-    recent_tickets = Ticket.query.filter(Ticket.created_at >= recent_cutoff).all()
+    recent_tickets = Ticket.query.filter(
+        Ticket.created_at >= recent_cutoff,
+        Ticket.call_type.ilike("CM"),
+        Ticket.serial_number.isnot(None),
+        func.length(func.trim(Ticket.serial_number)) > 0
+    ).all()
 
     from collections import defaultdict
     counter = defaultdict(list)
@@ -961,7 +979,7 @@ def create_pm_bulk():
                 existing_pm = Ticket.query.filter_by(
                     serial_number=asset.serial_number,
                     call_type='PM'
-                ).filter(Ticket.status.in_(["Open", "In Process"])).first()
+                ).filter(Ticket.status.in_(["Open", "In Progress"])).first()
 
                 if next_due <= today and not existing_pm:
                     technician_id = None

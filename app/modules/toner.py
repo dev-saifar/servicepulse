@@ -578,33 +578,76 @@ from app.models import toner_request, DeliveryTeam
 @login_required
 @permission_required('can_view_toner_dashboard')
 def delivery_dashboard():
-    today = date.today()
-    filter_boy = request.args.get('delivery_boy')
-    filter_date = request.args.get('filter_date')
+    from collections import defaultdict
+    from datetime import date, datetime, timedelta
+    from sqlalchemy import func
 
-    delivery_team = DeliveryTeam.query.all()
+    today = date.today()
+
+    # ✅ Get filters
+    filter_boy = request.args.get('delivery_boy', '').strip()
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+
+    # ✅ Default to last 7 days
+    if not from_date:
+        from_date = (today - timedelta(days=6)).isoformat()
+    if not to_date:
+        to_date = today.isoformat()
+
+    # ✅ Filter base query
+    query = toner_request.query.filter(
+        func.date(toner_request.date_issued) >= from_date,
+        func.date(toner_request.date_issued) <= to_date
+    )
+
+    if filter_boy:
+        query = query.filter(toner_request.delivery_boy.ilike(f"%{filter_boy}%"))
+
+    deliveries = query.all()
+
+    # ✅ Group by delivery boy
+    grouped = defaultdict(list)
+    for d in deliveries:
+        grouped[d.delivery_boy].append(d)
+
+    def get_threshold(region):
+        if region and "kampala" in region.strip().lower():
+            return timedelta(hours=6)
+        return timedelta(hours=48)
+
     stats = []
+    delivery_team = DeliveryTeam.query.all()
 
     for member in delivery_team:
-        queries = toner_request.query.filter_by(delivery_boy=member.name)
-
-        if filter_boy:
-            queries = queries.filter(toner_request.delivery_boy.ilike(f'%{filter_boy}%'))
-        if filter_date:
-            queries = queries.filter(func.date(toner_request.date_issued) == filter_date)
-
-        deliveries = queries.all()
+        user_deliveries = grouped.get(member.name, [])
 
         delivered_today = sum(
-            1 for r in deliveries
-            if r.delivery_status == 'Delivered' and r.delivery_date and r.delivery_date.date() == today
+            1 for r in user_deliveries
+            if r.delivery_status == 'Delivered'
+            and r.delivery_date and r.delivery_date.date() == today
         )
-        pending = sum(1 for r in deliveries if r.delivery_status == 'Pending')
-        in_transit = sum(1 for r in deliveries if r.delivery_status == 'In Transit')
 
-        # ✅ Safe Average Delivery Time
+        pending = sum(1 for r in user_deliveries if r.delivery_status == 'Pending')
+        in_transit = sum(1 for r in user_deliveries if r.delivery_status == 'In Transit')
+
+        # 🟡 Late Deliveries
+        late = 0
+        for r in user_deliveries:
+            if r.delivery_status == 'Delivered' and r.delivery_date and r.date_issued:
+                issued_dt = (
+                    datetime.combine(r.date_issued, datetime.min.time())
+                    if isinstance(r.date_issued, date) and not isinstance(r.date_issued, datetime)
+                    else r.date_issued
+                )
+                duration = r.delivery_date - issued_dt
+                threshold = get_threshold(r.region)
+                if duration > threshold:
+                    late += 1
+
+        # ⏱ Avg Delivery Time
         completed = []
-        for r in deliveries:
+        for r in user_deliveries:
             if r.delivery_date and r.date_issued:
                 issued_dt = (
                     datetime.combine(r.date_issued, datetime.min.time())
@@ -617,9 +660,9 @@ def delivery_dashboard():
 
         avg_minutes = round(sum(completed) / 60 / len(completed), 1) if completed else 0
 
-        # ✅ Average Transit Time
+        # ⏱ Avg Transit Time
         transit_times = []
-        for r in deliveries:
+        for r in user_deliveries:
             if r.delivery_date and r.dispatch_time and r.dispatch_time <= r.delivery_date:
                 diff = (r.delivery_date - r.dispatch_time).total_seconds()
                 if diff >= 0:
@@ -632,11 +675,12 @@ def delivery_dashboard():
             'delivered_today': delivered_today,
             'pending': pending,
             'in_transit': in_transit,
+            'late': late,
             'avg_time': avg_minutes,
             'avg_transit': avg_transit
         })
 
-    # 🔁 Build trend data for last 7 days
+    # 📈 Build trend for last 7 days (fixed range)
     trend_labels = []
     trend_data = defaultdict(lambda: [0] * 7)
     for i in range(6, -1, -1):
@@ -648,13 +692,21 @@ def delivery_dashboard():
         ).all()
         for r in day_records:
             trend_data[r.delivery_boy][6 - i] += 1
-    today_request_count = toner_request.query.filter(func.date(toner_request.date_issued) == today).count()
+
+    today_request_count = toner_request.query.filter(
+        func.date(toner_request.date_issued) == today
+    ).count()
 
     return render_template(
         'toner/delivery_dashboard.html',
         stats=stats,
         trend_labels=trend_labels,
         trend_data=dict(trend_data),
-    today_request_count = today_request_count
+        today_request_count=today_request_count,
+        filters={
+            "delivery_boy": filter_boy,
+            "from_date": from_date,
+            "to_date": to_date
+        }
     )
-from app.utils.permission_required import permission_required
+
