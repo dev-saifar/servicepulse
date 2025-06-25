@@ -30,7 +30,6 @@ def generate_reference_number():
 
     return f"{prefix}{str(new_number).zfill(3)}"  # SR-2502-001
 
-
 @ticket1_bp.route('/edit/<int:ticket_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required('can_edit_tickets')
@@ -39,6 +38,9 @@ def edit_ticket(ticket_id):
 
     if request.method == 'POST':
         try:
+            # Store old technician before update
+            old_tech_id = ticket.technician_id
+
             ticket.title = request.form['title']
             ticket.description = request.form['description']
             ticket.customer = request.form['customer']
@@ -52,17 +54,17 @@ def edit_ticket(ticket_id):
             ticket.phone = request.form['phone']
             ticket.service_location = request.form['service_location']
             ticket.region = request.form['region']
-            ticket.asset_Description = request.form['asset_description']  # Note: Fix naming mismatch
+            ticket.asset_Description = request.form['asset_description'] or ticket.asset_Description
             ticket.action_taken = request.form['action_taken']
             ticket.complete = request.form['complete']
             ticket.mr_mono = request.form['mr_mono']
             ticket.mr_color = request.form['mr_color']
 
             new_status = request.form['status']
-            previous_status = ticket.status  # Save old status first
+            previous_status = ticket.status
+            ticket.status = new_status  # update first before logic
 
-            ticket.status = new_status  # ✅ Update first before condition
-
+            # ✅ Set closed_at if just now closed
             if new_status == "Closed" and previous_status != "Closed":
                 ticket.closed_at = datetime.utcnow()
 
@@ -82,18 +84,34 @@ def edit_ticket(ticket_id):
                         )
                         db.session.add(pm_entry)
 
-            ticket.status = new_status
+            new_tech_id = ticket.technician_id
 
-            # ✅ Free up the technician only if they have no other pending tickets
-            if ticket.status == "Closed" and ticket.technician_id:
-                assigned_technician = Technician.query.get(ticket.technician_id)
-                if assigned_technician:
-                    # Check if the technician has other pending tickets
-                    open_tickets = Ticket.query.filter_by(technician_id=ticket.technician_id).filter(
-                        Ticket.status != "Closed").count()
+            # ✅ Technician Reassigned
+            if old_tech_id != new_tech_id:
+                if old_tech_id:
+                    open_tickets = Ticket.query.filter(
+                        Ticket.technician_id == old_tech_id,
+                        Ticket.status != 'Closed'
+                    ).count()
+                    old_tech = Technician.query.get(old_tech_id)
+                    if old_tech:
+                        old_tech.status = "Busy" if open_tickets > 1 else "Free"
 
-                    if open_tickets == 0:  # Only mark as "Free" if no open tickets remain
-                        assigned_technician.status = "Free"
+                if new_tech_id:
+                    new_tech = Technician.query.get(new_tech_id)
+                    if new_tech:
+                        new_tech.status = "Busy"
+
+            # ✅ Ticket just closed → check if assigned technician can be freed
+            if new_status == "Closed" and new_tech_id:
+                remaining = Ticket.query.filter(
+                    Ticket.technician_id == new_tech_id,
+                    Ticket.status != 'Closed',
+                    Ticket.id != ticket.id
+                ).count()
+                tech = Technician.query.get(new_tech_id)
+                if tech and remaining == 0:
+                    tech.status = "Free"
 
             db.session.commit()
             flash("Ticket updated successfully!", "success")
@@ -168,23 +186,59 @@ def new_ticket():
 
 from datetime import date
 
+
 @ticket1_bp.route('/dashboard', methods=['GET'])
 @login_required
 @permission_required('can_view_tickets')
 def ticket_dashboard():
-    """Render the ticket dashboard with extended filters and additional fields."""
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    status = request.args.get('status')
-    customer = request.args.get('customer')
-    serial_number = request.args.get('serial')  # Added filter for Serial Number
-    technician = request.args.get('technician')  # Added filter for Technician Name
-    region = request.args.get('region')  # Added filter for Region
-    call_type = request.args.get('callType')  # Added filter for Call Type
+    """Render the ticket dashboard with server-side processing support."""
 
-    # Aliased Technician table to fetch technician name
+    if not request.args.get('draw'):
+        from datetime import datetime, timedelta
+
+        now = datetime.utcnow()
+        tickets = Ticket.query.all()
+
+        # Overdue: Open status and created > 3 days ago
+        overdue_tickets = sum(
+            1 for t in tickets if t.status == 'Open' and (now - t.created_at).days > 3
+        )
+
+        # Average resolution time in hours
+        resolved = [t for t in tickets if t.status == 'Closed' and t.closed_at]
+        avg_resolution_time = round(
+            sum((t.closed_at - t.created_at).total_seconds() for t in resolved) / 3600 / len(resolved), 1
+        ) if resolved else 0
+
+        return render_template(
+            'ticket1/dashboard.html',
+            today=date.today(),
+            total_open=Ticket.query.filter_by(status='Open').count(),
+            total_in_progress=Ticket.query.filter_by(status='In Progress').count(),
+            total_closed=Ticket.query.filter_by(status='Closed').count(),
+            overdue_tickets=overdue_tickets,
+            avg_resolution_time=avg_resolution_time
+        )
+
+    # For DataTables server-side processing
+    return get_tickets_datatable_data()
+
+
+
+def get_tickets_datatable_data():
+    """Handle DataTables server-side processing requests."""
+    # Get parameters from DataTables request
+    draw = request.args.get('draw', type=int)
+    start = request.args.get('start', type=int)
+    length = request.args.get('length', type=int)
+    search_value = request.args.get('search[value]', type=str)
+
+    # Get column ordering info
+    order_column = request.args.get('order[0][column]', type=int)
+    order_dir = request.args.get('order[0][dir]', type=str)  # 'asc' or 'desc'
+
+    # Base query with joins
     tech_alias = aliased(Technician)
-
     query = db.session.query(
         Ticket.reference_no, Ticket.title, Ticket.customer, Ticket.call_type,
         tech_alias.name.label("technician_name"), Ticket.expected_completion_time,
@@ -193,7 +247,16 @@ def ticket_dashboard():
         Ticket.asset_Description, Ticket.called_by, Ticket.id
     ).outerjoin(tech_alias, tech_alias.id == Ticket.technician_id)
 
-    # Apply filters
+    # Apply filters from dashboard
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    status = request.args.get('status')
+    customer = request.args.get('customer')
+    serial_number = request.args.get('serial')
+    technician = request.args.get('technician')
+    region = request.args.get('region')
+    call_type = request.args.get('callType')
+
     if start_date:
         query = query.filter(Ticket.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
     if end_date:
@@ -211,27 +274,88 @@ def ticket_dashboard():
     if call_type:
         query = query.filter(Ticket.call_type.ilike(f"%{call_type}%"))
 
-    tickets = query.order_by(Ticket.created_at.desc()).all()
+    # Apply global search
+    if search_value:
+        search_filter = or_(
+            Ticket.reference_no.ilike(f"%{search_value}%"),
+            Ticket.title.ilike(f"%{search_value}%"),
+            Ticket.customer.ilike(f"%{search_value}%"),
+            Ticket.call_type.ilike(f"%{search_value}%"),
+            tech_alias.name.ilike(f"%{search_value}%"),
+            Ticket.serial_number.ilike(f"%{search_value}%"),
+            Ticket.service_location.ilike(f"%{search_value}%"),
+            Ticket.region.ilike(f"%{search_value}%"),
+            Ticket.asset_Description.ilike(f"%{search_value}%"),
+            Ticket.called_by.ilike(f"%{search_value}%")
+        )
+        query = query.filter(search_filter)
 
-    return render_template(
-        'ticket1/dashboard.html',
-        tickets=tickets,
-        today=date.today(),
-        total_open=sum(1 for t in tickets if t.status == 'Open'),
-        total_in_progress=sum(1 for t in tickets if t.status == 'In Progress'),
-        total_closed=sum(1 for t in tickets if t.status == 'Closed'),
-        avg_resolution_time=round(
-            sum((t.closed_at - t.created_at).total_seconds() for t in tickets if t.closed_at) / 3600 / max(1,
-                                                                                                           len([t for t
-                                                                                                                in
-                                                                                                                tickets
-                                                                                                                if
-                                                                                                                t.closed_at])),
-            1
-        ),
-        overdue_tickets=sum(1 for t in tickets if t.status == 'Open' and (date.today() - t.created_at.date()).days > 3)
-    )
+    # Apply ordering
+    orderable_columns = [
+        'reference_no', 'title', 'customer', 'call_type',
+        'technician_name', 'expected_completion_time',
+        'status', 'created_at', 'closed_at', 'serial_number',
+        'complete', 'service_location', 'region',
+        'asset_Description', 'called_by'
+    ]
 
+    if order_column < len(orderable_columns):
+        order_col = orderable_columns[order_column]
+        if order_dir == 'desc':
+            query = query.order_by(getattr(Ticket, order_col).desc())
+        else:
+            query = query.order_by(getattr(Ticket, order_col).asc())
+    else:
+        # Default ordering if no column specified
+        query = query.order_by(Ticket.created_at.desc())
+
+    # Get total records count (before pagination)
+    total_records = query.count()
+
+    # Apply pagination
+    tickets = query.offset(start).limit(length).all()
+
+    # Format data for DataTables
+    data = []
+    for ticket in tickets:
+        data.append({
+            'reference_no': f'<a href="{url_for("ticket1.edit_ticket", ticket_id=ticket.id)}">{ticket.reference_no}</a>',
+            'title': ticket.title,
+            'customer': ticket.customer,
+            'call_type': ticket.call_type,
+            'technician_name': ticket.technician_name or "Unassigned",
+            'expected_completion_time': ticket.expected_completion_time.strftime(
+                '%Y-%m-%d %H:%M') if ticket.expected_completion_time else "N/A",
+            'status': f'<span class="badge {get_status_badge_class(ticket.status)}">{ticket.status}</span>',
+            'created_at': ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else "N/A",
+            'closed_at': ticket.closed_at.strftime('%Y-%m-%d %H:%M') if ticket.closed_at else "N/A",
+            'serial_number': ticket.serial_number or "N/A",
+            'complete': ticket.complete or "N/A",
+            'service_location': ticket.service_location or "N/A",
+            'region': ticket.region or "N/A",
+            'asset_Description': f'<span title="{ticket.asset_Description or "N/A"}">{ticket.asset_Description[:20] if ticket.asset_Description else "N/A"}</span>',
+            'called_by': ticket.called_by or "N/A",
+            'DT_RowClass': 'table-warning' if ticket.status != 'Closed' and (
+                        date.today() - ticket.created_at.date()).days > 3 else ''
+        })
+
+    response = {
+        'draw': draw,
+        'recordsTotal': Ticket.query.count(),
+        'recordsFiltered': total_records,
+        'data': data
+    }
+
+    return jsonify(response)
+
+
+def get_status_badge_class(status):
+    """Return appropriate Bootstrap badge class based on status."""
+    if status == 'Closed':
+        return 'bg-success'
+    elif status == 'In Progress':
+        return 'bg-warning text-dark'
+    return 'bg-danger'
 
 import pandas as pd
 from flask import send_file, request
@@ -626,8 +750,10 @@ def technician_analytics():
     from collections import defaultdict
     from app.models import Technician, Ticket, spare_req
 
+    # 📅 Set default date range from 1st Jan 2025 to today
     today = datetime.today()
     default_from = today - timedelta(days=90)
+
 
     from_date_str = request.args.get('from_date') or default_from.strftime("%Y-%m-%d")
     to_date_str = request.args.get('to_date') or today.strftime("%Y-%m-%d")
@@ -636,7 +762,7 @@ def technician_analytics():
     from_date = datetime.strptime(from_date_str, "%Y-%m-%d")
     to_date = datetime.strptime(to_date_str, "%Y-%m-%d")
 
-    # 🔍 Resolve technician name
+    # 🔍 Resolve technician name to ID
     technician_id = None
     if technician_name:
         tech = Technician.query.filter(Technician.name.ilike(f"%{technician_name}%")).first()
@@ -656,9 +782,7 @@ def technician_analytics():
 
     for t in all_tickets:
         day = t.created_at.strftime('%Y-%m-%d')
-        call_type = t.call_type.strip().upper() if t.call_type else "UNKNOWN"
-        ticket_type_trend[day][call_type] += 1
-
+        ticket_type_trend[day][t.call_type] += 1
         if t.closed_at:
             hrs = (t.closed_at - t.created_at).total_seconds() / 3600
             resolution_trend[day].append(hrs)
@@ -671,12 +795,17 @@ def technician_analytics():
 
     # 🧮 Working Days
     def working_days(start, end):
-        return sum(1 for d in (start + timedelta(n) for n in range((end - start).days + 1)) if d.weekday() < 5)
+        count = 0
+        while start <= end:
+            if start.weekday() < 5:
+                count += 1
+            start += timedelta(days=1)
+        return count
 
     wd_total = working_days(from_date, to_date)
     total_closed = len(closed_tickets)
     avg_resolution = round(
-        sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed_tickets) / total_closed, 1
+        sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed_tickets if t.closed_at and t.created_at) / total_closed, 1
     ) if total_closed else 0
     overall_productivity = round(total_closed / max(wd_total, 1), 1)
 
@@ -690,41 +819,33 @@ def technician_analytics():
         (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
     ).count()
 
-    # 👨 Per-Technician Analysis
-    tech_filter = Technician.query.filter_by(id=technician_id) if technician_id else Technician.query.all()
-    technicians = tech_filter if technician_id else tech_filter
+    # 👨 Technician Stats
+    if technician_id:
+        technicians = Technician.query.filter_by(id=technician_id).all()
+    else:
+        technicians = Technician.query.all()
 
     data = []
     for tech in technicians:
-        t_q = Ticket.query.filter(
-            Ticket.technician_id == tech.id,
-            Ticket.created_at.between(from_date, to_date)
-        )
+        t_q = Ticket.query.filter(Ticket.technician_id == tech.id, Ticket.created_at.between(from_date, to_date))
         tickets = t_q.all()
+        closed = [t for t in tickets if t.status == "Closed"]
+        open_count = len([t for t in tickets if t.status != "Closed"])
 
-        closed = [t for t in tickets if t.status and t.status.strip().lower() == "closed"]
-        open_count = len([t for t in tickets if t.status and t.status.strip().lower() != "closed"])
+        pm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "pm")
+        cm = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "cm")
+        myq = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "myq")
+        inst = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "installation")
+        mfi_central = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == "mfi-central")
+        other = sum(1 for t in tickets if t.call_type not in ["PM", "CM", "MYQ", "Installation", "MFI-CENTRAL"])
+        # 🔢 Totals for footer row
 
-        def count_type(call_type):
-            return sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() == call_type)
-
-        call_types = ["pm", "cm", "myq", "installation", "mfi-central"]
-        pm = count_type("pm")
-        cm = count_type("cm")
-        myq = count_type("myq")
-        inst = count_type("installation")
-        mfi_central = count_type("mfi-central")
-
-        other = sum(1 for t in tickets if t.call_type and t.call_type.strip().lower() not in call_types)
 
         avg_res_time = round(
-            sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed) / len(closed), 1
+            sum((t.closed_at - t.created_at).total_seconds() / 3600 for t in closed if t.closed_at and t.created_at) / len(closed), 1
         ) if closed else 0
 
-        spare_q = spare_req.query.filter(
-            spare_req.technician_id == tech.id,
-            spare_req.date.between(from_date, to_date)
-        )
+        spare_q = spare_req.query.filter(spare_req.technician_id == tech.id, spare_req.date.between(from_date, to_date))
         warranty_pending = spare_q.filter(spare_req.warranty_status == "Pending").count()
         foc_pending = spare_q.filter(
             (spare_req.foc_no == None) | (spare_req.foc_no == "") | (spare_req.foc_no == "Pending")
@@ -747,7 +868,6 @@ def technician_analytics():
             "foc_pending": foc_pending,
             "productivity": productivity
         })
-
     totals = {
         "open": sum(t["open"] for t in data),
         "closed": sum(t["closed"] for t in data),
@@ -760,7 +880,6 @@ def technician_analytics():
         "warranty_pending": sum(t["warranty_pending"] for t in data),
         "foc_pending": sum(t["foc_pending"] for t in data),
     }
-
     all_techs = Technician.query.order_by(Technician.name).all()
 
     return render_template("ticket1/technician_analytics.html",
@@ -781,8 +900,8 @@ def technician_analytics():
                                "productivity": overall_productivity
                            },
                            all_technicians=all_techs,
-                           totals=totals)
-
+                           totals=totals  # ✅ newly added
+                           )
 @ticket1_bp.route('/export_technician_excel')
 @login_required
 @permission_required('can_export_data')
@@ -930,6 +1049,7 @@ def create_pm_ticket():
         title="Preventive Maintenance",
         description="Auto-generated PM ticket",
         called_by="System",
+        email_id="system@pm.local",
         call_type="PM",
         technician_id=technician_id,
         estimated_time=60,
@@ -999,6 +1119,7 @@ def create_pm_bulk():
                         title="Preventive Maintenance",
                         description="Auto-generated bulk PM ticket",
                         called_by="System",
+                        email_id="system@pm.local",
                         call_type="PM",
                         technician_id=technician_id,
                         estimated_time=60,
@@ -1017,3 +1138,54 @@ def create_pm_bulk():
     db.session.commit()
     flash(f"✅ {created} PM tickets created in bulk.", "success")
     return redirect(url_for('assets.pm_dashboard'))
+
+@ticket1_bp.route('/dashboard_summary_json')
+@login_required
+@permission_required('can_view_tickets')
+def dashboard_summary_json():
+    from datetime import datetime, timedelta
+
+    query = Ticket.query
+    now = datetime.utcnow()
+
+    # Reuse filters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    status = request.args.get('status')
+    customer = request.args.get('customer')
+    serial = request.args.get('serial')
+    technician = request.args.get('technician')
+    region = request.args.get('region')
+    call_type = request.args.get('callType')
+
+    if start_date:
+        query = query.filter(Ticket.created_at >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date:
+        query = query.filter(Ticket.created_at <= datetime.strptime(end_date, '%Y-%m-%d'))
+    if status:
+        query = query.filter(Ticket.status == status)
+    if customer:
+        query = query.filter(Ticket.customer.ilike(f"%{customer}%"))
+    if serial:
+        query = query.filter(Ticket.serial_number.ilike(f"%{serial}%"))
+    if technician:
+        query = query.join(Technician).filter(Technician.name.ilike(f"%{technician}%"))
+    if region:
+        query = query.filter(Ticket.region.ilike(f"%{region}%"))
+    if call_type:
+        query = query.filter(Ticket.call_type.ilike(f"%{call_type}%"))
+
+    tickets = query.all()
+
+    summary = {
+        "total_open": sum(1 for t in tickets if t.status == 'Open'),
+        "total_in_progress": sum(1 for t in tickets if t.status == 'In Progress'),
+        "total_closed": sum(1 for t in tickets if t.status == 'Closed'),
+        "overdue_tickets": sum(1 for t in tickets if t.status == 'Open' and (now - t.created_at).days > 3),
+        "avg_resolution_time": round(
+            sum((t.closed_at - t.created_at).total_seconds() for t in tickets if t.closed_at) / 3600 /
+            max(1, len([t for t in tickets if t.closed_at])), 1
+        )
+    }
+
+    return jsonify(summary)

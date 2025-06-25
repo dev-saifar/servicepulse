@@ -27,6 +27,8 @@ def create_app():
     global celery
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.config['CONTRACT_ALERT_CC'] = ['a.saifar@groupmfi.com']
+
     app.config["DEBUG"] = True
     app.config["ENV"] = "development"
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///techtrack.db"
@@ -122,17 +124,19 @@ def create_app():
     from app.modules.hourly import hourly_bp
     from app.modules.material import material_bp
     from app.modules.advance_report import advance_report_bp
+    from app.modules.financial import financial_bp
     from app.modules.technician_performance import technician_performance_bp
     from app.tasks import generate_and_email_report
     from app.modules.contracts import contracts_bp
     from app.modules.assets_add import assets_add_bp
     from app.modules.toner import toner_bp
-    from app.modules.financial import financial_bp
     from app.modules import financial
     financial.cache.init_app(app)
     from app.modules.delivery_report import delivery_report_bp
     from app.modules.dashboard_rotator import dashboard_rotator_bp
     app.register_blueprint(dashboard_rotator_bp)
+    from app.modules.contract_alerts import contract_alerts_bp
+    app.register_blueprint(contract_alerts_bp, url_prefix='/contract_alert')
 
     app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')

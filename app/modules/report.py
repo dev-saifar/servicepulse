@@ -106,3 +106,70 @@ def export_report():
     output.seek(0)
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                      as_attachment=True, download_name="technician_productivity_report.xlsx")
+from flask import send_file
+import pandas as pd
+from io import BytesIO
+from datetime import datetime, timedelta
+from app.models import Contract
+from app.utils.permission_required import permission_required
+from flask_login import login_required
+
+@report_bp.route('/export/contract-report')
+@login_required
+@permission_required('can_view_contracts')
+def export_contract_report():
+    today = datetime.today().date()
+    expiring_cutoff = today + timedelta(days=60)
+
+    # Load all contracts
+    contracts = Contract.query.all()
+
+    # Prepare data
+    active_data = []
+    expiring_data = []
+    expired_data = []
+
+    for c in contracts:
+        try:
+            end_date = datetime.strptime(c.contract_end_date, "%Y-%m-%d").date()
+        except:
+            continue  # Skip if invalid date
+
+        row = {
+            "Contract Code": c.contract_code,
+            "Customer": c.cust_name,
+            "Billing Company": c.billing_company,
+            "Start Date": c.contract_start_date,
+            "End Date": c.contract_end_date,
+            "Salesperson": c.sales_person,
+            "Email": c.email,
+            "Billing Cycle": c.billing_cycle,
+            "Currency": c.contract_currency
+        }
+
+        if end_date < today:
+            expired_data.append(row)
+        elif today <= end_date <= expiring_cutoff:
+            expiring_data.append(row)
+        else:
+            active_data.append(row)
+
+    # Create DataFrames
+    df_active = pd.DataFrame(active_data)
+    df_expiring = pd.DataFrame(expiring_data)
+    df_expired = pd.DataFrame(expired_data)
+
+    # Write to Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_active.to_excel(writer, sheet_name='Active Contracts', index=False)
+        df_expiring.to_excel(writer, sheet_name='Expiring Soon', index=False)
+        df_expired.to_excel(writer, sheet_name='Expired Contracts', index=False)
+
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f"Contract_Report_{today.strftime('%Y%m%d')}.xlsx"
+    )
