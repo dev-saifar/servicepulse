@@ -7,7 +7,12 @@ import os
 from datetime import datetime
 
 celery = Celery('tasks', broker='redis://localhost:6379/0')
+from app.modules.contract_alerts import send_contract_expiry_alerts
+from app import celery
 
+@celery.task
+def run_contract_alerts():
+    send_contract_expiry_alerts()
 
 @celery.task
 def generate_and_email_report(report_id):
@@ -36,3 +41,11 @@ def generate_and_email_report(report_id):
     mail.send(msg)
 
     return "Report emailed successfully"
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'daily-contract-reports': {
+        'task': 'tasks.run_all_scheduled_reports',
+        'schedule': crontab(hour=6, minute=0),  # every day at 06:00
+    },
+}

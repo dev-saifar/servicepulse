@@ -333,6 +333,14 @@ class toner_request(db.Model):
         if self.delivery_date:
             return (self.delivery_date - self.date_issued).days
         return None
+
+class ContractNotificationLog(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        contract_code = db.Column(db.String(100))
+        stage = db.Column(db.String(50))  # "60_day", "30_day", "expired"
+        sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class TonerModel(db.Model):
     __tablename__ = 'toner_models'
 
@@ -414,6 +422,8 @@ class McModel(db.Model):
     def __repr__(self):
         return f"<McModel {self.asset_description}>"
 
+
+
 class PreventiveMaintenance(db.Model):
     __tablename__ = 'preventive_maintenance'
 
@@ -425,6 +435,8 @@ class PreventiveMaintenance(db.Model):
     remarks = db.Column(db.Text, nullable=True)
     technician_name = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 
 from app import db
 

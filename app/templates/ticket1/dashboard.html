@@ -3,241 +3,314 @@
 {% block title %}Ticket Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="text-primary fw-bold mb-4">🎫 Ticket Dashboard</h2>
+<div class="container-fluid mt-4">
+  <h2 class="text-primary fw-bold mb-4">🎫 Ticket Dashboard</h2>
 
-    <!-- ✅ Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card text-white bg-primary text-center">
-                <div class="card-body">
-                    <h5>{{ total_open }}</h5><p>Open Tickets</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-warning text-center">
-                <div class="card-body">
-                    <h5>{{ total_in_progress }}</h5><p>In Progress</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-success text-center">
-                <div class="card-body">
-                    <h5>{{ total_closed }}</h5><p>Closed Tickets</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-secondary text-center">
-                <div class="card-body">
-                    <h5>{{ avg_resolution_time }} hrs</h5><p>Avg Resolution Time</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-danger text-center">
-                <div class="card-body">
-                    <h5>{{ overdue_tickets }}</h5><p>Overdue Tickets</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Control Panel -->
-    <div class="d-flex justify-content-between mb-3">
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
-            <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
-        </div>
-        <a href="{{ url_for('ticket1.export_tickets') }}" class="btn btn-success">📤 Export to Excel</a>
-    </div>
-
-    <!-- 🔍 Toggle Filters -->
-    <button class="btn btn-outline-secondary mb-2" data-bs-toggle="collapse" data-bs-target="#filterPanel">
-        🔍 Toggle Filters
-    </button>
-    <div id="filterPanel" class="collapse show">
-        <!-- Filter Options -->
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">Filter Tickets</div>
-            <div class="card-body">
-                <div class="row">
-    <div class="col-md-2"><input type="date" id="start_date" class="form-control" placeholder="Start Date"></div>
-    <div class="col-md-2"><input type="date" id="end_date" class="form-control" placeholder="End Date"></div>
-    <div class="col-md-2"><input type="text" id="customer_filter" class="form-control" placeholder="Customer"></div>
-    <div class="col-md-2"><input type="text" id="serial_filter" class="form-control" placeholder="Serial No"></div>
-    <div class="col-md-2"><input type="text" id="technician_filter" class="form-control" placeholder="Technician"></div>
-    <div class="col-md-2"><input type="text" id="region_filter" class="form-control" placeholder="Region"></div>
-    <div class="col-md-2"><select id="status_filter" class="form-select">
-        <option value="">Status</option>
-        <option>Open</option><option>In Process</option><option>Closed</option>
-    </select></div>
-    <div class="col-md-2"><select id="call_type_filter" class="form-select">
-        <option value="">Call Type</option>
-        <option>PM</option><option>CM</option><option>Installation</option><option>MYQ</option>
-    </select></div>
+  <div class="row mb-4">
     <div class="col-md-2">
-        <button onclick="applyFilters()" class="btn btn-success">Apply</button>
-        <button onclick="resetFilters()" class="btn btn-outline-danger">Reset</button>
+      <div class="card text-white bg-primary text-center">
+        <div class="card-body">
+          <h5>{{ total_open }}</h5><p>Open Tickets</p>
+        </div>
+      </div>
     </div>
-</div>
+    <div class="col-md-2">
+      <div class="card text-white bg-warning text-center">
+        <div class="card-body">
+          <h5>{{ total_in_progress }}</h5><p>In Progress</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card text-white bg-success text-center">
+        <div class="card-body">
+          <h5>{{ total_closed }}</h5><p>Closed Tickets</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-secondary text-center">
+        <div class="card-body">
+          <h5>{{ avg_resolution_time }} hrs</h5><p>Avg Resolution Time</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-danger text-center">
+        <div class="card-body">
+          <h5>{{ overdue_tickets }}</h5><p>Overdue Tickets</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            </div>
+  <div class="d-flex justify-content-between mb-3">
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary">Add New Ticket</a>
+      <a href="{{ url_for('ticket1.search_assets') }}" class="btn btn-secondary">Search Asset</a>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between mb-2">
+        <div>
+            <button class="btn btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                🔍 Toggle Filters
+            </button>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" id="columnToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                Show/Hide Columns
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="columnToggle" id="columnToggleMenu">
+                </ul>
         </div>
     </div>
-
-    <!-- Ticket Table -->
-    <div class="table-responsive" style="overflow-x: auto; max-height: 70vh; margin-left: -80px;">
-        <table id="ticketTable" class="table table-bordered table-hover table-sm" style="font-size: 12px;">
-            <thead class="table-light sticky-top">
-                <tr>
-                    <th onclick="sortTable(0)">Reference No</th>
-                    <th onclick="sortTable(1)">Title</th>
-                    <th onclick="sortTable(2)">Customer</th>
-                    <th onclick="sortTable(3)">Call Type</th>
-                    <th onclick="sortTable(4)">Technician</th>
-                    <th onclick="sortTable(5)">Expected Completion Time</th>
-                    <th onclick="sortTable(6)">Status</th>
-                    <th onclick="sortTable(7)">Created At</th>
-                    <th onclick="sortTable(8)">Closed At</th>
-                    <th onclick="sortTable(9)">Serial No</th>
-                    <th onclick="sortTable(10)">Complete</th>
-                    <th onclick="sortTable(11)">Service Location</th>
-                    <th onclick="sortTable(12)">Region</th>
-                    <th onclick="sortTable(13)">Asset Description</th>
-                    <th onclick="sortTable(14)">Called By</th>
-                </tr>
-            </thead>
-            <tbody id="ticketBody">
-                {% for ticket in tickets %}
-                <tr {% if ticket.status != 'Closed' and (today - ticket.created_at.date()).days > 3 %} class="table-warning" {% endif %}>
-                    <td><a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}">{{ ticket.reference_no }}</a></td>
-                    <td>{{ ticket.title }}</td>
-                    <td>{{ ticket.customer }}</td>
-                    <td>{{ ticket.call_type }}</td>
-                    <td>{{ ticket.technician_name or "Unassigned" }}</td>
-                    <td>{{ ticket.expected_completion_time }}</td>
-                    <td>
-                        <span class="badge {% if ticket.status == 'Closed' %}bg-success{% elif ticket.status == 'In Progress' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ ticket.status }}</span>
-                    </td>
-                    <td>{{ ticket.created_at.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ ticket.closed_at or "N/A" }}</td>
-                    <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ticket.serial_number or "N/A" }}</td>
-                    <td>{{ ticket.complete or "N/A" }}</td>
-                    <td>{{ ticket.service_location or "N/A" }}</td>
-                    <td>{{ ticket.region or "N/A" }}</td>
-                    <td title="{{ ticket.asset_Description or 'N/A' }}">{{ ticket.asset_Description[:20] if ticket.asset_Description else 'N/A' }}</td>
-                    <td>{{ ticket.called_by or "N/A" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <div id="filterPanel" class="collapse show">
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">Filter Tickets</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-2"><input type="date" id="start_date" class="form-control" placeholder="Start Date"></div>
+          <div class="col-md-2"><input type="date" id="end_date" class="form-control" placeholder="End Date"></div>
+          <div class="col-md-2"><input type="text" id="customer_filter" class="form-control" placeholder="Customer"></div>
+          <div class="col-md-2"><input type="text" id="serial_filter" class="form-control" placeholder="Serial No"></div>
+          <div class="col-md-2"><input type="text" id="technician_filter" class="form-control" placeholder="Technician"></div>
+          <div class="col-md-2"><input type="text" id="region_filter" class="form-control" placeholder="Region"></div>
+          <div class="col-md-2">
+            <select id="status_filter" class="form-select">
+              <option value="">Status</option>
+              <option>Open</option>
+              <option>In Progress</option>
+              <option>Closed</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select id="call_type_filter" class="form-select">
+              <option value="">Call Type</option>
+              <option>PM</option><option>CM</option><option>Installation</option><option>MYQ</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button onclick="applyFilters()" class="btn btn-success">Apply</button>
+            <button onclick="resetFilters()" class="btn btn-outline-danger">Reset</button>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="ticketTable" class="table table-bordered table-hover table-striped table-sm mb-0" style="font-size: 13.5px;">
+        <thead class="table-light sticky-top" style="box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+          <tr>
+            <th>Reference No</th>
+            <th>Title</th>
+            <th>Customer</th>
+            <th>Call Type</th>
+            <th>Technician</th>
+            <th>Expected Completion Time</th>
+            <th>Status</th>
+            <th>Created At</th>
+            <th>Closed At</th>
+            <th>Serial No</th>
+            <th>Complete</th>
+            <th>Service Location</th>
+            <th>Region</th>
+            <th>Asset Description</th>
+            <th>Called By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ticket in tickets %}
+          <tr {% if ticket.status != 'Closed' and (today - ticket.created_at.date()).days > 3 %} class="table-warning" {% endif %}>
+            <td><a href="{{ url_for('ticket1.edit_ticket', ticket_id=ticket.id) }}">{{ ticket.reference_no }}</a></td>
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.customer }}</td>
+            <td>{{ ticket.call_type }}</td>
+            <td>{{ ticket.technician_name or "Unassigned" }}</td>
+            <td class="text-nowrap">
+  {% if ticket.expected_completion_time %}
+    {{ ticket.expected_completion_time.strftime('%Y-%m-%d %H:%M') }}
+  {% else %}
+    N/A
+  {% endif %}
+</td>
 
-    <div class="text-center mt-3">
-        <button id="loadMoreBtn" class="btn btn-outline-primary" onclick="loadMoreTickets()">Load More</button>
+            <td>
+              <span class="badge {% if ticket.status == 'Closed' %}bg-success{% elif ticket.status == 'In Progress' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                {{ ticket.status }}
+              </span>
+            </td>
+            <td>
+  {% if ticket.created_at %}
+    {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+  {% else %}
+    N/A
+  {% endif %}
+</td>
+
+<td>
+  {% if ticket.closed_at %}
+    {{ ticket.closed_at.strftime('%Y-%m-%d %H:%M') }}
+  {% else %}
+    N/A
+  {% endif %}
+</td>
+
+            <td style="max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ticket.serial_number or "N/A" }}</td>
+            <td>{{ ticket.complete or "N/A" }}</td>
+            <td>{{ ticket.service_location or "N/A" }}</td>
+            <td>{{ ticket.region or "N/A" }}</td>
+            <td title="{{ ticket.asset_Description or 'N/A' }}">{{ ticket.asset_Description[:20] if ticket.asset_Description else 'N/A' }}</td>
+            <td>{{ ticket.called_by or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-
-    <!-- ➕ Floating Add Ticket Button -->
-    <a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary position-fixed bottom-0 end-0 m-4 shadow rounded-circle" title="Add Ticket">
-        <i class="bi bi-plus-lg fs-4"></i>
-    </a>
+  </div>
 </div>
+
+<a href="{{ url_for('ticket1.new_ticket') }}" class="btn btn-primary position-fixed bottom-0 end-0 m-4 shadow rounded-circle" title="Add Ticket">
+  <i class="bi bi-plus-lg fs-4"></i>
+</a>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <script>
-    let currentPage = 1;
+  $(document).ready(function () {
+    // Get filter values from URL params
+    const urlParams = new URLSearchParams(window.location.search);
 
-    function exportToExcel() {
-        window.location.href = "{{ url_for('ticket1.export_tickets') }}";
-    }
-
-    function applyFilters() {
-        let params = new URLSearchParams();
-        params.set("start_date", document.getElementById("start_date").value);
-        params.set("end_date", document.getElementById("end_date").value);
-        params.set("status", document.getElementById("status_filter").value);
-        params.set("customer", document.getElementById("customer_filter").value);
-        params.set("serial", document.getElementById("serial_filter").value);
-        params.set("technician", document.getElementById("technician_filter").value);
-        params.set("region", document.getElementById("region_filter").value);
-        params.set("callType", document.getElementById("call_type_filter").value);
-        window.location.href = `{{ url_for('ticket1.ticket_dashboard') }}?${params.toString()}`;
-    }
-
-    function resetFilters() {
-        document.getElementById("start_date").value = "";
-        document.getElementById("end_date").value = "";
-        document.getElementById("status_filter").value = "";
-        document.getElementById("customer_filter").value = "";
-        document.getElementById("serial_filter").value = "";
-        document.getElementById("technician_filter").value = "";
-        document.getElementById("region_filter").value = "";
-        document.getElementById("call_type_filter").value = "";
-        applyFilters();
-    }
-
-    function loadMoreTickets() {
-        currentPage++;
-        const params = new URLSearchParams();
-        params.set("page", currentPage);
-        params.set("start_date", document.getElementById("start_date").value);
-        params.set("end_date", document.getElementById("end_date").value);
-        params.set("status", document.getElementById("status_filter").value);
-        params.set("customer", document.getElementById("customer_filter").value);
-        params.set("serial", document.getElementById("serial_filter").value);
-        params.set("technician", document.getElementById("technician_filter").value);
-        params.set("region", document.getElementById("region_filter").value);
-        params.set("callType", document.getElementById("call_type_filter").value);
-
-        fetch(`/ticket1/load_tickets?${params.toString()}`)
-            .then(response => response.text())
-            .then(data => {
-                if (data.trim() === '') {
-                    const btn = document.getElementById('loadMoreBtn');
-                    btn.textContent = 'No More Tickets';
-                    btn.disabled = true;
-                } else {
-                    document.getElementById('ticketBody').insertAdjacentHTML('beforeend', data);
-                }
-            });
-    }
-
-    function sortTable(n) {
-        const table = document.getElementById("ticketTable");
-        let switching = true;
-        let dir = "asc";
-        let switchcount = 0;
-        while (switching) {
-            switching = false;
-            const rows = table.rows;
-            for (let i = 1; i < (rows.length - 1); i++) {
-                let shouldSwitch = false;
-                let x = rows[i].getElementsByTagName("TD")[n];
-                let y = rows[i + 1].getElementsByTagName("TD")[n];
-                if (dir === "asc") {
-                    if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                } else if (dir === "desc") {
-                    if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-            }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchcount++;
-            } else {
-                if (switchcount === 0 && dir === "asc") {
-                    dir = "desc";
-                    switching = true;
-                }
-            }
+    var table = $('#ticketTable').DataTable({
+      processing: true,
+      serverSide: true,
+      ajax: {
+        url: "{{ url_for('ticket1.ticket_dashboard') }}",
+        type: 'GET',
+        data: function (d) {
+          // Add our custom filters to the DataTables request
+          d.start_date = urlParams.get('start_date') || '';
+          d.end_date = urlParams.get('end_date') || '';
+          d.status = urlParams.get('status') || '';
+          d.customer = urlParams.get('customer') || '';
+          d.serial = urlParams.get('serial') || '';
+          d.technician = urlParams.get('technician') || '';
+          d.region = urlParams.get('region') || '';
+          d.callType = urlParams.get('callType') || '';
         }
-    }
+      },
+      columns: [
+        { data: 'reference_no', name: 'reference_no', orderable: true },
+        { data: 'title', name: 'title', orderable: true },
+        { data: 'customer', name: 'customer', orderable: true },
+        { data: 'call_type', name: 'call_type', orderable: true },
+        { data: 'technician_name', name: 'technician_name', orderable: true },
+        { data: 'expected_completion_time', name: 'expected_completion_time', orderable: true },
+        { data: 'status', name: 'status', orderable: true },
+        { data: 'created_at', name: 'created_at', orderable: true },
+        { data: 'closed_at', name: 'closed_at', orderable: true },
+        { data: 'serial_number', name: 'serial_number', orderable: true },
+        { data: 'complete', name: 'complete', orderable: true },
+        { data: 'service_location', name: 'service_location', orderable: true },
+        { data: 'region', name: 'region', orderable: true },
+        { data: 'asset_Description', name: 'asset_Description', orderable: true },
+        { data: 'called_by', name: 'called_by', orderable: true }
+      ],
+      pageLength: 25,
+      responsive: true,
+      order: [[7, 'desc']],  // Default sort by Created At
+      dom: 'Bflrtip',
+      buttons: [
+        {
+          extend: 'excelHtml5',
+          text: 'Export to Excel',
+          className: 'btn btn-success',
+          exportOptions: {
+            columns: ':visible'
+          }
+        }
+      ],
+      createdRow: function(row, data, dataIndex) {
+        // Apply row classes from server
+        if (data.DT_RowClass) {
+          $(row).addClass(data.DT_RowClass);
+        }
+      }
+    });
+
+    // Populate column toggle dropdown
+    table.columns().every(function () {
+      var column = this;
+      var title = $(column.header()).text();
+      $('#columnToggleMenu').append(
+        '<li><a class="dropdown-item toggle-vis" href="#" data-column="' + column.index() + '">' +
+        '<input type="checkbox" checked> ' + title + '</a></li>'
+      );
+    });
+
+    // Handle column visibility toggle
+    $('body').on('click', '.toggle-vis', function (e) {
+      e.preventDefault();
+      var column = table.column($(this).data('column'));
+      column.visible(!column.visible());
+      $(this).find('input').prop('checked', column.visible());
+    });
+
+    // Pre-fill filter inputs from URL params
+    if (urlParams.has('start_date')) $('#start_date').val(urlParams.get('start_date'));
+    if (urlParams.has('end_date')) $('#end_date').val(urlParams.get('end_date'));
+    if (urlParams.has('status')) $('#status_filter').val(urlParams.get('status'));
+    if (urlParams.has('customer')) $('#customer_filter').val(urlParams.get('customer'));
+    if (urlParams.has('serial')) $('#serial_filter').val(urlParams.get('serial'));
+    if (urlParams.has('technician')) $('#technician_filter').val(urlParams.get('technician'));
+    if (urlParams.has('region')) $('#region_filter').val(urlParams.get('region'));
+    if (urlParams.has('callType')) $('#call_type_filter').val(urlParams.get('callType'));
+  });
+
+  function applyFilters() {
+    const params = new URLSearchParams();
+    params.set("start_date", document.getElementById("start_date").value);
+    params.set("end_date", document.getElementById("end_date").value);
+    params.set("status", document.getElementById("status_filter").value);
+    params.set("customer", document.getElementById("customer_filter").value);
+    params.set("serial", document.getElementById("serial_filter").value);
+    params.set("technician", document.getElementById("technician_filter").value);
+    params.set("region", document.getElementById("region_filter").value);
+    params.set("callType", document.getElementById("call_type_filter").value);
+    window.location.href = `{{ url_for('ticket1.ticket_dashboard') }}?${params.toString()}`;
+    fetch(`{{ url_for('ticket1.dashboard_summary_json') }}?${params.toString()}`)
+  .then(res => res.json())
+  .then(summary => {
+    document.querySelector('.card-body h5:nth-child(1)').innerText = summary.total_open;
+    document.querySelector('.card-body h5:nth-child(3)').innerText = summary.total_in_progress;
+    document.querySelector('.card-body h5:nth-child(5)').innerText = summary.total_closed;
+    document.querySelector('.card-body h5:nth-child(7)').innerText = `${summary.avg_resolution_time} hrs`;
+    document.querySelector('.card-body h5:nth-child(9)').innerText = summary.overdue_tickets;
+  });
+
+  }
+
+  function resetFilters() {
+    document.getElementById("start_date").value = "";
+    document.getElementById("end_date").value = "";
+    document.getElementById("status_filter").value = "";
+    document.getElementById("customer_filter").value = "";
+    document.getElementById("serial_filter").value = "";
+    document.getElementById("technician_filter").value = "";
+    document.getElementById("region_filter").value = "";
+    document.getElementById("call_type_filter").value = "";
+    applyFilters();
+  }
 </script>
 {% endblock %}

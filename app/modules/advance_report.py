@@ -419,7 +419,10 @@ def run_scheduled_report(report_id):
                 end_date = today
             elif report.period == "Last Year":
                 start_date = today.replace(year=today.year - 1, month=1, day=1)
-                end_date = start_date.replace(month=12, day=31)
+                end_date = start_date.replace(month=12, day=31),
+            elif report.report_type == "Contract Report":
+                from app.modules.contract_alerts import generate_contract_expiry_excel
+                output, filename = generate_contract_expiry_excel()
 
         s_date = start_date.strftime('%Y-%m-%d') if start_date else ''
         e_date = end_date.strftime('%Y-%m-%d') if end_date else ''
@@ -440,6 +443,11 @@ def run_scheduled_report(report_id):
         elif report.report_type == "Total Summary":
             from app.modules.delivery_report import generate_total_service_summary_excel
             output, filename = generate_total_service_summary_excel(s_date, e_date)
+
+        elif report.report_type == "Contract Report":
+            from app.modules.contract_alerts import generate_contract_expiry_excel
+            output, filename = generate_contract_expiry_excel()
+
 
         else:
             flash("Unsupported report type.", "danger")
