@@ -92,7 +92,7 @@ def send_contract_expiry_alerts():
 
             if not already_sent:
                 send_contract_email(contract, stage)
-                db.session.add(ContractNotificationLog(cc=current_app.config.get("CONTRACT_ALERT_CC", []),
+                db.session.add(ContractNotificationLog(
                     contract_code=contract.contract_code,
                     stage=stage
                 ))
