@@ -1,12 +1,11 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from app.models import Assets, TonerModel, toner_request , Contract , DeliveryTeam
+from app.models import Assets, TonerModel, toner_request, Contract, DeliveryTeam
 from app.extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta, time
 import pandas as pd
 from flask import send_file
 import io
 from dateutil import parser
-from flask_login import login_required
 from flask_login import login_required
 from app.utils.permission_required import permission_required
 
@@ -17,7 +16,6 @@ toner_bp = Blueprint(
     static_folder='static',
     static_url_path='/static/toner'
 )
-
 
 # 🔍 Asset Search Page
 @toner_bp.route('/search_assets', methods=['GET', 'POST'])
@@ -48,7 +46,6 @@ def search_assets():
         } for a in results])
 
     return render_template('toner/search_assets_toner.html')
-
 
 @toner_bp.route('/request/<serial_number>', methods=['GET'])
 @login_required
@@ -99,7 +96,6 @@ def get_toner_models():
     results = TonerModel.query.filter_by(asset_model=model, toner_type=toner_type).all()
     return jsonify([{"model": t.model} for t in results])
 
-
 # ✅ Submit Toner Request
 @toner_bp.route('/submit_request', methods=['POST'])
 @login_required
@@ -132,7 +128,6 @@ def submit_toner_request():
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
 
-
 # 🖨 Print/Reprint Toner Request
 @toner_bp.route('/print_request/<int:id>')
 @login_required
@@ -148,13 +143,20 @@ def print_toner_request(id):
         toner_request.id != id
     ).order_by(toner_request.date_issued.desc()).limit(10).all()
 
+    asset = Assets.query.filter_by(serial_number=req.serial_number).first()
+    contract = Contract.query.filter_by(contract_code=asset.contract).first()
+    title_company = (
+        "MFI MANAGED DOCUMENT SOLUTIONS LIMITED"
+        if contract and contract.billing_company and contract.billing_company.upper() == "MDS"
+        else "MFI DOCUMENT SOLUTIONS LIMITED"
+    )
+
     return render_template("toner/print_toner_request.html",
-                           requests=requests,
+                           requests=[req],
                            asset=asset,
                            history=history,
                            title_company=title_company,
-                           now=datetime.now())  # ✅ Fix for the 'now' undefined error
-
+                           now=datetime.now())
 
 # ✏️ Get Data for Editing a Request
 @toner_bp.route('/get_request/<int:id>')
@@ -166,7 +168,7 @@ def get_request(id):
         return jsonify({"error": "Request not found"})
 
     return jsonify({
-        "id": req.id,
+        "id SS": req.id,
         "serial_number": req.serial_number,
         "asset_description": req.asset_description,
         "customer_name": req.customer_name,
@@ -181,7 +183,6 @@ def get_request(id):
         "delivery_date": req.delivery_date.strftime('%Y-%m-%d') if req.delivery_date else "",
         "receiver_name": req.receiver_name
     })
-
 
 # 💾 Update an Existing Request
 @toner_bp.route('/update_request', methods=['POST'])
@@ -217,22 +218,19 @@ def update_request():
                 if delivery_date:
                     req.delivery_date = parser.parse(delivery_date)
 
-
-
             # Handle dispatch_time only if In Transit
             if req.delivery_status == "In Transit":
                 dispatch_time = data.get('dispatch_time')
                 if dispatch_time:
-                    if dispatch_time:
-                        req.dispatch_time = parser.parse(dispatch_time)
+                    req.dispatch_time = parser.parse(dispatch_time)
 
         db.session.commit()
         return jsonify({"success": True})
 
-
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)})
+
 @toner_bp.route('/dashboard')
 @login_required
 @permission_required('can_view_toner_dashboard')
@@ -248,7 +246,6 @@ def toner_dashboard():
     status_filter = request.args.get("status", "").strip()
     delivery_boy_filter = request.args.get("delivery_boy", "").strip()
     foc_filter = request.args.get("foc", "").strip()
-
     serial_filter = request.args.get("serial_number", "").strip()
     asset_desc_filter = request.args.get("asset_description", "").strip()
 
@@ -286,17 +283,40 @@ def toner_dashboard():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     requests = pagination.items
 
-    from datetime import datetime
+    def calculate_working_hours(start_dt, end_dt):
+        if not start_dt or not end_dt:
+            return 0
+        work_start = time(8, 0)  # 8 AM
+        work_end_mf = time(17, 0)  # 5 PM for Monday-Friday
+        work_end_sat = time(12, 0)  # 12 PM for Saturday
+        total_seconds = 0
+        current_dt = start_dt
+
+        while current_dt.date() <= end_dt.date():
+            if current_dt.weekday() == 6:  # Skip Sunday
+                current_dt = current_dt.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                continue
+            # Set work end time based on day
+            work_end = work_end_sat if current_dt.weekday() == 5 else work_end_mf
+            day_start = datetime.combine(current_dt.date(), work_start)
+            day_end = datetime.combine(current_dt.date(), work_end)
+            # Adjust start and end times within working hours
+            period_start = max(current_dt, day_start)
+            period_end = min(end_dt, day_end) if current_dt.date() == end_dt.date() else day_end
+            if period_start < period_end:
+                total_seconds += (period_end - period_start).total_seconds()
+            current_dt = day_start + timedelta(days=1)
+        return round(total_seconds / 3600, 2)
 
     now = datetime.now()
     for r in requests:
         if r.date_issued:
             if r.delivery_status == "Delivered" and r.delivery_date:
                 r.tat_label = "Final"
-                r.tat_hours = round((r.delivery_date - r.date_issued).total_seconds() / 3600, 2)
+                r.tat_hours = calculate_working_hours(r.date_issued, r.delivery_date)
             else:
                 r.tat_label = "Live"
-                r.tat_hours = round((now - r.date_issued).total_seconds() / 3600, 2)
+                r.tat_hours = calculate_working_hours(r.date_issued, now)
         else:
             r.tat_label = None
             r.tat_hours = None
@@ -328,7 +348,6 @@ def toner_dashboard():
         }
     )
 
-# 📦 Load Dashboard Data
 @toner_bp.route('/dashboard_data')
 @login_required
 @permission_required('can_view_toner_dashboard')
@@ -387,6 +406,7 @@ def fetch_previous_reading(serial, toner_type):
     ).order_by(toner_request.date_issued.desc()).first()
 
     return jsonify({"previous": last.meter_reading if last else 0})
+
 from datetime import datetime
 import uuid
 
@@ -415,7 +435,7 @@ def submit_bulk_request():
                 customer_name=asset.customer_name,
                 billing_company=item.get("billing_company"),
                 contract_code=asset.contract,
-                cust_code=cust_code,  # ✅ Now from Contract table
+                cust_code=cust_code,
                 service_location=asset.service_location,
                 region=asset.region,
                 toner_type=item['toner_type'],
@@ -424,15 +444,13 @@ def submit_bulk_request():
                 toner_source=item['toner_source'],
                 issued_qty=int(item['issued_qty']),
                 meter_reading=int(item['current_reading']),
-                previous_reading=int(item['previous_reading']) if 'previous_reading' in item else 0,
+                previous_reading=int(item['previous_reading']) if item.get('previous_reading') else 0,
                 requested_by=item.get("requested_by") or "Web User",
                 request_type=item.get("request_type") or "Call",
                 comments=item['remarks'],
                 date_issued=datetime.now(),
-                foc = item.get("foc") or "Pending"
-
+                foc=item.get("foc") or "Pending"
             )
-
 
             db.session.add(new_request)
             success_count += 1
@@ -503,7 +521,6 @@ def edit_request(id):
     delivery_team = DeliveryTeam.query.all()
     return render_template('toner/edit_toner_request.html', req=req, delivery_team=delivery_team)
 
-
 @toner_bp.route('/export_excel')
 @login_required
 @permission_required('can_export_data')
@@ -569,19 +586,17 @@ def export_excel():
 
     output.seek(0)
     return send_file(output, download_name="Toner_Requests_Export.xlsx", as_attachment=True)
+
 from flask import request, render_template
 from collections import defaultdict
 from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from app.models import toner_request, DeliveryTeam
+
 @toner_bp.route('/delivery_dashboard')
 @login_required
 @permission_required('can_view_toner_dashboard')
 def delivery_dashboard():
-    from collections import defaultdict
-    from datetime import date, datetime, timedelta
-    from sqlalchemy import func
-
     today = date.today()
 
     # ✅ Get filters
@@ -616,6 +631,31 @@ def delivery_dashboard():
             return timedelta(hours=6)
         return timedelta(hours=48)
 
+    def calculate_working_hours(start_dt, end_dt):
+        if not start_dt or not end_dt:
+            return 0
+        work_start = time(8, 0)  # 8 AM
+        work_end_mf = time(17, 0)  # 5 PM for Monday-Friday
+        work_end_sat = time(12, 0)  # 12 PM for Saturday
+        total_seconds = 0
+        current_dt = start_dt
+
+        while current_dt.date() <= end_dt.date():
+            if current_dt.weekday() == 6:  # Skip Sunday
+                current_dt = current_dt.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                continue
+            # Set work end time based on day
+            work_end = work_end_sat if current_dt.weekday() == 5 else work_end_mf
+            day_start = datetime.combine(current_dt.date(), work_start)
+            day_end = datetime.combine(current_dt.date(), work_end)
+            # Adjust start and end times within working hours
+            period_start = max(current_dt, day_start)
+            period_end = min(end_dt, day_end) if current_dt.date() == end_dt.date() else day_end
+            if period_start < period_end:
+                total_seconds += (period_end - period_start).total_seconds()
+            current_dt = day_start + timedelta(days=1)
+        return round(total_seconds / 3600, 2)
+
     stats = []
     delivery_team = DeliveryTeam.query.all()
 
@@ -649,7 +689,7 @@ def delivery_dashboard():
                 if duration > threshold:
                     late += 1
 
-        # ⏱ Avg Delivery Time
+        # ⏱ Avg Delivery Time (in minutes, considering working hours only)
         completed = []
         for r in user_deliveries:
             if r.delivery_date and r.date_issued:
@@ -658,21 +698,19 @@ def delivery_dashboard():
                     if isinstance(r.date_issued, date) and not isinstance(r.date_issued, datetime)
                     else r.date_issued
                 )
-                diff = (r.delivery_date - issued_dt).total_seconds()
-                if diff >= 0:
-                    completed.append(diff)
+                hours = calculate_working_hours(issued_dt, r.delivery_date)
+                completed.append(hours * 60)  # Convert hours to minutes
 
-        avg_minutes = round(sum(completed) / 60 / len(completed), 1) if completed else 0
+        avg_minutes = round(sum(completed) / len(completed), 1) if completed else 0
 
-        # ⏱ Avg Transit Time
+        # ⏱ Avg Transit Time (in minutes, considering working hours only)
         transit_times = []
         for r in user_deliveries:
             if r.delivery_date and r.dispatch_time and r.dispatch_time <= r.delivery_date:
-                diff = (r.delivery_date - r.dispatch_time).total_seconds()
-                if diff >= 0:
-                    transit_times.append(diff)
+                hours = calculate_working_hours(r.dispatch_time, r.delivery_date)
+                transit_times.append(hours * 60)  # Convert hours to minutes
 
-        avg_transit = round(sum(transit_times) / 60 / len(transit_times), 1) if transit_times else 0
+        avg_transit = round(sum(transit_times) / len(transit_times), 1) if transit_times else 0
 
         stats.append({
             'name': member.name,
@@ -713,4 +751,3 @@ def delivery_dashboard():
             "to_date": to_date
         }
     )
-
