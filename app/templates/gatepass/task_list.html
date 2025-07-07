@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0 text-primary"><i class="fas fa-tasks"></i> Gate Pass Task List</h3>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('gate_pass.create_delivery') }}" class="btn btn-success">
+        <i class="fas fa-truck"></i> Delivery Gate Pass
+      </a>
+      <a href="{{ url_for('gate_pass.search_assets_for_collection') }}" class="btn btn-outline-warning btn-sm">
+  <i class="fas fa-search"></i> Collection
+</a>
+
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover table-sm">
+      <thead class="table-dark">
+        <tr>
+          <th>GP No.</th>
+          <th>Type</th>
+          <th>Customer</th>
+          <th>Serial</th>
+          <th>Location</th>
+          <th>Technician</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th style="min-width: 110px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for gp in tasks %}
+        <tr class="{{ 'table-success' if gp.status == 'completed' else 'table-warning' }}">
+          <td><strong>{{ gp.gp_number }}</strong></td>
+          <td>{{ gp.type.title() }}</td>
+          <td>{{ gp.customer_name }}</td>
+          <td>{{ gp.serial_number }}</td>
+          <td>{{ gp.service_location }}</td>
+          <td>{{ gp.technician_name }}</td>
+          <td>{{ gp.delivery_datetime[:16] if gp.delivery_datetime else '' }}</td>
+          <td>
+            <span class="badge bg-{{ 'success' if gp.status == 'completed' else 'warning text-dark' }}">
+              {{ gp.status.title() }}
+            </span>
+          </td>
+          <td class="text-nowrap">
+            <a href="{{ url_for('gate_pass.print_gate_pass', gp_id=gp.id) }}" class="btn btn-outline-primary btn-sm" title="Print" target="_blank">
+              <i class="fas fa-print"></i>
+            </a>
+            {% if gp.status == 'pending' %}
+            <a href="{{ url_for('gate_pass.mark_completed', gp_id=gp.id) }}" class="btn btn-outline-success btn-sm" title="Mark Completed">
+              <i class="fas fa-check"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

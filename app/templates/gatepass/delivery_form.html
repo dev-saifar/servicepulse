@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+<h3 class="mb-4 text-primary fw-bold"><i class="fas fa-truck"></i> Delivery Gate Pass</h3>
+<form action="{{ url_for('gate_pass.create_delivery') }}" method="POST">
+<!-- Customer & Contract Section -->
+<div class="card mb-4">
+<div class="card-header bg-info text-white">Customer &amp; Contract Info</div>
+<div class="card-body row g-3">
+&lt;<div class="col-md-4">
+<label class="form-label" for="customer_name">Customer Name</label>
+<input autocomplete="off" class="form-control" id="customer_name" list="customer_list" name="customer_name" required=""/>
+<datalist id="customer_list"></datalist>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="contract_code">Contract Code</label>
+<select class="form-control" id="contract_code" name="contract_code" required="">
+<option value="">Select contract</option>
+</select>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="department">Department</label>
+<input class="form-control" name="department" type="text">
+</input></div>
+</div>
+</div>
+<!-- Machine Details Section -->
+<div class="card mb-4">
+<div class="card-header bg-secondary text-white">Machine Details</div>
+<div class="card-body row g-3">
+<div class="col-md-4">
+<label class="form-label" for="serial_number">Serial Number</label>
+<input class="form-control" name="serial_number" required="" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="asset_type">Asset Type</label>
+<select class="form-control" name="asset_type" required="">
+<option value="Kampala">Kampala</option>
+<option value="Upcountry">Upcountry</option>
+<option value="Used">Used</option>
+</select>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="asset_code">Asset Code</label>
+<input class="form-control" id="asset_code" name="asset_code" placeholder="Auto-generated" readonly="" type="text"/>
+</div>
+</div>
+</div>
+<!-- Technician & Service Info -->
+<div class="card mb-4">
+<div class="card-header bg-warning text-dark">Technician &amp; Service Info</div>
+<div class="card-body row g-3">
+<div class="col-md-4">
+<label class="form-label" for="technician_name">Technician</label>
+<input autocomplete="off" class="form-control" id="technician_name" list="tech_list" name="technician_name" required=""/>
+<datalist id="tech_list"></datalist>
+</div>
+<div class="col-md-4 d-none">
+<label class="form-label" for="technician_email">Technician Email</label>
+<input class="form-control" id="technician_email" name="technician_email" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="service_location">Service Location</label>
+<input class="form-control" name="service_location" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="region">Region</label>
+<input class="form-control" name="region" type="text"/>
+</div>
+<div class="col-md-4 d-none">
+<label class="form-label" for="pm_freq">PM Frequency</label>
+<input class="form-control" name="pm_freq" type="text" value="60"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="delivery_datetime">Delivery Date &amp; Time</label>
+<input class="form-control" name="delivery_datetime" required="" type="datetime-local"/>
+</div>
+</div>
+</div>
+<!-- Machine Description -->
+<div class="card mb-4">
+<div class="card-header bg-light">Asset Description</div>
+<div class="card-body row g-3">
+<div class="col-md-8">
+<label class="form-label" for="asset_description">Machine Model</label>
+<textarea autocomplete="off" class="form-control" name="asset_description" rows="2"></textarea>
+<ul class="list-group position-absolute mt-1 w-100 z-3" id="asset_desc_suggestions"></ul>
+
+</div>
+<div class="col-md-4">
+<label class="form-label" for="part_number">Part Number</label>
+<input class="form-control" id="partnumber" name="part_number" readonly="" type="text">
+</input></div>
+</div>
+</div>
+<!-- Meter Reading & Contact -->
+<div class="card mb-4">
+<div class="card-header bg-primary text-white">Readings &amp; Contact</div>
+<div class="card-body row g-3">
+<div class="col-md-4">
+<label class="form-label" for="mono_reading">Mono Meter Reading</label>
+<input class="form-control" name="mono_reading" type="number"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="color_reading">Color Meter Reading</label>
+<input class="form-control" name="color_reading" type="number"/>
+</div>
+<div class="col-md-4">
+<label class="form-label" for="contact_number">Contact Number</label>
+<input class="form-control" name="contact_number" type="text"/>
+</div>
+</div>
+</div>
+<!-- Remarks -->
+<div class="mb-4">
+<label class="form-label" for="remarks">Remarks (Optional)</label>
+<textarea class="form-control" name="remarks" rows="3"></textarea>
+</div>
+<!-- Action Buttons -->
+<div class="d-flex justify-content-end gap-2">
+<button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Submit &amp; Create Gate Pass</button>
+<button class="btn btn-success" formaction="#" type="submit"><i class="fas fa-print"></i> Submit &amp; Print Request</button>
+</div>
+</form>
+</div>
+<script>
+  // --- CUSTOMER AUTOCOMPLETE from contract.cust_name ---
+  document.getElementById('customer_name').addEventListener('input', function () {
+    const val = this.value;
+    if (val.length < 2) return;
+
+    fetch(`/gatepass/autocomplete/customers?term=${encodeURIComponent(val)}`)
+      .then(res => res.json())
+      .then(data => {
+        const datalist = document.getElementById('customer_list');
+        datalist.innerHTML = '';
+        data.forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          datalist.appendChild(option);
+        });
+      });
+  });
+
+  // --- CONTRACTS under selected customer ---
+  document.getElementById('customer_name').addEventListener('change', function () {
+    const customer = this.value;
+    fetch(`/gatepass/contracts/by_customer?customer_name=${encodeURIComponent(customer)}`)
+      .then(res => res.json())
+      .then(data => {
+        const contractSelect = document.getElementById('contract_code');
+        contractSelect.innerHTML = data.map(c => `<option value="${c}">${c}</option>`).join('');
+      });
+  });
+
+
+  // --- TECHNICIAN AUTOFILL ---
+  const techInput = document.getElementById('technician_name');
+  techInput.addEventListener('input', function () {
+    const val = this.value;
+    if (val.length < 2) return;
+
+    fetch(`/gatepass/autocomplete/technicians?term=${val}`)
+      .then(res => res.json())
+      .then(data => {
+        const datalist = document.getElementById('tech_list') || document.createElement('datalist');
+        datalist.id = 'tech_list';
+        datalist.innerHTML = data.map(t => `<option data-email="${t.email}" value="${t.name}">`).join('');
+        techInput.setAttribute('list', 'tech_list');
+        if (!document.getElementById('tech_list')) {
+          document.body.appendChild(datalist);
+        }
+      });
+  });
+
+  techInput.addEventListener('change', function () {
+    const techName = this.value;
+    const email = [...document.querySelectorAll('#tech_list option')]
+                    .find(opt => opt.value === techName)?.dataset.email;
+    if (email) document.getElementById('technician_email').value = email;
+  });
+
+  // --- ASSET CODE AUTO-FILL ---
+  document.querySelector('select[name="asset_type"]').addEventListener('change', function () {
+  const type = this.value.toLowerCase(); // Kampala → kampala
+  fetch(`/assets_add/generate_asset_code?location=${encodeURIComponent(type)}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("asset_code").value = data.asset_code || '';
+    });
+});
+
+</script>
+<script>
+const assetDescInput = document.querySelector("textarea[name='asset_description']");
+const assetDescList = document.getElementById("asset_desc_suggestions");
+
+assetDescInput.addEventListener("input", function () {
+    const query = this.value.trim();
+    if (query.length < 2) {
+        assetDescList.innerHTML = "";
+        assetDescList.style.display = "none";
+        return;
+    }
+
+    fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(query)}`)
+        .then(res => res.json())
+        .then(descriptions => {
+            assetDescList.innerHTML = "";
+            if (descriptions.length === 0) {
+                assetDescList.style.display = "none";
+                return;
+            }
+
+            descriptions.forEach(desc => {
+                const item = document.createElement("li");
+                item.classList.add("list-group-item", "list-group-item-action");
+                item.style.cursor = "pointer";
+                item.textContent = desc;
+                item.onclick = () => {
+                    assetDescInput.value = desc;
+                    assetDescList.innerHTML = "";
+                    assetDescList.style.display = "none";
+
+                    fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            document.getElementsByName("part_number")[0].value = data.part_no || "";
+                        });
+                };
+                assetDescList.appendChild(item);
+            });
+
+            assetDescList.style.display = "block";
+        });
+});
+
+document.addEventListener("click", function (e) {
+    if (!assetDescInput.contains(e.target) && !assetDescList.contains(e.target)) {
+        assetDescList.innerHTML = "";
+        assetDescList.style.display = "none";
+    }
+});
+</script>
+
+
+{% endblock %}

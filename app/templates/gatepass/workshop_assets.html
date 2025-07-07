@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Workshop Assets{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">🧰 Workshop Assets</h3>
+
+    <!-- ✅ Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Assets</h6>
+                    <h3>{{ assets|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">This Week</h6>
+                    <h3>{{ assets | selectattr('collected_date', '>=', now - timedelta(days=7)) | list | length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Over 30 Days</h6>
+                    <h3>{{ assets | selectattr('collected_date', '<=', now - timedelta(days=30)) | list | length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Table -->
+    <div class="table-responsive">
+        <table id="workshopTable" class="table table-bordered table-hover table-striped align-middle">
+            <thead class="table-dark sticky-top">
+                <tr>
+                    <th>Serial No</th>
+                    <th>Customer</th>
+                    <th>Location</th>
+                    <th>Region</th>
+                    <th>Technician</th>
+                    <th>Asset Desc</th>
+                    <th>Collected On</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                {% set age = (now - asset.collected_date).days if asset.collected_date else 0 %}
+                <tr class="{% if age > 30 %}table-danger{% endif %}">
+                    <td>{{ asset.serial_number }}</td>
+                    <td>{{ asset.customer_name }}</td>
+                    <td>{{ asset.service_location }}</td>
+                    <td>{{ asset.region }}</td>
+                    <td>{{ asset.technician_name }}</td>
+                    <td>{{ asset.asset_Description }}</td>
+                    <td>{{ asset.collected_date.strftime('%d-%b-%Y %I:%M %p') if asset.collected_date else '' }}</td>
+                    <td><span class="badge bg-warning text-dark">In Workshop</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ✅ DataTables & Export -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.flash.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#workshopTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: ['copy', 'excel', 'pdf', 'print'],
+            pageLength: 25,
+            responsive: true,
+            ordering: true
+        });
+    });
+</script>
+{% endblock %}
