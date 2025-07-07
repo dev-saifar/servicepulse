@@ -1,0 +1,78 @@
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h4 class="mb-3"><i class="fas fa-truck-loading"></i> Collection Gate Pass Form</h4>
+
+  <form method="POST" action="{{ url_for('gate_pass.create_collection') }}">
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label>Customer Name</label>
+        <input type="text" name="customer_name" class="form-control" value="{{ asset.customer_name }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Contract Code</label>
+        <input type="text" name="contract_code" class="form-control" value="{{ contract_code }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Department</label>
+        <input type="text" name="department" class="form-control" value="{{ asset.department or '' }}">
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label>Serial Number</label>
+        <input type="text" name="serial_number" class="form-control" value="{{ asset.serial_number }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Asset Code</label>
+        <input type="text" name="asset_code" class="form-control" value="{{ asset.asset_code }}" readonly>
+      </div>
+      <div class="col-md-4">
+        <label>Asset Description</label>
+        <input type="text" name="asset_description" class="form-control" value="{{ asset.asset_Description }}" readonly>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label>Service Location</label>
+        <input type="text" name="service_location" class="form-control" value="{{ asset.service_location }}">
+      </div>
+      <div class="col-md-4">
+        <label>Region</label>
+        <input type="text" name="region" class="form-control" value="{{ asset.region }}">
+      </div>
+      <div class="col-md-4">
+        <label>Technician</label>
+        <input type="text" name="technician_name" class="form-control" value="{{ asset.technician_name }}">
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-3">
+        <label>Mono Reading</label>
+        <input type="text" name="mono_reading" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label>Color Reading</label>
+        <input type="text" name="color_reading" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label>Accessories (if any)</label>
+        <input type="text" name="accessories" class="form-control">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label>Remarks</label>
+      <textarea name="remarks" class="form-control" rows="3"></textarea>
+    </div>
+
+    <div class="text-end">
+      <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Submit Collection</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

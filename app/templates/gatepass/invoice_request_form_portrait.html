@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice Request Form</title>
+  <style>
+    @media print {
+      body { margin: 0; padding: 0; }
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 11px;
+      padding: 40px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .logo {
+      height: 50px;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      text-decoration: underline;
+      margin: 10px 0 4px;
+    }
+
+    .sub-title {
+      text-align: center;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    td {
+      padding: 4px;
+      vertical-align: top;
+    }
+
+    .info-table td {
+      width: 50%;
+    }
+
+    .product-table th, .product-table td {
+      border: 1px solid #000;
+      text-align: left;
+    }
+
+    .product-table th {
+      background-color: #f2f2f2;
+    }
+
+    .signature-section {
+      margin-top: 30px;
+    }
+
+    .billing-section {
+      border-top: 1px dashed #000;
+      margin-top: 40px;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="title">INVOICE REQUEST FORM</div>
+    <div class="sub-title">{{ gate_pass.type | upper }} NOTE</div>
+  </div>
+  <img src="{{ url_for('static', filename='logo2.png') }}" class="logo" alt="Logo">
+</div>
+
+<table class="info-table">
+  <tr>
+    <td><strong>Segment Type:</strong> {{ gate_pass.type | upper }} NOTE</td>
+    <td><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td>
+  </tr>
+  <tr>
+    <td><strong>Invoice Mode:</strong> {{ gate_pass.type | upper }} NOTE</td>
+    <td><strong>LPO / Agreement No:</strong> ____________________</td>
+  </tr>
+  <tr>
+    <td><strong>Customer Name:</strong> {{ gate_pass.customer_name }}</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><strong>Requested By:</strong> {{ gate_pass.technician_name }}</td>
+    <td><strong>Signature:</strong> ____________________</td>
+  </tr>
+  <tr>
+    <td><strong>Current MR:</strong> ____________</td>
+    <td><strong>Last replaced Date:</strong> ____________ Last Replaced MR: ____________</td>
+  </tr>
+</table>
+
+<br>
+
+<strong>Product Details:</strong>
+<table class="product-table">
+  <thead>
+    <tr>
+      <th style="width: 5%;">Sr.</th>
+      <th style="width: 20%;">Product Code</th>
+      <th>Product Description</th>
+      <th style="width: 8%;">Qty</th>
+      <th style="width: 15%;">Total Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>{{ gate_pass.part_number or 'N/A' }}</td>
+      <td>
+        Machine Model: {{ gate_pass.asset_description }}<br>
+        Serial Number: {{ gate_pass.serial_number }}<br>
+        Machine Code: {{ gate_pass.asset_code }}<br>
+        Start B/W Reading: {{ gate_pass.mono_reading or 'N/A' }}<br>
+        Start Color Reading: {{ gate_pass.color_reading or 'N/A' }}
+      </td>
+      <td>1</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td></td>
+      <td>Accessories: {{ gate_pass.accessories or 'None' }}</td>
+      <td>1</td>
+      <td>N/A</td>
+    </tr>
+    {% for i in range(3, 6) %}
+    <tr><td>{{ i }}</td><td></td><td></td><td></td><td></td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<br>
+
+<strong>Remarks:</strong> {{ gate_pass.remarks or 'Delivered against faulty machine under lease' }}
+
+<div class="signature-section">
+  <table>
+    <tr>
+      <td><strong>Head of Department:</strong> DAD</td>
+      <td style="text-align: right;"><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td>
+    </tr>
+  </table>
+</div>
+
+<div class="billing-section">
+  <strong>(Billing Section)</strong><br><br>
+  ☐ Invoice Created  ☐ Invoice No ______________  ☐ Invoice Date ______________<br><br>
+  Billing Head Name: ____________________  Signature: ____________________
+</div>
+
+</body>
+</html>

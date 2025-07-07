@@ -455,4 +455,57 @@ from datetime import datetime
 from app import db
 
 
+# models/gate_pass.py
+from app import db
+from datetime import datetime
 
+class GatePassRequest(db.Model):
+    __tablename__ = 'gate_pass_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    gp_number = db.Column(db.String, unique=True)
+    type = db.Column(db.String(20))  # 'delivery' or 'collection'
+    customer_name = db.Column(db.String(200))
+    contract_code = db.Column(db.String(100))
+    department = db.Column(db.String(100))
+    serial_number = db.Column(db.String(100))
+    asset_code = db.Column(db.String(100))
+    asset_type = db.Column(db.String(50))  # Kampala / Upcountry / Used
+    technician_name = db.Column(db.String(100))
+    technician_email = db.Column(db.String(200))
+    service_location = db.Column(db.String(200))
+    region = db.Column(db.String(100))
+    delivery_datetime = db.Column(db.String(100))
+    asset_description = db.Column(db.String(300))
+    part_number = db.Column(db.String(100))
+    mono_reading = db.Column(db.Integer)
+    color_reading = db.Column(db.Integer)
+    contact_number = db.Column(db.String(100))
+    accessories = db.Column(db.Text)
+    remarks = db.Column(db.Text)
+    qr_code_path = db.Column(db.String(200))
+    status = db.Column(db.String(50), default='pending')  # pending/completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class WorkshopAsset(db.Model):
+    __tablename__ = 'workshop_assets'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_code = db.Column(db.String(100), nullable=False)
+    customer_name = db.Column(db.String(255), nullable=False)
+    serial_number = db.Column(db.String(100), unique=True, nullable=False)
+    service_location = db.Column(db.String(255), nullable=True)
+    region = db.Column(db.String(100), nullable=True)
+    technician_name = db.Column(db.String(255), nullable=True)
+    technician_email = db.Column(db.String(255), nullable=True)
+    contract = db.Column(db.String(100), nullable=True)
+    asset_Description = db.Column(db.Text, nullable=True)
+    contract_expiry_date = db.Column(db.String(100), nullable=True)
+    last_pm_date = db.Column(db.String(100), nullable=True)
+    pm_freq = db.Column(db.String(100), nullable=True)
+    install_date = db.Column(db.String(100), nullable=True)
+    asset_code = db.Column(db.String(50), nullable=True)
+    asset_status = db.Column(db.String(50), nullable=True)
+    part_no = db.Column(db.String(50), nullable=True)
+    department = db.Column(db.String(100), nullable=True)
+    collected_date = db.Column(db.DateTime, default=datetime.utcnow)

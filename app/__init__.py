@@ -137,6 +137,8 @@ def create_app():
     app.register_blueprint(dashboard_rotator_bp)
     from app.modules.contract_alerts import contract_alerts_bp
     app.register_blueprint(contract_alerts_bp, url_prefix='/contract_alert')
+    from app.modules.gate_pass import gate_pass_bp
+    app.register_blueprint(gate_pass_bp, url_prefix='/gatepass')
 
     app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')
