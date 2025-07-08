@@ -2,7 +2,7 @@
 {% block content %}
 <div class="container mt-4">
 <h3 class="mb-4 text-primary fw-bold"><i class="fas fa-truck"></i> Delivery Gate Pass</h3>
-<form action="{{ url_for('gate_pass.create_delivery') }}" method="POST">
+<form action="{{ url_for('gate_pass.create_delivery') }}" method="POST" onsubmit="return validateBeforeSubmit()">
 <!-- Customer & Contract Section -->
 <div class="card mb-4">
 <div class="card-header bg-info text-white">Customer &amp; Contract Info</div>
@@ -121,6 +121,8 @@
 <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Submit &amp; Create Gate Pass</button>
 <button class="btn btn-success" formaction="#" type="submit"><i class="fas fa-print"></i> Submit &amp; Print Request</button>
 </div>
+  <form ... onsubmit="return validateBeforeSubmit()">
+
 </form>
 </div>
 <script>
@@ -190,8 +192,7 @@
     });
 });
 
-</script>
-<script>
+
 const assetDescInput = document.querySelector("textarea[name='asset_description']");
 const assetDescList = document.getElementById("asset_desc_suggestions");
 
@@ -241,7 +242,38 @@ document.addEventListener("click", function (e) {
         assetDescList.style.display = "none";
     }
 });
+
+
+let serialDuplicate = false;
+
+async function checkSerialExists() {
+  const serial = document.querySelector('input[name="serial_number"]').value.trim();
+  if (!serial) return false;
+
+  try {
+    const response = await fetch(`/gatepass/check_serial_exists?serial_number=${encodeURIComponent(serial)}`);
+    const data = await response.json();
+    return data.exists;
+  } catch (err) {
+    console.error("Error during serial check:", err);
+    return false;
+  }
+}
+
+async function validateBeforeSubmit() {
+  const exists = await checkSerialExists();
+  if (exists) {
+    alert("🚫 Serial Number exists. First make collection note to add the machine in workshop stock.");
+    document.querySelector('input[name="serial_number"]').classList.add("is-invalid");
+    return false;
+  }
+  return true;
+}
 </script>
+
+
+
+
 
 
 {% endblock %}
