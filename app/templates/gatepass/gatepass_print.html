@@ -119,6 +119,7 @@
     <table class="details">
       <tr><td class="label">Technician Name:</td><td>{{ gate_pass.technician_name }}</td></tr>
       <tr><td class="label">Delivery Date:</td><td>{{ gate_pass.delivery_datetime }}</td></tr>
+       <tr><td class="label">Customer Contact Number:</td><td>{{ gate_pass.contact_number or '-' }}</td></tr>
     </table>
     <br><br>
     <div class="signature-row">
@@ -161,18 +162,36 @@
 
   <br>
   <table>
-    <tr><td><strong>Customer Name:</strong> {{ gate_pass.customer_name }}</td><td><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td></tr>
-    <tr><td><strong>Requested By:</strong> {{ gate_pass.technician_name }}</td><td><strong>Signature:</strong> ____________________</td></tr>
+  <tr>
+    <td><strong>Customer Name:</strong> {{ gate_pass.customer_name }}</td>
+    <td><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td>
+  </tr>
     <tr>
-  <td><strong>LPO / Agreement No:</strong> {{ gate_pass.contract_code }}</td>
-  <td><strong>Segment Type:</strong> {{ billing_company }}</td>
-</tr>
-<tr>
-  <td colspan="2"><strong>LPO Received:</strong> Leasing Contract</td>
-</tr>
+    <td><strong>Service Location:</strong> {{ gate_pass.service_location }}</td>
+    <td><strong>Region:</strong> {{ gate_pass.region }}</td>
+        </tr>
+    <tr>
+    <td><strong>Contact No:</strong> {{ gate_pass.contact_number or '-' }}</td>
+    <td><strong>Delivery Date:</strong> {{ gate_pass.delivery_datetime }}</td>
+  </tr>
+  <tr>
+    <td><strong>Requested By:</strong> {{ gate_pass.technician_name }}</td>
+    <td><strong>Technician Email:</strong> {{ gate_pass.technician_email or '-' }}</td>
+  </tr>
 
-    <tr><td><strong>Current MR:</strong> ____________</td><td><strong>Last replaced Date:</strong> ____________ Last Replaced MR: ____________</td></tr>
-  </table>
+
+  <tr>
+    <td><strong>LPO / Agreement No:</strong> {{ gate_pass.contract_code }}</td>
+    <td><strong>Segment Type:</strong> {{ billing_company }}</td>
+  </tr>
+  <tr>
+    <td colspan="2"><strong>LPO Received:</strong> Leasing Contract</td>
+  </tr>
+  <tr>
+    <td><strong>Current MR:</strong> ____________</td>
+    <td><strong>Last replaced Date:</strong> ____________ Last Replaced MR: ____________</td>
+  </tr>
+</table>
 
   <br>
   <strong>Product Details:</strong>
