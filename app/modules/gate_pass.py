@@ -14,6 +14,12 @@ gate_pass_bp = Blueprint('gate_pass', __name__, url_prefix='/gatepass')
 def create_delivery():
     if request.method == 'POST':
         data = request.form
+        # Check if serial number already exists in assets table
+        existing = Assets.query.filter_by(serial_number=data.get('serial_number')).first()
+        if existing:
+            flash("🚫 Serial Number already exists in Assets. Please make a collection note first.", "danger")
+            return redirect(url_for('gate_pass.create_delivery'))
+
         asset_code = generate_asset_code(data.get('asset_type'))
 
         qr_path = generate_qr_code(f"{data.get('customer_name')} | {data.get('serial_number')} | {asset_code}")
@@ -321,3 +327,17 @@ from datetime import datetime, timedelta
 def workshop_assets():
     assets = WorkshopAsset.query.order_by(WorkshopAsset.collected_date.desc()).all()
     return render_template('gatepass/workshop_assets.html', assets=assets, now=datetime.now(), timedelta=timedelta)
+
+
+@gate_pass_bp.route('/check_serial_exists')
+def check_serial_exists():
+    serial = request.args.get('serial_number')
+    if not serial:
+        return jsonify({"exists": False})
+
+    exists = db.session.execute(
+        text("SELECT 1 FROM assets WHERE serial_number = :s LIMIT 1"),
+        {"s": serial}
+    ).first() is not None
+
+    return jsonify({"exists": exists})
