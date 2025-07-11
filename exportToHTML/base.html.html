@@ -19,38 +19,464 @@ base.html</font>
 <pre><span class="s0">&lt;!DOCTYPE </span><span class="s2">html</span><span class="s0">&gt;</span>
 <span class="s0">&lt;html </span><span class="s2">lang</span><span class="s3">=&quot;en&quot;</span><span class="s0">&gt;</span>
 <span class="s0">&lt;head&gt;</span>
-    <span class="s0">&lt;meta </span><span class="s2">charset</span><span class="s3">=&quot;UTF-8&quot;</span><span class="s0">&gt;</span>
-    <span class="s0">&lt;meta </span><span class="s2">name</span><span class="s3">=&quot;viewport&quot; </span><span class="s2">content</span><span class="s3">=&quot;width=device-width, initial-scale=1.0&quot;</span><span class="s0">&gt;</span>
-    <span class="s0">&lt;title&gt;</span><span class="s1">TechTrack</span><span class="s0">&lt;/title&gt;</span>
-    <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('static', filename='css/styles.css') }}&quot;</span><span class="s0">&gt;</span>
+  <span class="s0">&lt;meta </span><span class="s2">charset</span><span class="s3">=&quot;UTF-8&quot; </span><span class="s0">/&gt;</span>
+  <span class="s0">&lt;meta </span><span class="s2">name</span><span class="s3">=&quot;viewport&quot; </span><span class="s2">content</span><span class="s3">=&quot;width=device-width, initial-scale=1.0&quot; </span><span class="s0">/&gt;</span>
+  <span class="s0">&lt;title&gt;</span><span class="s1">Serv-Pulse</span><span class="s0">&lt;/title&gt;</span>
+
+  <span class="s4">&lt;!-- Bootstrap 5.3 --&gt;</span>
+  <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot; </span><span class="s2">href</span><span class="s3">=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css&quot; </span><span class="s0">/&gt;</span>
+  <span class="s4">&lt;!-- Font Awesome &amp; Bootstrap Icons --&gt;</span>
+  <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot; </span><span class="s2">href</span><span class="s3">=&quot;https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css&quot; </span><span class="s0">/&gt;</span>
+  <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot; </span><span class="s2">href</span><span class="s3">=&quot;https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css&quot; </span><span class="s0">/&gt;</span>
+  <span class="s4">&lt;!-- jQuery + Bootstrap JS --&gt;</span>
+  <span class="s0">&lt;script </span><span class="s2">src</span><span class="s3">=&quot;https://code.jquery.com/jquery-3.6.0.min.js&quot;</span><span class="s0">&gt;&lt;/script&gt;</span>
+  <span class="s0">&lt;script </span><span class="s2">src</span><span class="s3">=&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js&quot;</span><span class="s0">&gt;&lt;/script&gt;</span>
+
+  <span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;icon&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('static', filename='favicon.ico') }}&quot; </span><span class="s2">type</span><span class="s3">=&quot;image/x-icon&quot; </span><span class="s0">/&gt;</span>
+    <span class="s0">&lt;link </span><span class="s2">href</span><span class="s3">=&quot;https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css&quot; </span><span class="s2">rel</span><span class="s3">=&quot;stylesheet&quot;</span><span class="s0">&gt;</span>
+
+
+  <span class="s0">&lt;style&gt;</span>
+    <span class="s1">.is-invalid {</span>
+        <span class="s1">border-color: #dc3545;</span>
+        <span class="s1">box-shadow: 0 0 0 0.15rem rgba(220,53,69,.25);</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.logo {</span>
+        <span class="s1">width: 100px;</span>
+        <span class="s1">height: auto;</span>
+        <span class="s1">margin-bottom: 10px;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">body {</span>
+        <span class="s1">font-family: Arial, sans-serif;</span>
+        <span class="s1">background-color: #f8f9fa;</span>
+        <span class="s1">transition: background-color 0.3s, color 0.3s;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">/* Sidebar with z-index fixes */</span>
+    <span class="s1">.sidebar {</span>
+        <span class="s1">width: 250px;</span>
+        <span class="s1">position: fixed;</span>
+        <span class="s1">align-items: center;</span>
+        <span class="s1">height: 100%;</span>
+        <span class="s1">background: #343a40;</span>
+        <span class="s1">color: white;</span>
+        <span class="s1">padding-top: 20px;</span>
+        <span class="s1">transition: all 0.3s;</span>
+        <span class="s1">display: flex;</span>
+        <span class="s1">flex-direction: column;</span>
+        <span class="s1">justify-content: space-between;</span>
+        <span class="s1">z-index: 1030;</span>
+        <span class="s1">overflow: visible !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar a {</span>
+        <span class="s1">display: block;</span>
+        <span class="s1">color: white;</span>
+        <span class="s1">padding: 12px 20px;</span>
+        <span class="s1">text-decoration: none;</span>
+        <span class="s1">transition: background 0.3s;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar a:hover {</span>
+        <span class="s1">background: #495057;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.main-content {</span>
+        <span class="s1">margin-left: 260px;</span>
+        <span class="s1">padding: 20px;</span>
+        <span class="s1">z-index: 1020;</span>
+        <span class="s1">position: relative;</span>
+        <span class="s1">transition: margin-left 0.3s;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar-footer {</span>
+        <span class="s1">text-align: center;</span>
+        <span class="s1">padding: 10px;</span>
+        <span class="s1">background: #2c3034;</span>
+        <span class="s1">color: white;</span>
+        <span class="s1">margin-top: auto;</span>
+        <span class="s1">width: 100%;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.nav-link {</span>
+        <span class="s1">padding-left: 30px !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">/* Dropdown menu z-index fixes */</span>
+    <span class="s1">.sidebar .collapse {</span>
+        <span class="s1">z-index: 1031 !important;</span>
+        <span class="s1">position: relative;</span>
+        <span class="s1">overflow: visible !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar .nav {</span>
+        <span class="s1">overflow: visible !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">@media (max-width: 768px) {</span>
+        <span class="s1">.sidebar {</span>
+            <span class="s1">display: none;</span>
+            <span class="s1">z-index: 1030;</span>
+            <span class="s1">background-color: #343a40;</span>
+        <span class="s1">}</span>
+        <span class="s1">.main-content {</span>
+            <span class="s1">margin-left: 0 !important;</span>
+        <span class="s1">}</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.collapsed {</span>
+        <span class="s1">width: 60px;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.collapsed .nav-link,</span>
+    <span class="s1">.sidebar.collapsed .sidebar-footer,</span>
+    <span class="s1">.sidebar.collapsed h5,</span>
+    <span class="s1">.sidebar.collapsed span,</span>
+    <span class="s1">.sidebar.collapsed p {</span>
+        <span class="s1">display: none !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.collapsed .logo {</span>
+        <span class="s1">width: 60px;</span>
+        <span class="s1">margin-bottom: 0;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.main-content.collapsed {</span>
+        <span class="s1">margin-left: 70px !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.collapsed:hover {</span>
+        <span class="s1">width: 250px;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.collapsed:hover .nav-link,</span>
+    <span class="s1">.sidebar.collapsed:hover .sidebar-footer,</span>
+    <span class="s1">.sidebar.collapsed:hover h5,</span>
+    <span class="s1">.sidebar.collapsed:hover span,</span>
+    <span class="s1">.sidebar.collapsed:hover p {</span>
+        <span class="s1">display: block !important;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar-toggle {</span>
+        <span class="s1">position: absolute;</span>
+        <span class="s1">top: 10px;</span>
+        <span class="s1">right: 10px;</span>
+        <span class="s1">background: none;</span>
+        <span class="s1">border: none;</span>
+        <span class="s1">color: white;</span>
+        <span class="s1">cursor: pointer;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar-toggle:hover {</span>
+        <span class="s1">color: #adb5bd;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar {</span>
+        <span class="s1">transition: transform 0.3s ease-in-out;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">.sidebar.d-none {</span>
+        <span class="s1">transform: translateX(-100%);</span>
+    <span class="s1">}</span>
+    <span class="s0">&lt;/style&gt;</span>
+    <span class="s0">&lt;script&gt;</span>
+  <span class="s1">$(document).ready(function () {</span>
+    <span class="s1">// Automatically dismiss alerts after 3 seconds</span>
+    <span class="s1">setTimeout(function () {</span>
+      <span class="s1">$(&quot;.alert.auto-dismiss&quot;).fadeTo(500, 0).slideUp(500, function () {</span>
+        <span class="s1">$(this).remove();</span>
+      <span class="s1">});</span>
+    <span class="s1">}, 3000);</span>
+
+    <span class="s1">// Fix stuck modal overlay (important for your case)</span>
+    <span class="s1">$(&quot;.modal-backdrop&quot;).remove();</span>
+    <span class="s1">$(&quot;body&quot;).removeClass(&quot;modal-open&quot;);</span>
+  <span class="s1">});</span>
+
+  <span class="s1">function toggleSidebar() {</span>
+    <span class="s1">document.querySelector(&quot;.sidebar&quot;).classList.toggle(&quot;d-none&quot;);</span>
+  <span class="s1">}</span>
+
+  <span class="s1">function collapseSidebar() {</span>
+    <span class="s1">const sidebar = document.getElementById(&quot;sidebar&quot;);</span>
+    <span class="s1">const content = document.getElementById(&quot;mainContent&quot;);</span>
+    <span class="s1">const toggleIcon = document.getElementById(&quot;sidebarToggleIcon&quot;);</span>
+
+    <span class="s1">sidebar.classList.toggle(&quot;collapsed&quot;);</span>
+    <span class="s1">content.classList.toggle(&quot;collapsed&quot;);</span>
+
+    <span class="s1">if (sidebar.classList.contains(&quot;collapsed&quot;)) {</span>
+      <span class="s1">toggleIcon.classList.remove(&quot;fa-angle-double-left&quot;);</span>
+      <span class="s1">toggleIcon.classList.add(&quot;fa-angle-double-right&quot;);</span>
+    <span class="s1">} else {</span>
+      <span class="s1">toggleIcon.classList.remove(&quot;fa-angle-double-right&quot;);</span>
+      <span class="s1">toggleIcon.classList.add(&quot;fa-angle-double-left&quot;);</span>
+    <span class="s1">}</span>
+  <span class="s1">}</span>
+<span class="s0">&lt;/script&gt;</span>
+
 <span class="s0">&lt;/head&gt;</span>
+<span class="s0">&lt;link </span><span class="s2">rel</span><span class="s3">=&quot;icon&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('static', filename='favicon.ico') }}&quot; </span><span class="s2">type</span><span class="s3">=&quot;image/x-icon&quot;</span><span class="s0">&gt;</span>
+
 <span class="s0">&lt;body&gt;</span>
+    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;sidebar text-start&quot; </span><span class="s2">id</span><span class="s3">=&quot;sidebar&quot;</span><span class="s0">&gt;</span>
+        <span class="s0">&lt;button </span><span class="s2">class</span><span class="s3">=&quot;sidebar-toggle&quot; </span><span class="s2">onclick</span><span class="s3">=&quot;collapseSidebar()&quot; </span><span class="s2">title</span><span class="s3">=&quot;Collapse/Expand&quot;</span><span class="s0">&gt;</span>
+            <span class="s0">&lt;i </span><span class="s2">id</span><span class="s3">=&quot;sidebarToggleIcon&quot; </span><span class="s2">class</span><span class="s3">=&quot;fas fa-angle-double-left&quot;</span><span class="s0">&gt;&lt;/i&gt;</span>
+        <span class="s0">&lt;/button&gt;</span>
 
-    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;navbar&quot;</span><span class="s0">&gt;</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('dashboard.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Dashboard</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('technicians.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Technicians</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('tickets.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Tickets</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('reports.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Reports</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.index') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Assets</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('about.about') }}&quot;</span><span class="s0">&gt;</span><span class="s1">About</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-        <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('users.user_list') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Users</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
+        <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;text-center&quot;</span><span class="s0">&gt;</span>
+            <span class="s0">&lt;img </span><span class="s2">src</span><span class="s3">=&quot;{{ url_for('static', filename='logo_mfi.png') }}&quot; </span><span class="s2">alt</span><span class="s3">=&quot;Serv-Pulse Logo&quot; </span><span class="s2">class</span><span class="s3">=&quot;logo&quot;</span><span class="s0">&gt;</span>
+            <span class="s0">&lt;h5 </span><span class="s2">class</span><span class="s3">=&quot;text-white&quot;</span><span class="s0">&gt;</span><span class="s1">Service-Pulse</span><span class="s0">&lt;/h5&gt;</span>
+        <span class="s0">&lt;/div&gt;</span>
 
-        <span class="s4">&lt;!-- ✅ Authentication Logic --&gt;</span>
-        <span class="s1">{% if current_user.is_authenticated %}</span>
-            <span class="s0">&lt;span&gt;</span><span class="s1">Welcome, {{ current_user.username }} | </span><span class="s0">&lt;/span&gt;</span>
-            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.logout') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Logout</span><span class="s0">&lt;/a&gt;</span>
-        <span class="s1">{% else %}</span>
-            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.login') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Login</span><span class="s0">&lt;/a&gt; </span><span class="s1">|</span>
-            <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.register') }}&quot;</span><span class="s0">&gt;</span><span class="s1">Register</span><span class="s0">&lt;/a&gt;</span>
-        <span class="s1">{% endif %}</span>
+        <span class="s0">&lt;ul </span><span class="s2">class</span><span class="s3">=&quot;nav flex-column w-100&quot;</span><span class="s0">&gt;</span>
+            <span class="s4">&lt;!-- Rest of your sidebar content remains the same --&gt;</span>
+            <span class="s4">&lt;!-- Dashboard Collapsible Menu --&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link dropdown-toggle text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;#&quot; </span><span class="s2">data-bs-toggle</span><span class="s3">=&quot;collapse&quot; </span><span class="s2">data-bs-target</span><span class="s3">=&quot;#dashboardSubMenu&quot; </span><span class="s2">aria-expanded</span><span class="s3">=&quot;false&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-tachometer-alt me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Dashboard</span>
+                <span class="s0">&lt;/a&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;collapse ps-2&quot; </span><span class="s2">id</span><span class="s3">=&quot;dashboardSubMenu&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;ul </span><span class="s2">class</span><span class="s3">=&quot;nav flex-column&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('dashboard_rotator.tv_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-house-door me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Technician Availability</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('ticket1.technician_analytics') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-chart-line me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Technician Analytics</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('contracts.contract_dashboard_page') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-file-contract me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Contracts Dashboard</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('toner.delivery_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-truck me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Toner Delivery Dashboard</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('ticket1.ticket_dashboard_summary_page') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fa-ticket-alt me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Ticket Dashboard</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('financial.financial_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-coins me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Financial Dashboard</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                    <span class="s0">&lt;/ul&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+
+            <span class="s4">&lt;!-- Rest of your menu items... --&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('technicians.index') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-user-cog me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Technicians</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+
+            <span class="s4">&lt;!-- Assets Collapsible Menu --&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link dropdown-toggle text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;#&quot; </span><span class="s2">data-bs-toggle</span><span class="s3">=&quot;collapse&quot; </span><span class="s2">data-bs-target</span><span class="s3">=&quot;#assetsSubMenu&quot; </span><span class="s2">aria-expanded</span><span class="s3">=&quot;false&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-box me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Customer/Contract/Asset</span>
+                <span class="s0">&lt;/a&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;collapse ps-2&quot; </span><span class="s2">id</span><span class="s3">=&quot;assetsSubMenu&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;ul </span><span class="s2">class</span><span class="s3">=&quot;nav flex-column&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.customer_list') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-person-lines-fill me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Customer List</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('contracts.list_contracts') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-file-earmark-text me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Contract List</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.index') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-hdd-network me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Assets</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                       <span class="s0">&lt;li&gt;</span>
+  <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('gate_pass.workshop_assets') }}&quot;</span><span class="s0">&gt;</span>
+    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-tools&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Workshop Assets</span>
+  <span class="s0">&lt;/a&gt;</span>
+<span class="s0">&lt;/li&gt;</span>
+
+
+                    <span class="s0">&lt;/ul&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('users.user_list') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-users me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Users</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('ticket1.ticket_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-ticket-alt me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Tickets</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+            <span class="s4">&lt;!-- ✅ New: Preventive Maintenance Menu --&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link dropdown-toggle text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;#&quot; </span><span class="s2">data-bs-toggle</span><span class="s3">=&quot;collapse&quot; </span><span class="s2">data-bs-target</span><span class="s3">=&quot;#pmSubMenu&quot; </span><span class="s2">aria-expanded</span><span class="s3">=&quot;false&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-tools me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Preventive Maintenance</span>
+                <span class="s0">&lt;/a&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;collapse ps-2&quot; </span><span class="s2">id</span><span class="s3">=&quot;pmSubMenu&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;ul </span><span class="s2">class</span><span class="s3">=&quot;nav flex-column&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.pm_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-speedometer2 me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">PM Dashboard</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.pm_history') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;bi bi-clock-history me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">PM History</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                    <span class="s0">&lt;/ul&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('advance_report.advance_report_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-chart-bar me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Report</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+            <span class="s4">&lt;!-- Material Movement Collapsible Menu --&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link dropdown-toggle text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;#&quot; </span><span class="s2">data-bs-toggle</span><span class="s3">=&quot;collapse&quot; </span><span class="s2">data-bs-target</span><span class="s3">=&quot;#materialSubMenu&quot; </span><span class="s2">aria-expanded</span><span class="s3">=&quot;false&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-warehouse me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Material Movement</span>
+                <span class="s0">&lt;/a&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;collapse ps-2&quot; </span><span class="s2">id</span><span class="s3">=&quot;materialSubMenu&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;ul </span><span class="s2">class</span><span class="s3">=&quot;nav flex-column&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('toner.toner_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-tint me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Toner</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                        <span class="s0">&lt;/li&gt;</span>
+                        <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('material.material_dashboard') }}&quot;</span><span class="s0">&gt;</span>
+                                <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-tools me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Spare</span>
+                            <span class="s0">&lt;/a&gt;</span>
+                            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                          <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('gate_pass.gate_pass_tasks') }}&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-truck-moving me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Machines</span>
+                          <span class="s0">&lt;/a&gt;</span>
+<span class="s0">&lt;/li&gt;</span>
+
+                        <span class="s0">&lt;/li&gt;</span>
+                    <span class="s0">&lt;/ul&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('logs.view_logs') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-clipboard-list me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Logs</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+
+            <span class="s0">&lt;li </span><span class="s2">class</span><span class="s3">=&quot;nav-item&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;a </span><span class="s2">class</span><span class="s3">=&quot;nav-link text-white&quot; </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('about.about') }}&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-info-circle me-2&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">About</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s0">&lt;/li&gt;</span>
+        <span class="s0">&lt;/ul&gt;</span>
+
+        <span class="s0">&lt;/ul&gt;</span>
+
+        <span class="s4">&lt;!-- Footer --&gt;</span>
+        <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;sidebar-footer&quot;</span><span class="s0">&gt;</span>
+            <span class="s1">{% if current_user.is_authenticated %}</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;d-flex align-items-center justify-content-center mb-2&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;bg-white text-dark rounded-circle d-flex justify-content-center align-items-center me-2&quot;</span>
+                        <span class="s2">style</span><span class="s3">=&quot;width: 35px; height: 35px; font-weight: bold;&quot;</span><span class="s0">&gt;</span>
+                        <span class="s1">{{ current_user.username[0] | upper }}</span>
+                    <span class="s0">&lt;/div&gt;</span>
+                    <span class="s0">&lt;span </span><span class="s2">class</span><span class="s3">=&quot;text-white small&quot;</span><span class="s0">&gt;</span><span class="s1">Logged in as</span><span class="s0">&lt;br&gt;&lt;strong&gt;</span><span class="s1">{{ current_user.username }}</span><span class="s0">&lt;/strong&gt;&lt;/span&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;d-grid gap-2&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;button </span><span class="s2">class</span><span class="s3">=&quot;btn btn-outline-light btn-sm&quot; </span><span class="s2">data-bs-toggle</span><span class="s3">=&quot;modal&quot; </span><span class="s2">data-bs-target</span><span class="s3">=&quot;#resetPasswordModal&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-key me-1&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Reset Password</span>
+                    <span class="s0">&lt;/button&gt;</span>
+                    <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.logout') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-danger btn-sm&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-sign-out-alt&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Logout</span>
+                    <span class="s0">&lt;/a&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s1">{% else %}</span>
+                <span class="s0">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('auth.login') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-primary btn-sm&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-sign-in-alt&quot;</span><span class="s0">&gt;&lt;/i&gt; </span><span class="s1">Login</span>
+                <span class="s0">&lt;/a&gt;</span>
+            <span class="s1">{% endif %}</span>
+        <span class="s0">&lt;/div&gt;</span>
     <span class="s0">&lt;/div&gt;</span>
 
-    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container&quot;</span><span class="s0">&gt;</span>
+    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;main-content&quot; </span><span class="s2">id</span><span class="s3">=&quot;mainContent&quot;</span><span class="s0">&gt;</span>
+        <span class="s1">{% with messages = get_flashed_messages(with_categories=true) %}</span>
+            <span class="s1">{% if messages %}</span>
+                <span class="s1">{% for category, message in messages %}</span>
+                    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;alert alert-{{ category }} alert-dismissible fade show auto-dismiss&quot; </span><span class="s2">role</span><span class="s3">=&quot;alert&quot;</span><span class="s0">&gt;</span>
+                        <span class="s1">{{ message }}</span>
+                        <span class="s0">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn-close&quot; </span><span class="s2">data-bs-dismiss</span><span class="s3">=&quot;alert&quot; </span><span class="s2">aria-label</span><span class="s3">=&quot;Close&quot;</span><span class="s0">&gt;&lt;/button&gt;</span>
+                    <span class="s0">&lt;/div&gt;</span>
+                <span class="s1">{% endfor %}</span>
+            <span class="s1">{% endif %}</span>
+        <span class="s1">{% endwith %}</span>
+
+        <span class="s0">&lt;button </span><span class="s2">class</span><span class="s3">=&quot;btn text-dark position-fixed top-0 start-0 m-2 d-md-none z-3&quot; </span><span class="s2">onclick</span><span class="s3">=&quot;toggleSidebar()&quot; </span><span class="s2">style</span><span class="s3">=&quot;background: none; border: none;&quot;</span><span class="s0">&gt;</span>
+            <span class="s0">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-bars fa-lg&quot;</span><span class="s0">&gt;&lt;/i&gt;</span>
+        <span class="s0">&lt;/button&gt;</span>
+
         <span class="s1">{% block content %}{% endblock %}</span>
     <span class="s0">&lt;/div&gt;</span>
 
+    <span class="s4">&lt;!-- Password Reset Modal --&gt;</span>
+    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal fade&quot; </span><span class="s2">id</span><span class="s3">=&quot;resetPasswordModal&quot; </span><span class="s2">tabindex</span><span class="s3">=&quot;-1&quot; </span><span class="s2">aria-labelledby</span><span class="s3">=&quot;resetPasswordModalLabel&quot; </span><span class="s2">aria-hidden</span><span class="s3">=&quot;true&quot;</span><span class="s0">&gt;</span>
+        <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal-dialog&quot;</span><span class="s0">&gt;</span>
+            <span class="s0">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;POST&quot; </span><span class="s2">action</span><span class="s3">=&quot;{{ url_for('users.reset_own_password') }}&quot;</span><span class="s0">&gt;</span>
+                <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal-content&quot;</span><span class="s0">&gt;</span>
+                    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal-header bg-warning text-dark&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;h5 </span><span class="s2">class</span><span class="s3">=&quot;modal-title&quot;</span><span class="s0">&gt;</span><span class="s1">Reset Your Password</span><span class="s0">&lt;/h5&gt;</span>
+                        <span class="s0">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn-close&quot; </span><span class="s2">data-bs-dismiss</span><span class="s3">=&quot;modal&quot;</span><span class="s0">&gt;&lt;/button&gt;</span>
+                    <span class="s0">&lt;/div&gt;</span>
+                    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal-body&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;form-label&quot;</span><span class="s0">&gt;</span><span class="s1">New Password</span><span class="s0">&lt;/label&gt;</span>
+                            <span class="s0">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;password&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;new_password&quot; </span><span class="s2">required</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;/div&gt;</span>
+                        <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s0">&gt;</span>
+                            <span class="s0">&lt;label </span><span class="s2">class</span><span class="s3">=&quot;form-label&quot;</span><span class="s0">&gt;</span><span class="s1">Confirm Password</span><span class="s0">&lt;/label&gt;</span>
+                            <span class="s0">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;password&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">name</span><span class="s3">=&quot;confirm_password&quot; </span><span class="s2">required</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;/div&gt;</span>
+                    <span class="s0">&lt;/div&gt;</span>
+                    <span class="s0">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;modal-footer&quot;</span><span class="s0">&gt;</span>
+                        <span class="s0">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-warning&quot;</span><span class="s0">&gt;</span><span class="s1">Update Password</span><span class="s0">&lt;/button&gt;</span>
+                    <span class="s0">&lt;/div&gt;</span>
+                <span class="s0">&lt;/div&gt;</span>
+            <span class="s0">&lt;/form&gt;</span>
+        <span class="s0">&lt;/div&gt;</span>
+    <span class="s0">&lt;/div&gt;</span>
+
+<span class="s0">&lt;script&gt;</span>
+  <span class="s1">document.addEventListener('DOMContentLoaded', function () {</span>
+    <span class="s1">document.querySelectorAll('.modal').forEach(modal =&gt; {</span>
+      <span class="s1">modal.addEventListener('hidden.bs.modal', () =&gt; {</span>
+        <span class="s1">document.body.classList.remove('modal-open');</span>
+        <span class="s1">document.body.style.overflow = 'auto';</span>
+        <span class="s1">const backdrops = document.querySelectorAll('.modal-backdrop');</span>
+        <span class="s1">backdrops.forEach(b =&gt; b.remove());</span>
+      <span class="s1">});</span>
+    <span class="s1">});</span>
+  <span class="s1">});</span>
+<span class="s0">&lt;/script&gt;</span>
+
 <span class="s0">&lt;/body&gt;</span>
-<span class="s0">&lt;/html&gt;</span>
-</pre>
+<span class="s0">&lt;/html&gt;</span></pre>
 </body>
 </html>

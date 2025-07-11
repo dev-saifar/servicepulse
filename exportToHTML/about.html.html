@@ -19,138 +19,233 @@ about.html</font>
 <pre><span class="s0">{% extends 'base.html' %}</span>
 
 <span class="s0">{% block content %}</span>
-<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;logo-container&quot;</span><span class="s1">&gt;</span>
-    <span class="s1">&lt;img </span><span class="s2">src</span><span class="s3">=&quot;{{ url_for('static', filename='logo.png') }}&quot; </span><span class="s2">alt</span><span class="s3">=&quot;ServPulse Logo&quot; </span><span class="s2">class</span><span class="s3">=&quot;small-logo&quot;</span><span class="s1">&gt;</span>
-<span class="s1">&lt;/div&gt;</span>
+<span class="s0">{% with messages = get_flashed_messages(with_categories=true) %}</span>
+  <span class="s0">{% for category, message in messages %}</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;alert alert-{{ category if category in ['success','warning','danger','info'] else 'info' }} mt-2&quot;</span><span class="s1">&gt;</span>
+        <span class="s0">{{ message }}</span>
+    <span class="s1">&lt;/div&gt;</span>
+  <span class="s0">{% endfor %}</span>
+<span class="s0">{% endwith %}</span>
 
 <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container&quot;</span><span class="s1">&gt;</span>
-    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;header&quot;</span><span class="s1">&gt;</span>
-        <span class="s1">&lt;h2&gt;</span><span class="s0">About ServPulse</span><span class="s1">&lt;/h2&gt;</span>
-    <span class="s1">&lt;/div&gt;</span>
-    <span class="s1">&lt;p&gt;</span><span class="s0">Welcome to </span><span class="s1">&lt;strong&gt;</span><span class="s0">ServPulse</span><span class="s1">&lt;/strong&gt;</span><span class="s0">, your ultimate solution for </span><span class="s1">&lt;strong&gt;</span><span class="s0">managed document services, technician tracking, and service request automation</span><span class="s1">&lt;/strong&gt;</span><span class="s0">. We are dedicated to providing innovative solutions for your service management needs.</span><span class="s1">&lt;/p&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;split-screen&quot;</span><span class="s1">&gt;</span>
+        <span class="s4">&lt;!-- Left Section --&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;left-section&quot;</span><span class="s1">&gt;</span>
 
-    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;content-wrapper&quot;</span><span class="s1">&gt;</span>
-        <span class="s4">&lt;!-- Features Section --&gt;</span>
-        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;features-section&quot;</span><span class="s1">&gt;</span>
-            <span class="s1">&lt;h3&gt;</span><span class="s0">Application Features:</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s4">&lt;!-- Animation --&gt;</span>
+            <span class="s1">&lt;script </span><span class="s2">src</span><span class="s3">=&quot;https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js&quot;</span><span class="s1">&gt;&lt;/script&gt;</span>
+            <span class="s1">&lt;lottie-player</span>
+                <span class="s2">src</span><span class="s3">=&quot;https://assets6.lottiefiles.com/packages/lf20_qp1q7mct.json&quot;</span>
+                <span class="s2">background</span><span class="s3">=&quot;transparent&quot;</span>
+                <span class="s2">speed</span><span class="s3">=&quot;1&quot;</span>
+                <span class="s2">style</span><span class="s3">=&quot;max-width: 100%; height: 250px;&quot;</span>
+                <span class="s2">loop autoplay</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;/lottie-player&gt;</span>
+
+            <span class="s4">&lt;!-- License Info --&gt;</span>
+            <span class="s1">&lt;h3&gt;</span><span class="s0">🔐 License Status</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;tech-list&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;table </span><span class="s2">class</span><span class="s3">=&quot;table table-bordered table-sm bg-white&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;thead </span><span class="s2">class</span><span class="s3">=&quot;table-light&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;th&gt;</span><span class="s0">Field</span><span class="s1">&lt;/th&gt;&lt;th&gt;</span><span class="s0">Value</span><span class="s1">&lt;/th&gt;&lt;/tr&gt;</span>
+                    <span class="s1">&lt;/thead&gt;</span>
+                    <span class="s1">&lt;tbody&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">Client Name</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.client_name }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">Domain</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.domain }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">Hardware ID</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.hardware_id }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">License Type</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.license_type }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">Expiry Date</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.expiry_date }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">Status</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">{{ license.status or 'Unknown' }}</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                    <span class="s1">&lt;/tbody&gt;</span>
+                <span class="s1">&lt;/table&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- License Actions --&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mt-4&quot;</span><span class="s1">&gt;</span>
+                <span class="s0">{% if license.license_type == 'trial' and license.status.startswith(&quot;✅&quot;) %}</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;p-4 bg-success text-white rounded shadow-sm mb-4&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;h5&gt;</span><span class="s0">🎯 Upgrade from Trial</span><span class="s1">&lt;/h5&gt;</span>
+                    <span class="s1">&lt;p&gt;</span><span class="s0">You are currently on a trial license. Activate your full license below:</span><span class="s1">&lt;/p&gt;</span>
+                    <span class="s1">&lt;form </span><span class="s2">action</span><span class="s3">=&quot;{{ url_for('license.license_page') }}&quot; </span><span class="s2">method</span><span class="s3">=&quot;get&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-light fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">➕ Add Full License</span><span class="s1">&lt;/button&gt;</span>
+                    <span class="s1">&lt;/form&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+                <span class="s0">{% endif %}</span>
+
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;p-4 bg-primary text-white rounded shadow-sm&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;h5&gt;</span><span class="s0">📥 Download License Info</span><span class="s1">&lt;/h5&gt;</span>
+                    <span class="s1">&lt;p&gt;</span><span class="s0">Send this file to the ServPulse team for license generation.</span><span class="s1">&lt;/p&gt;</span>
+                    <span class="s1">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;post&quot; </span><span class="s2">action</span><span class="s3">=&quot;{{ url_for('about.download_license_info') }}&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;hidden&quot; </span><span class="s2">name</span><span class="s3">=&quot;client_name&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ license.client_name }}&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;hidden&quot; </span><span class="s2">name</span><span class="s3">=&quot;email&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ license.email }}&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;hidden&quot; </span><span class="s2">name</span><span class="s3">=&quot;address&quot; </span><span class="s2">value</span><span class="s3">=&quot;{{ license.address }}&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-light fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Download License Info JSON</span><span class="s1">&lt;/button&gt;</span>
+                    <span class="s1">&lt;/form&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s4">&lt;!-- About Section --&gt;</span>
+            <span class="s1">&lt;h2 </span><span class="s2">class</span><span class="s3">=&quot;mt-5&quot;</span><span class="s1">&gt;</span><span class="s0">What is ServPulse?</span><span class="s1">&lt;/h2&gt;</span>
+            <span class="s1">&lt;p&gt;</span>
+                <span class="s1">&lt;strong&gt;</span><span class="s0">ServPulse</span><span class="s1">&lt;/strong&gt; </span><span class="s0">is a smart, web-based Service Management Platform built by the </span><span class="s1">&lt;strong&gt;</span><span class="s0">MFI-UG MDS Technical Team</span><span class="s1">&lt;/strong&gt; </span><span class="s0">to optimize internal service workflows across Technical, Sales, Finance, and Credit Control.</span>
+                <span class="s0">Hosted locally at Kansanga HQ, it empowers teams with real-time visibility into tickets, assets, logistics, contracts, and financials.</span>
+            <span class="s1">&lt;/p&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Core Modules:</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;feature-cards&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">🎫 Ticket Management</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Real-time technician tracking, SLA alerts, escalation workflows, and resolution analytics.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">🧰 Spare &amp; Toner Requests</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Complete lifecycle tracking from request to delivery. Historical meter tracking, toner yield, and delivery team workflow.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">📃 Contract Management</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Add, track, and alert contracts. Auto-code generation, expiry dashboards, and document upload/download.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">🖥️ Asset Management</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Tag machines with contract, technician, and PM mapping. Auto-code generation by location (Kampala / Upcountry / Used).</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">📊 Technician Reporting</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Analyze job types, resolution times, FOC/warranty work, and productivity via charts.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">💸 Financial Dashboard</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Automated cost analysis by contract, asset, or customer. Tracks toner, spare, and service costs.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">📑 Dashboards &amp; Alerts</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Overview of open tickets, top-serviced clients, overdue issues, and delivery summaries.</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;&lt;strong&gt;</span><span class="s0">🧭 PM Scheduling</span><span class="s1">&lt;/strong&gt;&lt;br&gt; </span><span class="s0">Plan and track preventive maintenance with custom frequency and technician reminders.</span><span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Why ServPulse?</span><span class="s1">&lt;/h3&gt;</span>
             <span class="s1">&lt;ul&gt;</span>
-                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Ticket Management with Quick Registration</span><span class="s1">&lt;/li&gt;</span>
-                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Technician Status &amp; Availability Tracking</span><span class="s1">&lt;/li&gt;</span>
-                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Asset Management &amp; Import Feature</span><span class="s1">&lt;/li&gt;</span>
-                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Real-Time Service Request Updates</span><span class="s1">&lt;/li&gt;</span>
-                <span class="s1">&lt;li&gt;</span><span class="s0">🔹 Reports &amp; Performance Monitoring</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">✅ Built in-house by MFI-UG MDS Tech Team</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">✅ Saves time via automated workflows</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">✅ Centralized contract + ticket + cost visibility</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">✅ Department-specific benefits &amp; real-time reporting</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">✅ Hosted securely in your internal network</span><span class="s1">&lt;/li&gt;</span>
             <span class="s1">&lt;/ul&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Technologies Used:</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;tech-list&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;p&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fab fa-html5&quot;</span><span class="s1">&gt;&lt;/i&gt; &lt;strong&gt;</span><span class="s0">Frontend:</span><span class="s1">&lt;/strong&gt; </span><span class="s0">HTML, Bootstrap, JavaScript, Lottie</span><span class="s1">&lt;/p&gt;</span>
+                <span class="s1">&lt;p&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fab fa-python&quot;</span><span class="s1">&gt;&lt;/i&gt; &lt;strong&gt;</span><span class="s0">Backend:</span><span class="s1">&lt;/strong&gt; </span><span class="s0">Flask, SQLAlchemy</span><span class="s1">&lt;/p&gt;</span>
+                <span class="s1">&lt;p&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-database&quot;</span><span class="s1">&gt;&lt;/i&gt; &lt;strong&gt;</span><span class="s0">Database:</span><span class="s1">&lt;/strong&gt; </span><span class="s0">SQLite / PostgreSQL</span><span class="s1">&lt;/p&gt;</span>
+                <span class="s1">&lt;p&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-chart-bar&quot;</span><span class="s1">&gt;&lt;/i&gt; &lt;strong&gt;</span><span class="s0">Visualization:</span><span class="s1">&lt;/strong&gt; </span><span class="s0">Chart.js, DataTables</span><span class="s1">&lt;/p&gt;</span>
+                <span class="s1">&lt;p&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-file-export&quot;</span><span class="s1">&gt;&lt;/i&gt; &lt;strong&gt;</span><span class="s0">Reporting:</span><span class="s1">&lt;/strong&gt; </span><span class="s0">Excel / PDF Export, WeasyPrint</span><span class="s1">&lt;/p&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
         <span class="s1">&lt;/div&gt;</span>
 
-        <span class="s4">&lt;!-- Developer Section --&gt;</span>
-        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;developer-section&quot;</span><span class="s1">&gt;</span>
+        <span class="s4">&lt;!-- Right Section --&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;right-section&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Meet the Developer</span><span class="s1">&lt;/h3&gt;</span>
             <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;developer-photo&quot;</span><span class="s1">&gt;</span>
                 <span class="s1">&lt;img </span><span class="s2">src</span><span class="s3">=&quot;{{ url_for('static', filename='developer.jpg') }}&quot; </span><span class="s2">alt</span><span class="s3">=&quot;Developer Photo&quot; </span><span class="s2">class</span><span class="s3">=&quot;oval-photo&quot;</span><span class="s1">&gt;</span>
             <span class="s1">&lt;/div&gt;</span>
-            <span class="s1">&lt;h3&gt;</span><span class="s0">Developer Information:</span><span class="s1">&lt;/h3&gt;</span>
-            <span class="s1">&lt;p&gt;&lt;strong&gt;</span><span class="s0">Developer: SAIFAR. A</span><span class="s1">&lt;/strong&gt;&lt;/p&gt;</span>
-            <span class="s1">&lt;p&gt;</span><span class="s0">Email: </span><span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;mailto:saifarabdullatheef@gmail.com&quot;</span><span class="s1">&gt;</span><span class="s0">saifarabdullatheef@gmail.com</span><span class="s1">&lt;/a&gt;&lt;/p&gt;</span>
-            <span class="s1">&lt;p&gt;</span><span class="s0">For feature requests, bug reports, or changes, please feel free to contact the developer.</span><span class="s1">&lt;/p&gt;</span>
+            <span class="s1">&lt;p&gt;&lt;strong&gt;</span><span class="s0">Saifar A Latheef</span><span class="s1">&lt;/strong&gt;&lt;/p&gt;</span>
+            <span class="s1">&lt;p&gt;</span><span class="s0">Email: </span><span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;mailto:dev.saifar@gmail.com&quot;</span><span class="s1">&gt;</span><span class="s0">dev.saifar@gmail.com</span><span class="s1">&lt;/a&gt;&lt;/p&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">ServPulse v2025.04</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;p&gt;</span><span class="s0">Latest release includes full support for:</span><span class="s1">&lt;/p&gt;</span>
+            <span class="s1">&lt;ul&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">Contract Management with alerts</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">Toner &amp; Spare request workflows</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">Technician tracking &amp; analytics</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">Cost dashboards (service, toner, spare)</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">PM Scheduling &amp; Completion Tracker</span><span class="s1">&lt;/li&gt;</span>
+            <span class="s1">&lt;/ul&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Team Behind ServPulse</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;p&gt;</span><span class="s0">ServPulse is proudly built in-house by the MFI-UG MDS Technical Team to streamline daily service operations across Uganda.</span><span class="s1">&lt;/p&gt;</span>
+            <span class="s1">&lt;ul&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🎯 Designed for field &amp; support engineers</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">💼 Supports sales, credit control, and finance teams</span><span class="s1">&lt;/li&gt;</span>
+                <span class="s1">&lt;li&gt;</span><span class="s0">🔐 Securely hosted on local infrastructure</span><span class="s1">&lt;/li&gt;</span>
+            <span class="s1">&lt;/ul&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Coming Soon</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;feature-cards&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;</span><span class="s0">🔹 </span><span class="s1">&lt;strong&gt;</span><span class="s0">Email Alerts</span><span class="s1">&lt;/strong&gt; </span><span class="s0">– For contract expiry, ticket assignment, deliveries</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;</span><span class="s0">🔹 </span><span class="s1">&lt;strong&gt;</span><span class="s0">Mobile View</span><span class="s1">&lt;/strong&gt; </span><span class="s0">– UI optimized for phones &amp; tablets</span><span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card&quot;</span><span class="s1">&gt;</span><span class="s0">🔹 </span><span class="s1">&lt;strong&gt;</span><span class="s0">Auto Scheduling</span><span class="s1">&lt;/strong&gt; </span><span class="s0">– PM visit planner based on frequency</span><span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+
+            <span class="s1">&lt;h3&gt;</span><span class="s0">Department Benefits</span><span class="s1">&lt;/h3&gt;</span>
+            <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;tech-list&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;table </span><span class="s2">class</span><span class="s3">=&quot;table table-bordered table-sm bg-white&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;thead </span><span class="s2">class</span><span class="s3">=&quot;table-light&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;th&gt;</span><span class="s0">Department</span><span class="s1">&lt;/th&gt;&lt;th&gt;</span><span class="s0">What They Get</span><span class="s1">&lt;/th&gt;&lt;/tr&gt;</span>
+                    <span class="s1">&lt;/thead&gt;</span>
+                    <span class="s1">&lt;tbody&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">🛠️ Technical</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">Ticket dashboards, asset status, PM, toner, delivery tracking</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">💼 Sales</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">Contract listing, uploads, renewal alerts, document access</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">📊 Finance</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">Cost analytics by customer/asset, exportable reports</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                        <span class="s1">&lt;tr&gt;&lt;td&gt;</span><span class="s0">🔐 Credit Control</span><span class="s1">&lt;/td&gt;&lt;td&gt;</span><span class="s0">Stop-service history, contract access &amp; compliance overview</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+                    <span class="s1">&lt;/tbody&gt;</span>
+                <span class="s1">&lt;/table&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
         <span class="s1">&lt;/div&gt;</span>
     <span class="s1">&lt;/div&gt;</span>
 
-    <span class="s1">&lt;h3&gt;</span><span class="s0">Version Information:</span><span class="s1">&lt;/h3&gt;</span>
-    <span class="s1">&lt;p&gt;&lt;strong&gt;</span><span class="s0">ServPulse v2025-1</span><span class="s1">&lt;/strong&gt; </span><span class="s0">- Built with Flask, SQLite, and SQLAlchemy.</span><span class="s1">&lt;/p&gt;</span>
-
-    <span class="s1">&lt;p </span><span class="s2">class</span><span class="s3">=&quot;note&quot;</span><span class="s1">&gt;</span><span class="s0">This is a test version. Please contact the developer for any changes or added features.</span><span class="s1">&lt;/p&gt;</span>
+    <span class="s4">&lt;!-- CTA --&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;cta&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;p </span><span class="s2">class</span><span class="s3">=&quot;note&quot;</span><span class="s1">&gt;</span><span class="s0">📌 Want a demo or need help? Contact the team today!</span><span class="s1">&lt;/p&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
 <span class="s1">&lt;/div&gt;</span>
 
 <span class="s1">&lt;style&gt;</span>
-    <span class="s0">/* Small Logo Styling */</span>
-    <span class="s0">.logo-container {</span>
-        <span class="s0">text-align: center;</span>
-        <span class="s0">margin-top: 20px;</span>
-        <span class="s0">margin-bottom: 20px;</span>
+    <span class="s0">@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&amp;display=swap');</span>
+    <span class="s0">body {</span>
+        <span class="s0">font-family: 'Poppins', sans-serif;</span>
+        <span class="s0">background-color: #eef5ff;</span>
+        <span class="s0">background-image: url(&quot;{{ url_for('static', filename='images/logo1.png') }}&quot;);</span>
+        <span class="s0">background-size: 300px;</span>
+        <span class="s0">background-position: center;</span>
+        <span class="s0">background-repeat: no-repeat;</span>
     <span class="s0">}</span>
-
-    <span class="s0">.small-logo {</span>
-        <span class="s0">width: 120px; /* Adjust size as needed */</span>
-        <span class="s0">height: auto;</span>
-    <span class="s0">}</span>
-
     <span class="s0">.container {</span>
-        <span class="s0">max-width: 800px;</span>
+        <span class="s0">max-width: 1200px;</span>
         <span class="s0">margin: auto;</span>
-        <span class="s0">background: #f9f9f9;</span>
-        <span class="s0">padding: 20px;</span>
-        <span class="s0">border-radius: 10px;</span>
-        <span class="s0">box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);</span>
-        <span class="s0">font-family: 'Arial', sans-serif;</span>
+        <span class="s0">background: rgba(255, 255, 255, 0.95);</span>
+        <span class="s0">padding: 30px;</span>
+        <span class="s0">border-radius: 12px;</span>
+        <span class="s0">box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);</span>
     <span class="s0">}</span>
-
-    <span class="s0">.header {</span>
-        <span class="s0">text-align: center;</span>
-        <span class="s0">margin-bottom: 20px;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">h2 {</span>
-        <span class="s0">text-align: center;</span>
-        <span class="s0">color: #007BFF;</span>
-        <span class="s0">font-size: 2em;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">h3 {</span>
-        <span class="s0">color: #0056b3;</span>
-        <span class="s0">margin-top: 20px;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">p {</span>
-        <span class="s0">font-size: 1.1em;</span>
-        <span class="s0">color: #333;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">ul {</span>
-        <span class="s0">list-style-type: none;</span>
-        <span class="s0">padding: 0;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">li {</span>
-        <span class="s0">margin: 10px 0;</span>
-        <span class="s0">font-size: 1.1em;</span>
-        <span class="s0">color: #555;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">a {</span>
-        <span class="s0">color: #007BFF;</span>
-        <span class="s0">text-decoration: none;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">a:hover {</span>
-        <span class="s0">text-decoration: underline;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">.note {</span>
-        <span class="s0">font-size: 1.2em;</span>
-        <span class="s0">color: #FF5733;</span>
-        <span class="s0">font-weight: bold;</span>
-    <span class="s0">}</span>
-
-    <span class="s0">.content-wrapper {</span>
+    <span class="s0">.split-screen {</span>
         <span class="s0">display: flex;</span>
-        <span class="s0">justify-content: space-between;</span>
-        <span class="s0">margin-top: 20px;</span>
+        <span class="s0">flex-wrap: wrap;</span>
+        <span class="s0">gap: 40px;</span>
     <span class="s0">}</span>
-
-    <span class="s0">.features-section, .developer-section {</span>
+    <span class="s0">.left-section, .right-section {</span>
+        <span class="s0">width: 100%;</span>
+        <span class="s0">max-width: 48%;</span>
+    <span class="s0">}</span>
+    <span class="s0">.feature-cards {</span>
+        <span class="s0">display: flex;</span>
+        <span class="s0">flex-wrap: wrap;</span>
+        <span class="s0">gap: 15px;</span>
+    <span class="s0">}</span>
+    <span class="s0">.card {</span>
+        <span class="s0">background: linear-gradient(135deg, #007BFF, #00D4FF);</span>
+        <span class="s0">color: white;</span>
+        <span class="s0">padding: 15px;</span>
+        <span class="s0">border-radius: 10px;</span>
+        <span class="s0">font-size: 0.95em;</span>
         <span class="s0">width: 48%;</span>
+        <span class="s0">box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);</span>
+        <span class="s0">transition: transform 0.3s ease-in-out;</span>
     <span class="s0">}</span>
-
+    <span class="s0">.card:hover {</span>
+        <span class="s0">transform: scale(1.05);</span>
+    <span class="s0">}</span>
+    <span class="s0">.tech-list, table {</span>
+        <span class="s0">background: #eef5ff;</span>
+        <span class="s0">padding: 10px;</span>
+        <span class="s0">border-radius: 8px;</span>
+    <span class="s0">}</span>
     <span class="s0">.developer-photo {</span>
         <span class="s0">text-align: center;</span>
         <span class="s0">margin-bottom: 20px;</span>
     <span class="s0">}</span>
-
     <span class="s0">.oval-photo {</span>
         <span class="s0">width: 150px;</span>
         <span class="s0">height: 150px;</span>
         <span class="s0">border-radius: 50%;</span>
         <span class="s0">object-fit: cover;</span>
         <span class="s0">border: 3px solid #007BFF;</span>
+    <span class="s0">}</span>
+    <span class="s0">.note {</span>
+        <span class="s0">font-size: 1.1em;</span>
+        <span class="s0">color: #FF5733;</span>
+        <span class="s0">font-weight: bold;</span>
+        <span class="s0">text-align: center;</span>
+        <span class="s0">margin-top: 20px;</span>
     <span class="s0">}</span>
 <span class="s1">&lt;/style&gt;</span>
 <span class="s0">{% endblock %}</span>

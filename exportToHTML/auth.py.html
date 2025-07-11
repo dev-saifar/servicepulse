@@ -3,11 +3,13 @@
 <title>auth.py</title>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <style type="text/css">
-.s0 { color: #cf8e6d;}
+.s0 { color: #5f826b; font-style: italic;}
 .s1 { color: #bcbec4;}
-.s2 { color: #bcbec4;}
-.s3 { color: #6aab73;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
 .s4 { color: #7a7e85;}
+.s5 { color: #6aab73;}
+.s6 { color: #2aacb8;}
 </style>
 </head>
 <body bgcolor="#1e1f22">
@@ -16,58 +18,572 @@
 <font face="Arial, Helvetica" color="#000000">
 auth.py</font>
 </center></td></tr></table>
-<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">flash</span>
-<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_user</span><span class="s2">, </span><span class="s1">logout_user</span><span class="s2">, </span><span class="s1">login_required</span>
-<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">db</span><span class="s2">, </span><span class="s1">User</span>
-<span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">security </span><span class="s0">import </span><span class="s1">generate_password_hash</span><span class="s2">, </span><span class="s1">check_password_hash</span>
+<pre><span class="s0">&quot;&quot;&quot;Network Authentication Helpers 
+ 
+Contains interface (MultiDomainBasicAuth) and associated glue code for 
+providing credentials in the context of network requests. 
+&quot;&quot;&quot;</span>
 
-<span class="s1">auth_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">&quot;auth&quot;</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">&quot;../templates/auth&quot;</span><span class="s2">)</span>
+<span class="s2">import </span><span class="s1">logging</span>
+<span class="s2">import </span><span class="s1">os</span>
+<span class="s2">import </span><span class="s1">shutil</span>
+<span class="s2">import </span><span class="s1">subprocess</span>
+<span class="s2">import </span><span class="s1">sysconfig</span>
+<span class="s2">import </span><span class="s1">typing</span>
+<span class="s2">import </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span>
+<span class="s2">from </span><span class="s1">abc </span><span class="s2">import </span><span class="s1">ABC</span><span class="s3">, </span><span class="s1">abstractmethod</span>
+<span class="s2">from </span><span class="s1">functools </span><span class="s2">import </span><span class="s1">lru_cache</span>
+<span class="s2">from </span><span class="s1">os</span><span class="s3">.</span><span class="s1">path </span><span class="s2">import </span><span class="s1">commonprefix</span>
+<span class="s2">from </span><span class="s1">pathlib </span><span class="s2">import </span><span class="s1">Path</span>
+<span class="s2">from </span><span class="s1">typing </span><span class="s2">import </span><span class="s1">Any</span><span class="s3">, </span><span class="s1">Dict</span><span class="s3">, </span><span class="s1">List</span><span class="s3">, </span><span class="s1">NamedTuple</span><span class="s3">, </span><span class="s1">Optional</span><span class="s3">, </span><span class="s1">Tuple</span>
 
-<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/login&quot;</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">&quot;GET&quot;</span><span class="s2">, </span><span class="s3">&quot;POST&quot;</span><span class="s2">])</span>
-<span class="s0">def </span><span class="s1">login</span><span class="s2">():</span>
-    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">&quot;POST&quot;</span><span class="s2">:</span>
-        <span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;username&quot;</span><span class="s2">)</span>
-        <span class="s1">password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;password&quot;</span><span class="s2">)</span>
-        <span class="s1">user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_vendor</span><span class="s3">.</span><span class="s1">requests</span><span class="s3">.</span><span class="s1">auth </span><span class="s2">import </span><span class="s1">AuthBase</span><span class="s3">, </span><span class="s1">HTTPBasicAuth</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_vendor</span><span class="s3">.</span><span class="s1">requests</span><span class="s3">.</span><span class="s1">models </span><span class="s2">import </span><span class="s1">Request</span><span class="s3">, </span><span class="s1">Response</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_vendor</span><span class="s3">.</span><span class="s1">requests</span><span class="s3">.</span><span class="s1">utils </span><span class="s2">import </span><span class="s1">get_netrc_auth</span>
 
-        <span class="s0">if </span><span class="s1">user </span><span class="s0">and </span><span class="s1">check_password_hash</span><span class="s2">(</span><span class="s1">user</span><span class="s2">.</span><span class="s1">password_hash</span><span class="s2">, </span><span class="s1">password</span><span class="s2">):</span>
-            <span class="s1">login_user</span><span class="s2">(</span><span class="s1">user</span><span class="s2">)</span>
-            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Login successful!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
-            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;dashboard.index&quot;</span><span class="s2">))</span>
-        <span class="s0">else</span><span class="s2">:</span>
-            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Invalid username or password&quot;</span><span class="s2">, </span><span class="s3">&quot;danger&quot;</span><span class="s2">)</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_internal</span><span class="s3">.</span><span class="s1">utils</span><span class="s3">.</span><span class="s1">logging </span><span class="s2">import </span><span class="s1">getLogger</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_internal</span><span class="s3">.</span><span class="s1">utils</span><span class="s3">.</span><span class="s1">misc </span><span class="s2">import </span><span class="s3">(</span>
+    <span class="s1">ask</span><span class="s3">,</span>
+    <span class="s1">ask_input</span><span class="s3">,</span>
+    <span class="s1">ask_password</span><span class="s3">,</span>
+    <span class="s1">remove_auth_from_url</span><span class="s3">,</span>
+    <span class="s1">split_auth_netloc_from_url</span><span class="s3">,</span>
+<span class="s3">)</span>
+<span class="s2">from </span><span class="s1">pip</span><span class="s3">.</span><span class="s1">_internal</span><span class="s3">.</span><span class="s1">vcs</span><span class="s3">.</span><span class="s1">versioncontrol </span><span class="s2">import </span><span class="s1">AuthInfo</span>
 
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;auth/login.html&quot;</span><span class="s2">)</span>
+<span class="s1">logger </span><span class="s3">= </span><span class="s1">getLogger</span><span class="s3">(</span><span class="s1">__name__</span><span class="s3">)</span>
 
-<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/logout&quot;</span><span class="s2">)</span>
-<span class="s2">@</span><span class="s1">login_required</span>
-<span class="s0">def </span><span class="s1">logout</span><span class="s2">():</span>
-    <span class="s1">logout_user</span><span class="s2">()</span>
-    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;You have been logged out.&quot;</span><span class="s2">, </span><span class="s3">&quot;info&quot;</span><span class="s2">)</span>
-    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.login&quot;</span><span class="s2">))</span>
+<span class="s1">KEYRING_DISABLED </span><span class="s3">= </span><span class="s2">False</span>
 
-<span class="s2">@</span><span class="s1">auth_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">&quot;/register&quot;</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">&quot;GET&quot;</span><span class="s2">, </span><span class="s3">&quot;POST&quot;</span><span class="s2">])</span>
-<span class="s0">def </span><span class="s1">register</span><span class="s2">():</span>
-    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">&quot;POST&quot;</span><span class="s2">:</span>
-        <span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;username&quot;</span><span class="s2">)</span>
-        <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;email&quot;</span><span class="s2">)</span>
-        <span class="s1">password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;password&quot;</span><span class="s2">)</span>
 
-        <span class="s4"># Check if user exists</span>
-        <span class="s1">existing_user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
-        <span class="s0">if </span><span class="s1">existing_user</span><span class="s2">:</span>
-            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Username already exists. Choose a different one.&quot;</span><span class="s2">, </span><span class="s3">&quot;warning&quot;</span><span class="s2">)</span>
-            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.register&quot;</span><span class="s2">))</span>
+<span class="s2">class </span><span class="s1">Credentials</span><span class="s3">(</span><span class="s1">NamedTuple</span><span class="s3">):</span>
+    <span class="s1">url</span><span class="s3">: </span><span class="s1">str</span>
+    <span class="s1">username</span><span class="s3">: </span><span class="s1">str</span>
+    <span class="s1">password</span><span class="s3">: </span><span class="s1">str</span>
 
-        <span class="s4"># Create new user</span>
-        <span class="s1">new_user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">password_hash</span><span class="s2">=</span><span class="s1">generate_password_hash</span><span class="s2">(</span><span class="s1">password</span><span class="s2">))</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_user</span><span class="s2">)</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
 
-        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Account created successfully! Please log in.&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
-        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">&quot;auth.login&quot;</span><span class="s2">))</span>
+<span class="s2">class </span><span class="s1">KeyRingBaseProvider</span><span class="s3">(</span><span class="s1">ABC</span><span class="s3">):</span>
+    <span class="s0">&quot;&quot;&quot;Keyring base provider interface&quot;&quot;&quot;</span>
 
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;auth/register.html&quot;</span><span class="s2">)</span>
+    <span class="s1">has_keyring</span><span class="s3">: </span><span class="s1">bool</span>
+
+    <span class="s3">@</span><span class="s1">abstractmethod</span>
+    <span class="s2">def </span><span class="s1">get_auth_info</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]</span>
+    <span class="s3">) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">AuthInfo</span><span class="s3">]: ...</span>
+
+    <span class="s3">@</span><span class="s1">abstractmethod</span>
+    <span class="s2">def </span><span class="s1">save_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">password</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">: ...</span>
+
+
+<span class="s2">class </span><span class="s1">KeyRingNullProvider</span><span class="s3">(</span><span class="s1">KeyRingBaseProvider</span><span class="s3">):</span>
+    <span class="s0">&quot;&quot;&quot;Keyring null provider&quot;&quot;&quot;</span>
+
+    <span class="s1">has_keyring </span><span class="s3">= </span><span class="s2">False</span>
+
+    <span class="s2">def </span><span class="s1">get_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">AuthInfo</span><span class="s3">]:</span>
+        <span class="s2">return None</span>
+
+    <span class="s2">def </span><span class="s1">save_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">password</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s2">return None</span>
+
+
+<span class="s2">class </span><span class="s1">KeyRingPythonProvider</span><span class="s3">(</span><span class="s1">KeyRingBaseProvider</span><span class="s3">):</span>
+    <span class="s0">&quot;&quot;&quot;Keyring interface which uses locally imported `keyring`&quot;&quot;&quot;</span>
+
+    <span class="s1">has_keyring </span><span class="s3">= </span><span class="s2">True</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s2">import </span><span class="s1">keyring</span>
+
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring </span><span class="s3">= </span><span class="s1">keyring</span>
+
+    <span class="s2">def </span><span class="s1">get_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">AuthInfo</span><span class="s3">]:</span>
+        <span class="s4"># Support keyring's get_credential interface which supports getting</span>
+        <span class="s4"># credentials without a username. This is only available for</span>
+        <span class="s4"># keyring&gt;=15.2.0.</span>
+        <span class="s2">if </span><span class="s1">hasattr</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">, </span><span class="s5">&quot;get_credential&quot;</span><span class="s3">):</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Getting credentials from keyring for %s&quot;</span><span class="s3">, </span><span class="s1">url</span><span class="s3">)</span>
+            <span class="s1">cred </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">.</span><span class="s1">get_credential</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">cred </span><span class="s2">is not None</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">cred</span><span class="s3">.</span><span class="s1">username</span><span class="s3">, </span><span class="s1">cred</span><span class="s3">.</span><span class="s1">password</span>
+            <span class="s2">return None</span>
+
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Getting password from keyring for %s&quot;</span><span class="s3">, </span><span class="s1">url</span><span class="s3">)</span>
+            <span class="s1">password </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">.</span><span class="s1">get_password</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">password</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span>
+        <span class="s2">return None</span>
+
+    <span class="s2">def </span><span class="s1">save_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">password</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">.</span><span class="s1">set_password</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">)</span>
+
+
+<span class="s2">class </span><span class="s1">KeyRingCliProvider</span><span class="s3">(</span><span class="s1">KeyRingBaseProvider</span><span class="s3">):</span>
+    <span class="s0">&quot;&quot;&quot;Provider which uses `keyring` cli 
+ 
+    Instead of calling the keyring package installed alongside pip 
+    we call keyring on the command line which will enable pip to 
+    use which ever installation of keyring is available first in 
+    PATH. 
+    &quot;&quot;&quot;</span>
+
+    <span class="s1">has_keyring </span><span class="s3">= </span><span class="s2">True</span>
+
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">cmd</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring </span><span class="s3">= </span><span class="s1">cmd</span>
+
+    <span class="s2">def </span><span class="s1">get_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">AuthInfo</span><span class="s3">]:</span>
+        <span class="s4"># This is the default implementation of keyring.get_credential</span>
+        <span class="s4"># https://github.com/jaraco/keyring/blob/97689324abcf01bd1793d49063e7ca01e03d7d07/keyring/backend.py#L134-L139</span>
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s1">password </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_password</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span>
+        <span class="s2">return None</span>
+
+    <span class="s2">def </span><span class="s1">save_auth_info</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">password</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_set_password</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">_get_password</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">service_name</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]:</span>
+        <span class="s0">&quot;&quot;&quot;Mirror the implementation of keyring.get_password using cli&quot;&quot;&quot;</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring </span><span class="s2">is None</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+
+        <span class="s1">cmd </span><span class="s3">= [</span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">, </span><span class="s5">&quot;get&quot;</span><span class="s3">, </span><span class="s1">service_name</span><span class="s3">, </span><span class="s1">username</span><span class="s3">]</span>
+        <span class="s1">env </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">environ</span><span class="s3">.</span><span class="s1">copy</span><span class="s3">()</span>
+        <span class="s1">env</span><span class="s3">[</span><span class="s5">&quot;PYTHONIOENCODING&quot;</span><span class="s3">] = </span><span class="s5">&quot;utf-8&quot;</span>
+        <span class="s1">res </span><span class="s3">= </span><span class="s1">subprocess</span><span class="s3">.</span><span class="s1">run</span><span class="s3">(</span>
+            <span class="s1">cmd</span><span class="s3">,</span>
+            <span class="s1">stdin</span><span class="s3">=</span><span class="s1">subprocess</span><span class="s3">.</span><span class="s1">DEVNULL</span><span class="s3">,</span>
+            <span class="s1">stdout</span><span class="s3">=</span><span class="s1">subprocess</span><span class="s3">.</span><span class="s1">PIPE</span><span class="s3">,</span>
+            <span class="s1">env</span><span class="s3">=</span><span class="s1">env</span><span class="s3">,</span>
+        <span class="s3">)</span>
+        <span class="s2">if </span><span class="s1">res</span><span class="s3">.</span><span class="s1">returncode</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+        <span class="s2">return </span><span class="s1">res</span><span class="s3">.</span><span class="s1">stdout</span><span class="s3">.</span><span class="s1">decode</span><span class="s3">(</span><span class="s5">&quot;utf-8&quot;</span><span class="s3">).</span><span class="s1">strip</span><span class="s3">(</span><span class="s1">os</span><span class="s3">.</span><span class="s1">linesep</span><span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">_set_password</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">service_name</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">username</span><span class="s3">: </span><span class="s1">str</span><span class="s3">, </span><span class="s1">password</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s0">&quot;&quot;&quot;Mirror the implementation of keyring.set_password using cli&quot;&quot;&quot;</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring </span><span class="s2">is None</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+        <span class="s1">env </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">environ</span><span class="s3">.</span><span class="s1">copy</span><span class="s3">()</span>
+        <span class="s1">env</span><span class="s3">[</span><span class="s5">&quot;PYTHONIOENCODING&quot;</span><span class="s3">] = </span><span class="s5">&quot;utf-8&quot;</span>
+        <span class="s1">subprocess</span><span class="s3">.</span><span class="s1">run</span><span class="s3">(</span>
+            <span class="s3">[</span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring</span><span class="s3">, </span><span class="s5">&quot;set&quot;</span><span class="s3">, </span><span class="s1">service_name</span><span class="s3">, </span><span class="s1">username</span><span class="s3">],</span>
+            <span class="s1">input</span><span class="s3">=</span><span class="s5">f&quot;</span><span class="s2">{</span><span class="s1">password</span><span class="s2">}{</span><span class="s1">os</span><span class="s3">.</span><span class="s1">linesep</span><span class="s2">}</span><span class="s5">&quot;</span><span class="s3">.</span><span class="s1">encode</span><span class="s3">(),</span>
+            <span class="s1">env</span><span class="s3">=</span><span class="s1">env</span><span class="s3">,</span>
+            <span class="s1">check</span><span class="s3">=</span><span class="s2">True</span><span class="s3">,</span>
+        <span class="s3">)</span>
+        <span class="s2">return None</span>
+
+
+<span class="s3">@</span><span class="s1">lru_cache</span><span class="s3">(</span><span class="s1">maxsize</span><span class="s3">=</span><span class="s2">None</span><span class="s3">)</span>
+<span class="s2">def </span><span class="s1">get_keyring_provider</span><span class="s3">(</span><span class="s1">provider</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; KeyRingBaseProvider</span><span class="s3">:</span>
+    <span class="s1">logger</span><span class="s3">.</span><span class="s1">verbose</span><span class="s3">(</span><span class="s5">&quot;Keyring provider requested: %s&quot;</span><span class="s3">, </span><span class="s1">provider</span><span class="s3">)</span>
+
+    <span class="s4"># keyring has previously failed and been disabled</span>
+    <span class="s2">if </span><span class="s1">KEYRING_DISABLED</span><span class="s3">:</span>
+        <span class="s1">provider </span><span class="s3">= </span><span class="s5">&quot;disabled&quot;</span>
+    <span class="s2">if </span><span class="s1">provider </span><span class="s2">in </span><span class="s3">[</span><span class="s5">&quot;import&quot;</span><span class="s3">, </span><span class="s5">&quot;auto&quot;</span><span class="s3">]:</span>
+        <span class="s2">try</span><span class="s3">:</span>
+            <span class="s1">impl </span><span class="s3">= </span><span class="s1">KeyRingPythonProvider</span><span class="s3">()</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">verbose</span><span class="s3">(</span><span class="s5">&quot;Keyring provider set: import&quot;</span><span class="s3">)</span>
+            <span class="s2">return </span><span class="s1">impl</span>
+        <span class="s2">except </span><span class="s1">ImportError</span><span class="s3">:</span>
+            <span class="s2">pass</span>
+        <span class="s2">except </span><span class="s1">Exception </span><span class="s2">as </span><span class="s1">exc</span><span class="s3">:</span>
+            <span class="s4"># In the event of an unexpected exception</span>
+            <span class="s4"># we should warn the user</span>
+            <span class="s1">msg </span><span class="s3">= </span><span class="s5">&quot;Installed copy of keyring fails with exception %s&quot;</span>
+            <span class="s2">if </span><span class="s1">provider </span><span class="s3">== </span><span class="s5">&quot;auto&quot;</span><span class="s3">:</span>
+                <span class="s1">msg </span><span class="s3">= </span><span class="s1">msg </span><span class="s3">+ </span><span class="s5">&quot;, trying to find a keyring executable as a fallback&quot;</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">warning</span><span class="s3">(</span><span class="s1">msg</span><span class="s3">, </span><span class="s1">exc</span><span class="s3">, </span><span class="s1">exc_info</span><span class="s3">=</span><span class="s1">logger</span><span class="s3">.</span><span class="s1">isEnabledFor</span><span class="s3">(</span><span class="s1">logging</span><span class="s3">.</span><span class="s1">DEBUG</span><span class="s3">))</span>
+    <span class="s2">if </span><span class="s1">provider </span><span class="s2">in </span><span class="s3">[</span><span class="s5">&quot;subprocess&quot;</span><span class="s3">, </span><span class="s5">&quot;auto&quot;</span><span class="s3">]:</span>
+        <span class="s1">cli </span><span class="s3">= </span><span class="s1">shutil</span><span class="s3">.</span><span class="s1">which</span><span class="s3">(</span><span class="s5">&quot;keyring&quot;</span><span class="s3">)</span>
+        <span class="s2">if </span><span class="s1">cli </span><span class="s2">and </span><span class="s1">cli</span><span class="s3">.</span><span class="s1">startswith</span><span class="s3">(</span><span class="s1">sysconfig</span><span class="s3">.</span><span class="s1">get_path</span><span class="s3">(</span><span class="s5">&quot;scripts&quot;</span><span class="s3">)):</span>
+            <span class="s4"># all code within this function is stolen from shutil.which implementation</span>
+            <span class="s3">@</span><span class="s1">typing</span><span class="s3">.</span><span class="s1">no_type_check</span>
+            <span class="s2">def </span><span class="s1">PATH_as_shutil_which_determines_it</span><span class="s3">() </span><span class="s1">-&gt; str</span><span class="s3">:</span>
+                <span class="s1">path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">environ</span><span class="s3">.</span><span class="s1">get</span><span class="s3">(</span><span class="s5">&quot;PATH&quot;</span><span class="s3">, </span><span class="s2">None</span><span class="s3">)</span>
+                <span class="s2">if </span><span class="s1">path </span><span class="s2">is None</span><span class="s3">:</span>
+                    <span class="s2">try</span><span class="s3">:</span>
+                        <span class="s1">path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">confstr</span><span class="s3">(</span><span class="s5">&quot;CS_PATH&quot;</span><span class="s3">)</span>
+                    <span class="s2">except </span><span class="s3">(</span><span class="s1">AttributeError</span><span class="s3">, </span><span class="s1">ValueError</span><span class="s3">):</span>
+                        <span class="s4"># os.confstr() or CS_PATH is not available</span>
+                        <span class="s1">path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">defpath</span>
+                <span class="s4"># bpo-35755: Don't use os.defpath if the PATH environment variable is</span>
+                <span class="s4"># set to an empty string</span>
+
+                <span class="s2">return </span><span class="s1">path</span>
+
+            <span class="s1">scripts </span><span class="s3">= </span><span class="s1">Path</span><span class="s3">(</span><span class="s1">sysconfig</span><span class="s3">.</span><span class="s1">get_path</span><span class="s3">(</span><span class="s5">&quot;scripts&quot;</span><span class="s3">))</span>
+
+            <span class="s1">paths </span><span class="s3">= []</span>
+            <span class="s2">for </span><span class="s1">path </span><span class="s2">in </span><span class="s1">PATH_as_shutil_which_determines_it</span><span class="s3">().</span><span class="s1">split</span><span class="s3">(</span><span class="s1">os</span><span class="s3">.</span><span class="s1">pathsep</span><span class="s3">):</span>
+                <span class="s1">p </span><span class="s3">= </span><span class="s1">Path</span><span class="s3">(</span><span class="s1">path</span><span class="s3">)</span>
+                <span class="s2">try</span><span class="s3">:</span>
+                    <span class="s2">if not </span><span class="s1">p</span><span class="s3">.</span><span class="s1">samefile</span><span class="s3">(</span><span class="s1">scripts</span><span class="s3">):</span>
+                        <span class="s1">paths</span><span class="s3">.</span><span class="s1">append</span><span class="s3">(</span><span class="s1">path</span><span class="s3">)</span>
+                <span class="s2">except </span><span class="s1">FileNotFoundError</span><span class="s3">:</span>
+                    <span class="s2">pass</span>
+
+            <span class="s1">path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">pathsep</span><span class="s3">.</span><span class="s1">join</span><span class="s3">(</span><span class="s1">paths</span><span class="s3">)</span>
+
+            <span class="s1">cli </span><span class="s3">= </span><span class="s1">shutil</span><span class="s3">.</span><span class="s1">which</span><span class="s3">(</span><span class="s5">&quot;keyring&quot;</span><span class="s3">, </span><span class="s1">path</span><span class="s3">=</span><span class="s1">path</span><span class="s3">)</span>
+
+        <span class="s2">if </span><span class="s1">cli</span><span class="s3">:</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">verbose</span><span class="s3">(</span><span class="s5">&quot;Keyring provider set: subprocess with executable %s&quot;</span><span class="s3">, </span><span class="s1">cli</span><span class="s3">)</span>
+            <span class="s2">return </span><span class="s1">KeyRingCliProvider</span><span class="s3">(</span><span class="s1">cli</span><span class="s3">)</span>
+
+    <span class="s1">logger</span><span class="s3">.</span><span class="s1">verbose</span><span class="s3">(</span><span class="s5">&quot;Keyring provider set: disabled&quot;</span><span class="s3">)</span>
+    <span class="s2">return </span><span class="s1">KeyRingNullProvider</span><span class="s3">()</span>
+
+
+<span class="s2">class </span><span class="s1">MultiDomainBasicAuth</span><span class="s3">(</span><span class="s1">AuthBase</span><span class="s3">):</span>
+    <span class="s2">def </span><span class="s1">__init__</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">,</span>
+        <span class="s1">prompting</span><span class="s3">: </span><span class="s1">bool </span><span class="s3">= </span><span class="s2">True</span><span class="s3">,</span>
+        <span class="s1">index_urls</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">List</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]] = </span><span class="s2">None</span><span class="s3">,</span>
+        <span class="s1">keyring_provider</span><span class="s3">: </span><span class="s1">str </span><span class="s3">= </span><span class="s5">&quot;auto&quot;</span><span class="s3">,</span>
+    <span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">prompting </span><span class="s3">= </span><span class="s1">prompting</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">index_urls </span><span class="s3">= </span><span class="s1">index_urls</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring_provider </span><span class="s3">= </span><span class="s1">keyring_provider  </span><span class="s4"># type: ignore[assignment]</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">passwords</span><span class="s3">: </span><span class="s1">Dict</span><span class="s3">[</span><span class="s1">str</span><span class="s3">, </span><span class="s1">AuthInfo</span><span class="s3">] = {}</span>
+        <span class="s4"># When the user is prompted to enter credentials and keyring is</span>
+        <span class="s4"># available, we will offer to save them. If the user accepts,</span>
+        <span class="s4"># this value is set to the credentials they entered. After the</span>
+        <span class="s4"># request authenticates, the caller should call</span>
+        <span class="s4"># ``save_credentials`` to save these.</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">Credentials</span><span class="s3">] = </span><span class="s2">None</span>
+
+    <span class="s3">@</span><span class="s1">property</span>
+    <span class="s2">def </span><span class="s1">keyring_provider</span><span class="s3">(</span><span class="s1">self</span><span class="s3">) </span><span class="s1">-&gt; KeyRingBaseProvider</span><span class="s3">:</span>
+        <span class="s2">return </span><span class="s1">get_keyring_provider</span><span class="s3">(</span><span class="s1">self</span><span class="s3">.</span><span class="s1">_keyring_provider</span><span class="s3">)</span>
+
+    <span class="s3">@</span><span class="s1">keyring_provider</span><span class="s3">.</span><span class="s1">setter</span>
+    <span class="s2">def </span><span class="s1">keyring_provider</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">provider</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s4"># The free function get_keyring_provider has been decorated with</span>
+        <span class="s4"># functools.cache. If an exception occurs in get_keyring_auth that</span>
+        <span class="s4"># cache will be cleared and keyring disabled, take that into account</span>
+        <span class="s4"># if you want to remove this indirection.</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">_keyring_provider </span><span class="s3">= </span><span class="s1">provider</span>
+
+    <span class="s3">@</span><span class="s1">property</span>
+    <span class="s2">def </span><span class="s1">use_keyring</span><span class="s3">(</span><span class="s1">self</span><span class="s3">) </span><span class="s1">-&gt; bool</span><span class="s3">:</span>
+        <span class="s4"># We won't use keyring when --no-input is passed unless</span>
+        <span class="s4"># a specific provider is requested because it might require</span>
+        <span class="s4"># user interaction</span>
+        <span class="s2">return </span><span class="s1">self</span><span class="s3">.</span><span class="s1">prompting </span><span class="s2">or </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_keyring_provider </span><span class="s2">not in </span><span class="s3">[</span><span class="s5">&quot;auto&quot;</span><span class="s3">, </span><span class="s5">&quot;disabled&quot;</span><span class="s3">]</span>
+
+    <span class="s2">def </span><span class="s1">_get_keyring_auth</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">,</span>
+        <span class="s1">url</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">],</span>
+        <span class="s1">username</span><span class="s3">: </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">],</span>
+    <span class="s3">) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">AuthInfo</span><span class="s3">]:</span>
+        <span class="s0">&quot;&quot;&quot;Return the tuple auth for a given url from keyring.&quot;&quot;&quot;</span>
+        <span class="s4"># Do nothing if no url was provided</span>
+        <span class="s2">if not </span><span class="s1">url</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+
+        <span class="s2">try</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring_provider</span><span class="s3">.</span><span class="s1">get_auth_info</span><span class="s3">(</span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+        <span class="s2">except </span><span class="s1">Exception </span><span class="s2">as </span><span class="s1">exc</span><span class="s3">:</span>
+            <span class="s4"># Log the full exception (with stacktrace) at debug, so it'll only</span>
+            <span class="s4"># show up when running in verbose mode.</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Keyring is skipped due to an exception&quot;</span><span class="s3">, </span><span class="s1">exc_info</span><span class="s3">=</span><span class="s2">True</span><span class="s3">)</span>
+            <span class="s4"># Always log a shortened version of the exception.</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">warning</span><span class="s3">(</span>
+                <span class="s5">&quot;Keyring is skipped due to an exception: %s&quot;</span><span class="s3">,</span>
+                <span class="s1">str</span><span class="s3">(</span><span class="s1">exc</span><span class="s3">),</span>
+            <span class="s3">)</span>
+            <span class="s2">global </span><span class="s1">KEYRING_DISABLED</span>
+            <span class="s1">KEYRING_DISABLED </span><span class="s3">= </span><span class="s2">True</span>
+            <span class="s1">get_keyring_provider</span><span class="s3">.</span><span class="s1">cache_clear</span><span class="s3">()</span>
+            <span class="s2">return None</span>
+
+    <span class="s2">def </span><span class="s1">_get_index_url</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">) </span><span class="s1">-&gt; Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]:</span>
+        <span class="s0">&quot;&quot;&quot;Return the original index URL matching the requested URL. 
+ 
+        Cached or dynamically generated credentials may work against 
+        the original index URL rather than just the netloc. 
+ 
+        The provided url should have had its username and password 
+        removed already. If the original index url had credentials then 
+        they will be included in the return value. 
+ 
+        Returns None if no matching index was found, or if --no-index 
+        was specified by the user. 
+        &quot;&quot;&quot;</span>
+        <span class="s2">if not </span><span class="s1">url </span><span class="s2">or not </span><span class="s1">self</span><span class="s3">.</span><span class="s1">index_urls</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+
+        <span class="s1">url </span><span class="s3">= </span><span class="s1">remove_auth_from_url</span><span class="s3">(</span><span class="s1">url</span><span class="s3">).</span><span class="s1">rstrip</span><span class="s3">(</span><span class="s5">&quot;/&quot;</span><span class="s3">) + </span><span class="s5">&quot;/&quot;</span>
+        <span class="s1">parsed_url </span><span class="s3">= </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span><span class="s3">.</span><span class="s1">urlsplit</span><span class="s3">(</span><span class="s1">url</span><span class="s3">)</span>
+
+        <span class="s1">candidates </span><span class="s3">= []</span>
+
+        <span class="s2">for </span><span class="s1">index </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">index_urls</span><span class="s3">:</span>
+            <span class="s1">index </span><span class="s3">= </span><span class="s1">index</span><span class="s3">.</span><span class="s1">rstrip</span><span class="s3">(</span><span class="s5">&quot;/&quot;</span><span class="s3">) + </span><span class="s5">&quot;/&quot;</span>
+            <span class="s1">parsed_index </span><span class="s3">= </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span><span class="s3">.</span><span class="s1">urlsplit</span><span class="s3">(</span><span class="s1">remove_auth_from_url</span><span class="s3">(</span><span class="s1">index</span><span class="s3">))</span>
+            <span class="s2">if </span><span class="s1">parsed_url </span><span class="s3">== </span><span class="s1">parsed_index</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">index</span>
+
+            <span class="s2">if </span><span class="s1">parsed_url</span><span class="s3">.</span><span class="s1">netloc </span><span class="s3">!= </span><span class="s1">parsed_index</span><span class="s3">.</span><span class="s1">netloc</span><span class="s3">:</span>
+                <span class="s2">continue</span>
+
+            <span class="s1">candidate </span><span class="s3">= </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span><span class="s3">.</span><span class="s1">urlsplit</span><span class="s3">(</span><span class="s1">index</span><span class="s3">)</span>
+            <span class="s1">candidates</span><span class="s3">.</span><span class="s1">append</span><span class="s3">(</span><span class="s1">candidate</span><span class="s3">)</span>
+
+        <span class="s2">if not </span><span class="s1">candidates</span><span class="s3">:</span>
+            <span class="s2">return None</span>
+
+        <span class="s1">candidates</span><span class="s3">.</span><span class="s1">sort</span><span class="s3">(</span>
+            <span class="s1">reverse</span><span class="s3">=</span><span class="s2">True</span><span class="s3">,</span>
+            <span class="s1">key</span><span class="s3">=</span><span class="s2">lambda </span><span class="s1">candidate</span><span class="s3">: </span><span class="s1">commonprefix</span><span class="s3">(</span>
+                <span class="s3">[</span>
+                    <span class="s1">parsed_url</span><span class="s3">.</span><span class="s1">path</span><span class="s3">,</span>
+                    <span class="s1">candidate</span><span class="s3">.</span><span class="s1">path</span><span class="s3">,</span>
+                <span class="s3">]</span>
+            <span class="s3">).</span><span class="s1">rfind</span><span class="s3">(</span><span class="s5">&quot;/&quot;</span><span class="s3">),</span>
+        <span class="s3">)</span>
+
+        <span class="s2">return </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span><span class="s3">.</span><span class="s1">urlunsplit</span><span class="s3">(</span><span class="s1">candidates</span><span class="s3">[</span><span class="s6">0</span><span class="s3">])</span>
+
+    <span class="s2">def </span><span class="s1">_get_new_credentials</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">,</span>
+        <span class="s1">original_url</span><span class="s3">: </span><span class="s1">str</span><span class="s3">,</span>
+        <span class="s3">*,</span>
+        <span class="s1">allow_netrc</span><span class="s3">: </span><span class="s1">bool </span><span class="s3">= </span><span class="s2">True</span><span class="s3">,</span>
+        <span class="s1">allow_keyring</span><span class="s3">: </span><span class="s1">bool </span><span class="s3">= </span><span class="s2">False</span><span class="s3">,</span>
+    <span class="s3">) </span><span class="s1">-&gt; AuthInfo</span><span class="s3">:</span>
+        <span class="s0">&quot;&quot;&quot;Find and return credentials for the specified URL.&quot;&quot;&quot;</span>
+        <span class="s4"># Split the credentials and netloc from the url.</span>
+        <span class="s1">url</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">, </span><span class="s1">url_user_password </span><span class="s3">= </span><span class="s1">split_auth_netloc_from_url</span><span class="s3">(</span>
+            <span class="s1">original_url</span><span class="s3">,</span>
+        <span class="s3">)</span>
+
+        <span class="s4"># Start with the credentials embedded in the url</span>
+        <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">url_user_password</span>
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None and </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Found credentials in url for %s&quot;</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">)</span>
+            <span class="s2">return </span><span class="s1">url_user_password</span>
+
+        <span class="s4"># Find a matching index url for this request</span>
+        <span class="s1">index_url </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_index_url</span><span class="s3">(</span><span class="s1">url</span><span class="s3">)</span>
+        <span class="s2">if </span><span class="s1">index_url</span><span class="s3">:</span>
+            <span class="s4"># Split the credentials from the url.</span>
+            <span class="s1">index_info </span><span class="s3">= </span><span class="s1">split_auth_netloc_from_url</span><span class="s3">(</span><span class="s1">index_url</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">index_info</span><span class="s3">:</span>
+                <span class="s1">index_url</span><span class="s3">, </span><span class="s1">_</span><span class="s3">, </span><span class="s1">index_url_user_password </span><span class="s3">= </span><span class="s1">index_info</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Found index url %s&quot;</span><span class="s3">, </span><span class="s1">index_url</span><span class="s3">)</span>
+
+        <span class="s4"># If an index URL was found, try its embedded credentials</span>
+        <span class="s2">if </span><span class="s1">index_url </span><span class="s2">and </span><span class="s1">index_url_user_password</span><span class="s3">[</span><span class="s6">0</span><span class="s3">] </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">index_url_user_password</span>
+            <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None and </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Found credentials in index url for %s&quot;</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">)</span>
+                <span class="s2">return </span><span class="s1">index_url_user_password</span>
+
+        <span class="s4"># Get creds from netrc if we still don't have them</span>
+        <span class="s2">if </span><span class="s1">allow_netrc</span><span class="s3">:</span>
+            <span class="s1">netrc_auth </span><span class="s3">= </span><span class="s1">get_netrc_auth</span><span class="s3">(</span><span class="s1">original_url</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">netrc_auth</span><span class="s3">:</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Found credentials in netrc for %s&quot;</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">)</span>
+                <span class="s2">return </span><span class="s1">netrc_auth</span>
+
+        <span class="s4"># If we don't have a password and keyring is available, use it.</span>
+        <span class="s2">if </span><span class="s1">allow_keyring</span><span class="s3">:</span>
+            <span class="s4"># The index url is more specific than the netloc, so try it first</span>
+            <span class="s4"># fmt: off</span>
+            <span class="s1">kr_auth </span><span class="s3">= (</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">_get_keyring_auth</span><span class="s3">(</span><span class="s1">index_url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">) </span><span class="s2">or</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">_get_keyring_auth</span><span class="s3">(</span><span class="s1">netloc</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+            <span class="s3">)</span>
+            <span class="s4"># fmt: on</span>
+            <span class="s2">if </span><span class="s1">kr_auth</span><span class="s3">:</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">debug</span><span class="s3">(</span><span class="s5">&quot;Found credentials in keyring for %s&quot;</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">)</span>
+                <span class="s2">return </span><span class="s1">kr_auth</span>
+
+        <span class="s2">return </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span>
+
+    <span class="s2">def </span><span class="s1">_get_url_and_credentials</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">, </span><span class="s1">original_url</span><span class="s3">: </span><span class="s1">str</span>
+    <span class="s3">) </span><span class="s1">-&gt; Tuple</span><span class="s3">[</span><span class="s1">str</span><span class="s3">, </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">], </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">]]:</span>
+        <span class="s0">&quot;&quot;&quot;Return the credentials to use for the provided URL. 
+ 
+        If allowed, netrc and keyring may be used to obtain the 
+        correct credentials. 
+ 
+        Returns (url_without_credentials, username, password). Note 
+        that even if the original URL contains credentials, this 
+        function may return a different username and password. 
+        &quot;&quot;&quot;</span>
+        <span class="s1">url</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">, </span><span class="s1">_ </span><span class="s3">= </span><span class="s1">split_auth_netloc_from_url</span><span class="s3">(</span><span class="s1">original_url</span><span class="s3">)</span>
+
+        <span class="s4"># Try to get credentials from original url</span>
+        <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_new_credentials</span><span class="s3">(</span><span class="s1">original_url</span><span class="s3">)</span>
+
+        <span class="s4"># If credentials not found, use any stored credentials for this netloc.</span>
+        <span class="s4"># Do this if either the username or the password is missing.</span>
+        <span class="s4"># This accounts for the situation in which the user has specified</span>
+        <span class="s4"># the username in the index url, but the password comes from keyring.</span>
+        <span class="s2">if </span><span class="s3">(</span><span class="s1">username </span><span class="s2">is None or </span><span class="s1">password </span><span class="s2">is None</span><span class="s3">) </span><span class="s2">and </span><span class="s1">netloc </span><span class="s2">in </span><span class="s1">self</span><span class="s3">.</span><span class="s1">passwords</span><span class="s3">:</span>
+            <span class="s1">un</span><span class="s3">, </span><span class="s1">pw </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">passwords</span><span class="s3">[</span><span class="s1">netloc</span><span class="s3">]</span>
+            <span class="s4"># It is possible that the cached credentials are for a different username,</span>
+            <span class="s4"># in which case the cache should be ignored.</span>
+            <span class="s2">if </span><span class="s1">username </span><span class="s2">is None or </span><span class="s1">username </span><span class="s3">== </span><span class="s1">un</span><span class="s3">:</span>
+                <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">un</span><span class="s3">, </span><span class="s1">pw</span>
+
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None or </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s4"># Convert the username and password if they're None, so that</span>
+            <span class="s4"># this netloc will show up as &quot;cached&quot; in the conditional above.</span>
+            <span class="s4"># Further, HTTPBasicAuth doesn't accept None, so it makes sense to</span>
+            <span class="s4"># cache the value that is going to be used.</span>
+            <span class="s1">username </span><span class="s3">= </span><span class="s1">username </span><span class="s2">or </span><span class="s5">&quot;&quot;</span>
+            <span class="s1">password </span><span class="s3">= </span><span class="s1">password </span><span class="s2">or </span><span class="s5">&quot;&quot;</span>
+
+            <span class="s4"># Store any acquired credentials.</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">passwords</span><span class="s3">[</span><span class="s1">netloc</span><span class="s3">] = (</span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">)</span>
+
+        <span class="s2">assert </span><span class="s3">(</span>
+            <span class="s4"># Credentials were found</span>
+            <span class="s3">(</span><span class="s1">username </span><span class="s2">is not None and </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">)</span>
+            <span class="s4"># Credentials were not found</span>
+            <span class="s2">or </span><span class="s3">(</span><span class="s1">username </span><span class="s2">is None and </span><span class="s1">password </span><span class="s2">is None</span><span class="s3">)</span>
+        <span class="s3">), </span><span class="s5">f&quot;Could not load credentials from url: </span><span class="s2">{</span><span class="s1">original_url</span><span class="s2">}</span><span class="s5">&quot;</span>
+
+        <span class="s2">return </span><span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span>
+
+    <span class="s2">def </span><span class="s1">__call__</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">req</span><span class="s3">: </span><span class="s1">Request</span><span class="s3">) </span><span class="s1">-&gt; Request</span><span class="s3">:</span>
+        <span class="s4"># Get credentials for this request</span>
+        <span class="s1">url</span><span class="s3">, </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_url_and_credentials</span><span class="s3">(</span><span class="s1">req</span><span class="s3">.</span><span class="s1">url</span><span class="s3">)</span>
+
+        <span class="s4"># Set the url of the request to the url without any credentials</span>
+        <span class="s1">req</span><span class="s3">.</span><span class="s1">url </span><span class="s3">= </span><span class="s1">url</span>
+
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None and </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s4"># Send the basic auth with this request</span>
+            <span class="s1">req </span><span class="s3">= </span><span class="s1">HTTPBasicAuth</span><span class="s3">(</span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">)(</span><span class="s1">req</span><span class="s3">)</span>
+
+        <span class="s4"># Attach a hook to handle 401 responses</span>
+        <span class="s1">req</span><span class="s3">.</span><span class="s1">register_hook</span><span class="s3">(</span><span class="s5">&quot;response&quot;</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">handle_401</span><span class="s3">)</span>
+
+        <span class="s2">return </span><span class="s1">req</span>
+
+    <span class="s4"># Factored out to allow for easy patching in tests</span>
+    <span class="s2">def </span><span class="s1">_prompt_for_password</span><span class="s3">(</span>
+        <span class="s1">self</span><span class="s3">, </span><span class="s1">netloc</span><span class="s3">: </span><span class="s1">str</span>
+    <span class="s3">) </span><span class="s1">-&gt; Tuple</span><span class="s3">[</span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">], </span><span class="s1">Optional</span><span class="s3">[</span><span class="s1">str</span><span class="s3">], </span><span class="s1">bool</span><span class="s3">]:</span>
+        <span class="s1">username </span><span class="s3">= </span><span class="s1">ask_input</span><span class="s3">(</span><span class="s5">f&quot;User for </span><span class="s2">{</span><span class="s1">netloc</span><span class="s2">}</span><span class="s5">: &quot;</span><span class="s3">) </span><span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">prompting </span><span class="s2">else None</span>
+        <span class="s2">if not </span><span class="s1">username</span><span class="s3">:</span>
+            <span class="s2">return None</span><span class="s3">, </span><span class="s2">None</span><span class="s3">, </span><span class="s2">False</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">use_keyring</span><span class="s3">:</span>
+            <span class="s1">auth </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_keyring_auth</span><span class="s3">(</span><span class="s1">netloc</span><span class="s3">, </span><span class="s1">username</span><span class="s3">)</span>
+            <span class="s2">if </span><span class="s1">auth </span><span class="s2">and </span><span class="s1">auth</span><span class="s3">[</span><span class="s6">0</span><span class="s3">] </span><span class="s2">is not None and </span><span class="s1">auth</span><span class="s3">[</span><span class="s6">1</span><span class="s3">] </span><span class="s2">is not None</span><span class="s3">:</span>
+                <span class="s2">return </span><span class="s1">auth</span><span class="s3">[</span><span class="s6">0</span><span class="s3">], </span><span class="s1">auth</span><span class="s3">[</span><span class="s6">1</span><span class="s3">], </span><span class="s2">False</span>
+        <span class="s1">password </span><span class="s3">= </span><span class="s1">ask_password</span><span class="s3">(</span><span class="s5">&quot;Password: &quot;</span><span class="s3">)</span>
+        <span class="s2">return </span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">, </span><span class="s2">True</span>
+
+    <span class="s4"># Factored out to allow for easy patching in tests</span>
+    <span class="s2">def </span><span class="s1">_should_save_password_to_keyring</span><span class="s3">(</span><span class="s1">self</span><span class="s3">) </span><span class="s1">-&gt; bool</span><span class="s3">:</span>
+        <span class="s2">if </span><span class="s3">(</span>
+            <span class="s2">not </span><span class="s1">self</span><span class="s3">.</span><span class="s1">prompting</span>
+            <span class="s2">or not </span><span class="s1">self</span><span class="s3">.</span><span class="s1">use_keyring</span>
+            <span class="s2">or not </span><span class="s1">self</span><span class="s3">.</span><span class="s1">keyring_provider</span><span class="s3">.</span><span class="s1">has_keyring</span>
+        <span class="s3">):</span>
+            <span class="s2">return False</span>
+        <span class="s2">return </span><span class="s1">ask</span><span class="s3">(</span><span class="s5">&quot;Save credentials to keyring [y/N]: &quot;</span><span class="s3">, [</span><span class="s5">&quot;y&quot;</span><span class="s3">, </span><span class="s5">&quot;n&quot;</span><span class="s3">]) == </span><span class="s5">&quot;y&quot;</span>
+
+    <span class="s2">def </span><span class="s1">handle_401</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">resp</span><span class="s3">: </span><span class="s1">Response</span><span class="s3">, **</span><span class="s1">kwargs</span><span class="s3">: </span><span class="s1">Any</span><span class="s3">) </span><span class="s1">-&gt; Response</span><span class="s3">:</span>
+        <span class="s4"># We only care about 401 responses, anything else we want to just</span>
+        <span class="s4">#   pass through the actual response</span>
+        <span class="s2">if </span><span class="s1">resp</span><span class="s3">.</span><span class="s1">status_code </span><span class="s3">!= </span><span class="s6">401</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">resp</span>
+
+        <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s2">None</span><span class="s3">, </span><span class="s2">None</span>
+
+        <span class="s4"># Query the keyring for credentials:</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">use_keyring</span><span class="s3">:</span>
+            <span class="s1">username</span><span class="s3">, </span><span class="s1">password </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_get_new_credentials</span><span class="s3">(</span>
+                <span class="s1">resp</span><span class="s3">.</span><span class="s1">url</span><span class="s3">,</span>
+                <span class="s1">allow_netrc</span><span class="s3">=</span><span class="s2">False</span><span class="s3">,</span>
+                <span class="s1">allow_keyring</span><span class="s3">=</span><span class="s2">True</span><span class="s3">,</span>
+            <span class="s3">)</span>
+
+        <span class="s4"># We are not able to prompt the user so simply return the response</span>
+        <span class="s2">if not </span><span class="s1">self</span><span class="s3">.</span><span class="s1">prompting </span><span class="s2">and not </span><span class="s1">username </span><span class="s2">and not </span><span class="s1">password</span><span class="s3">:</span>
+            <span class="s2">return </span><span class="s1">resp</span>
+
+        <span class="s1">parsed </span><span class="s3">= </span><span class="s1">urllib</span><span class="s3">.</span><span class="s1">parse</span><span class="s3">.</span><span class="s1">urlparse</span><span class="s3">(</span><span class="s1">resp</span><span class="s3">.</span><span class="s1">url</span><span class="s3">)</span>
+
+        <span class="s4"># Prompt the user for a new username and password</span>
+        <span class="s1">save </span><span class="s3">= </span><span class="s2">False</span>
+        <span class="s2">if not </span><span class="s1">username </span><span class="s2">and not </span><span class="s1">password</span><span class="s3">:</span>
+            <span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">, </span><span class="s1">save </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_prompt_for_password</span><span class="s3">(</span><span class="s1">parsed</span><span class="s3">.</span><span class="s1">netloc</span><span class="s3">)</span>
+
+        <span class="s4"># Store the new username and password to use for future requests</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save </span><span class="s3">= </span><span class="s2">None</span>
+        <span class="s2">if </span><span class="s1">username </span><span class="s2">is not None and </span><span class="s1">password </span><span class="s2">is not None</span><span class="s3">:</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">passwords</span><span class="s3">[</span><span class="s1">parsed</span><span class="s3">.</span><span class="s1">netloc</span><span class="s3">] = (</span><span class="s1">username</span><span class="s3">, </span><span class="s1">password</span><span class="s3">)</span>
+
+            <span class="s4"># Prompt to save the password to keyring</span>
+            <span class="s2">if </span><span class="s1">save </span><span class="s2">and </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_should_save_password_to_keyring</span><span class="s3">():</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save </span><span class="s3">= </span><span class="s1">Credentials</span><span class="s3">(</span>
+                    <span class="s1">url</span><span class="s3">=</span><span class="s1">parsed</span><span class="s3">.</span><span class="s1">netloc</span><span class="s3">,</span>
+                    <span class="s1">username</span><span class="s3">=</span><span class="s1">username</span><span class="s3">,</span>
+                    <span class="s1">password</span><span class="s3">=</span><span class="s1">password</span><span class="s3">,</span>
+                <span class="s3">)</span>
+
+        <span class="s4"># Consume content and release the original connection to allow our new</span>
+        <span class="s4">#   request to reuse the same one.</span>
+        <span class="s4"># The result of the assignment isn't used, it's just needed to consume</span>
+        <span class="s4"># the content.</span>
+        <span class="s1">_ </span><span class="s3">= </span><span class="s1">resp</span><span class="s3">.</span><span class="s1">content</span>
+        <span class="s1">resp</span><span class="s3">.</span><span class="s1">raw</span><span class="s3">.</span><span class="s1">release_conn</span><span class="s3">()</span>
+
+        <span class="s4"># Add our new username and password to the request</span>
+        <span class="s1">req </span><span class="s3">= </span><span class="s1">HTTPBasicAuth</span><span class="s3">(</span><span class="s1">username </span><span class="s2">or </span><span class="s5">&quot;&quot;</span><span class="s3">, </span><span class="s1">password </span><span class="s2">or </span><span class="s5">&quot;&quot;</span><span class="s3">)(</span><span class="s1">resp</span><span class="s3">.</span><span class="s1">request</span><span class="s3">)</span>
+        <span class="s1">req</span><span class="s3">.</span><span class="s1">register_hook</span><span class="s3">(</span><span class="s5">&quot;response&quot;</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">warn_on_401</span><span class="s3">)</span>
+
+        <span class="s4"># On successful request, save the credentials that were used to</span>
+        <span class="s4"># keyring. (Note that if the user responded &quot;no&quot; above, this member</span>
+        <span class="s4"># is not set and nothing will be saved.)</span>
+        <span class="s2">if </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save</span><span class="s3">:</span>
+            <span class="s1">req</span><span class="s3">.</span><span class="s1">register_hook</span><span class="s3">(</span><span class="s5">&quot;response&quot;</span><span class="s3">, </span><span class="s1">self</span><span class="s3">.</span><span class="s1">save_credentials</span><span class="s3">)</span>
+
+        <span class="s4"># Send our new request</span>
+        <span class="s1">new_resp </span><span class="s3">= </span><span class="s1">resp</span><span class="s3">.</span><span class="s1">connection</span><span class="s3">.</span><span class="s1">send</span><span class="s3">(</span><span class="s1">req</span><span class="s3">, **</span><span class="s1">kwargs</span><span class="s3">)</span>
+        <span class="s1">new_resp</span><span class="s3">.</span><span class="s1">history</span><span class="s3">.</span><span class="s1">append</span><span class="s3">(</span><span class="s1">resp</span><span class="s3">)</span>
+
+        <span class="s2">return </span><span class="s1">new_resp</span>
+
+    <span class="s2">def </span><span class="s1">warn_on_401</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">resp</span><span class="s3">: </span><span class="s1">Response</span><span class="s3">, **</span><span class="s1">kwargs</span><span class="s3">: </span><span class="s1">Any</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s0">&quot;&quot;&quot;Response callback to warn about incorrect credentials.&quot;&quot;&quot;</span>
+        <span class="s2">if </span><span class="s1">resp</span><span class="s3">.</span><span class="s1">status_code </span><span class="s3">== </span><span class="s6">401</span><span class="s3">:</span>
+            <span class="s1">logger</span><span class="s3">.</span><span class="s1">warning</span><span class="s3">(</span>
+                <span class="s5">&quot;401 Error, Credentials not correct for %s&quot;</span><span class="s3">,</span>
+                <span class="s1">resp</span><span class="s3">.</span><span class="s1">request</span><span class="s3">.</span><span class="s1">url</span><span class="s3">,</span>
+            <span class="s3">)</span>
+
+    <span class="s2">def </span><span class="s1">save_credentials</span><span class="s3">(</span><span class="s1">self</span><span class="s3">, </span><span class="s1">resp</span><span class="s3">: </span><span class="s1">Response</span><span class="s3">, **</span><span class="s1">kwargs</span><span class="s3">: </span><span class="s1">Any</span><span class="s3">) </span><span class="s1">-&gt; </span><span class="s2">None</span><span class="s3">:</span>
+        <span class="s0">&quot;&quot;&quot;Response callback to save credentials on success.&quot;&quot;&quot;</span>
+        <span class="s2">assert </span><span class="s3">(</span>
+            <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring_provider</span><span class="s3">.</span><span class="s1">has_keyring</span>
+        <span class="s3">), </span><span class="s5">&quot;should never reach here without keyring&quot;</span>
+
+        <span class="s1">creds </span><span class="s3">= </span><span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save</span>
+        <span class="s1">self</span><span class="s3">.</span><span class="s1">_credentials_to_save </span><span class="s3">= </span><span class="s2">None</span>
+        <span class="s2">if </span><span class="s1">creds </span><span class="s2">and </span><span class="s1">resp</span><span class="s3">.</span><span class="s1">status_code </span><span class="s3">&lt; </span><span class="s6">400</span><span class="s3">:</span>
+            <span class="s2">try</span><span class="s3">:</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">info</span><span class="s3">(</span><span class="s5">&quot;Saving credentials to keyring&quot;</span><span class="s3">)</span>
+                <span class="s1">self</span><span class="s3">.</span><span class="s1">keyring_provider</span><span class="s3">.</span><span class="s1">save_auth_info</span><span class="s3">(</span>
+                    <span class="s1">creds</span><span class="s3">.</span><span class="s1">url</span><span class="s3">, </span><span class="s1">creds</span><span class="s3">.</span><span class="s1">username</span><span class="s3">, </span><span class="s1">creds</span><span class="s3">.</span><span class="s1">password</span>
+                <span class="s3">)</span>
+            <span class="s2">except </span><span class="s1">Exception</span><span class="s3">:</span>
+                <span class="s1">logger</span><span class="s3">.</span><span class="s1">exception</span><span class="s3">(</span><span class="s5">&quot;Failed to save credentials&quot;</span><span class="s3">)</span>
 </pre>
 </body>
 </html>

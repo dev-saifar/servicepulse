@@ -25,7 +25,16 @@ assets.py</font>
 <span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">utils </span><span class="s0">import </span><span class="s1">secure_filename</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Assets</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">PreventiveMaintenance</span>
 
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">jsonify</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Customer</span><span class="s2">, </span><span class="s1">Contract</span><span class="s2">, </span><span class="s1">Assets</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span>
+<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_required</span>
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span>
+<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_required</span><span class="s2">, </span><span class="s1">current_user</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">utils</span><span class="s2">.</span><span class="s1">permission_required </span><span class="s0">import </span><span class="s1">permission_required</span>
 <span class="s1">assets_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'assets'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/assets'</span><span class="s2">)</span>
 
 <span class="s1">UPLOAD_FOLDER </span><span class="s2">= </span><span class="s3">'uploads'</span>
@@ -56,6 +65,8 @@ assets.py</font>
 
 <span class="s4"># ✅ Display paginated assets with filters</span>
 <span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_assets'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
     <span class="s1">query </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span>
 
@@ -84,24 +95,25 @@ assets.py</font>
 
 <span class="s4"># ✅ Export assets to Excel</span>
 <span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/export-to-excel'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_assets'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">export_to_excel</span><span class="s2">():</span>
     <span class="s6">&quot;&quot;&quot;Exports asset data to an Excel file.&quot;&quot;&quot;</span>
-
-    <span class="s4"># Fetch asset data from the database</span>
     <span class="s1">assets </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
 
-    <span class="s4"># Convert database records to a list of dictionaries</span>
-    <span class="s1">assets_data </span><span class="s2">= [</span>
-        <span class="s2">{</span>
+    <span class="s4"># Convert database records to a list of dictionaries safely</span>
+    <span class="s1">assets_data </span><span class="s2">= []</span>
+    <span class="s0">for </span><span class="s1">asset </span><span class="s0">in </span><span class="s1">assets</span><span class="s2">:</span>
+        <span class="s0">if </span><span class="s1">asset </span><span class="s0">is None</span><span class="s2">:</span>
+            <span class="s0">continue</span>
+        <span class="s1">assets_data</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
             <span class="s3">'Customer Name'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">,</span>
             <span class="s3">'Serial Number'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">,</span>
             <span class="s3">'Location'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">,</span>
             <span class="s3">'Region'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region</span><span class="s2">,</span>
             <span class="s3">'Technician'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_name</span><span class="s2">,</span>
             <span class="s3">'Asset Description'</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description</span>
-        <span class="s2">}</span>
-        <span class="s0">for </span><span class="s1">asset </span><span class="s0">in </span><span class="s1">assets</span>
-    <span class="s2">]</span>
+        <span class="s2">})</span>
 
     <span class="s4"># Convert data to Pandas DataFrame</span>
     <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">assets_data</span><span class="s2">)</span>
@@ -113,13 +125,15 @@ assets.py</font>
 
     <span class="s1">output</span><span class="s2">.</span><span class="s1">seek</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
 
-    <span class="s4"># Send file as a response</span>
-    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;assets.xlsx&quot;</span><span class="s2">, </span><span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">output</span><span class="s2">,</span>
+                     <span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;assets.xlsx&quot;</span><span class="s2">,</span>
+                     <span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
                      <span class="s1">mimetype</span><span class="s2">=</span><span class="s3">&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;</span><span class="s2">)</span>
-
 
 <span class="s4"># ✅ Import assets from an Excel/CSV file</span>
 <span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/import'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_add_assets'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">import_assets</span><span class="s2">():</span>
     <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
         <span class="s0">if </span><span class="s3">'file' </span><span class="s0">not in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
@@ -181,8 +195,9 @@ assets.py</font>
     <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/import.html'</span><span class="s2">)</span>
 
 
-<span class="s4"># ✅ Edit an asset</span>
 <span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/edit/&lt;int:asset_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_edit_assets'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">edit_asset</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">):</span>
     <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">)</span>
     <span class="s0">if not </span><span class="s1">asset</span><span class="s2">:</span>
@@ -191,8 +206,23 @@ assets.py</font>
 
     <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
         <span class="s0">try</span><span class="s2">:</span>
-            <span class="s0">for </span><span class="s1">field </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">:</span>
-                <span class="s1">setattr</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">, </span><span class="s1">field</span><span class="s2">, </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s1">field</span><span class="s2">])</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">account_code </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'account_code'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'customer_name'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'service_location'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">region </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'region'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_name'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_email'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">contract </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'contract'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'asset_Description'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">department </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'department'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">part_no </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'partnumber'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">pm_freq </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'pm_freq'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_status </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'asset_status'</span><span class="s2">)</span>
+
+            <span class="s4"># Convert and set install_date</span>
+            <span class="s1">install_date </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'install_date'</span><span class="s2">)</span>
+            <span class="s1">asset</span><span class="s2">.</span><span class="s1">install_date </span><span class="s2">= </span><span class="s1">install_date </span><span class="s0">if </span><span class="s1">install_date </span><span class="s0">else None</span>
 
             <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
             <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Asset updated successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
@@ -203,8 +233,9 @@ assets.py</font>
     <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/edit.html'</span><span class="s2">, </span><span class="s1">asset</span><span class="s2">=</span><span class="s1">asset</span><span class="s2">)</span>
 
 
-<span class="s4"># ✅ Delete an asset</span>
 <span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/delete/&lt;int:asset_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_delete_assets'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">delete_asset</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">):</span>
     <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">asset_id</span><span class="s2">)</span>
     <span class="s0">if not </span><span class="s1">asset</span><span class="s2">:</span>
@@ -219,6 +250,412 @@ assets.py</font>
         <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Error deleting asset: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
 
     <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.index'</span><span class="s2">))</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customers'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_manage_customers'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">manage_customers</span><span class="s2">():</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">billing_company </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'billing_company'</span><span class="s2">]</span>
+        <span class="s1">cust_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'cust_name'</span><span class="s2">].</span><span class="s1">strip</span><span class="s2">()</span>
+        <span class="s1">cust_code </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'cust_code'</span><span class="s2">].</span><span class="s1">strip</span><span class="s2">()</span>
+
+        <span class="s4"># Check if customer already exists</span>
+        <span class="s1">existing_customer </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">cust_name</span><span class="s2">=</span><span class="s1">cust_name</span><span class="s2">, </span><span class="s1">billing_company</span><span class="s2">=</span><span class="s1">billing_company</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">existing_customer</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Customer '</span><span class="s0">{</span><span class="s1">cust_name</span><span class="s0">}</span><span class="s3">' found. Redirecting to contracts...&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.manage_contracts'</span><span class="s2">, </span><span class="s1">cust_code</span><span class="s2">=</span><span class="s1">existing_customer</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">))</span>
+
+        <span class="s4"># New customer scenario: Ensure `cust_code` is provided</span>
+        <span class="s0">if not </span><span class="s1">cust_code</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Customer Code is required for new customers!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.manage_customers'</span><span class="s2">))</span>
+
+        <span class="s4"># Ensure `cust_code` is unique within the billing company</span>
+        <span class="s1">existing_cust_code </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">cust_code</span><span class="s2">=</span><span class="s1">cust_code</span><span class="s2">, </span><span class="s1">billing_company</span><span class="s2">=</span><span class="s1">billing_company</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">existing_cust_code</span><span class="s2">:</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;Customer Code '</span><span class="s0">{</span><span class="s1">cust_code</span><span class="s0">}</span><span class="s3">' already exists for </span><span class="s0">{</span><span class="s1">billing_company</span><span class="s0">}</span><span class="s3">.&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.manage_customers'</span><span class="s2">))</span>
+
+        <span class="s4"># Add new customer</span>
+        <span class="s1">new_customer </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">(</span><span class="s1">cust_code</span><span class="s2">=</span><span class="s1">cust_code</span><span class="s2">, </span><span class="s1">cust_name</span><span class="s2">=</span><span class="s1">cust_name</span><span class="s2">, </span><span class="s1">billing_company</span><span class="s2">=</span><span class="s1">billing_company</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_customer</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;New Customer '</span><span class="s0">{</span><span class="s1">cust_name</span><span class="s0">}</span><span class="s3">' added successfully! Redirecting to contracts...&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.manage_contracts'</span><span class="s2">, </span><span class="s1">cust_code</span><span class="s2">=</span><span class="s1">cust_code</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'customers.html'</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/assets'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">manage_assets</span><span class="s2">():</span>
+    <span class="s4"># Your asset management logic here</span>
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;assets_add/assets_Add.html&quot;</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customer/search'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">search_customer</span><span class="s2">():</span>
+    <span class="s1">billing_company </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'billing_company'</span><span class="s2">, </span><span class="s3">''</span><span class="s2">).</span><span class="s1">strip</span><span class="s2">()</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'query'</span><span class="s2">, </span><span class="s3">''</span><span class="s2">).</span><span class="s1">strip</span><span class="s2">()</span>
+
+    <span class="s0">if not </span><span class="s1">billing_company </span><span class="s0">or not </span><span class="s1">query</span><span class="s2">:</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">([])  </span><span class="s4"># Return an empty list if no input</span>
+
+    <span class="s4"># Fetch matching customers from the database</span>
+    <span class="s1">customers </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">billing_company </span><span class="s2">== </span><span class="s1">billing_company</span><span class="s2">,</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_name</span><span class="s2">.</span><span class="s1">ilike</span><span class="s2">(</span><span class="s3">f&quot;%</span><span class="s0">{</span><span class="s1">query</span><span class="s0">}</span><span class="s3">%&quot;</span><span class="s2">)  </span><span class="s4"># Case-insensitive search</span>
+    <span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">([</span>
+        <span class="s2">{</span><span class="s3">&quot;cust_code&quot;</span><span class="s2">: </span><span class="s1">c</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">, </span><span class="s3">&quot;cust_name&quot;</span><span class="s2">: </span><span class="s1">c</span><span class="s2">.</span><span class="s1">cust_name</span><span class="s2">, </span><span class="s3">&quot;billing_company&quot;</span><span class="s2">: </span><span class="s1">c</span><span class="s2">.</span><span class="s1">billing_company</span><span class="s2">}</span>
+        <span class="s0">for </span><span class="s1">c </span><span class="s0">in </span><span class="s1">customers</span>
+    <span class="s2">])</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/contracts'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_contracts'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">manage_contracts</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot;Display contract management page&quot;&quot;&quot;</span>
+    <span class="s1">contracts </span><span class="s2">= </span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()  </span><span class="s4"># Fetch all contracts</span>
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;contracts/contracts.html&quot;</span><span class="s2">)  </span><span class="s4"># Correct path to the contract management template</span>
+
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/add_asset/&lt;contract_code&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_add_assets'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">add_asset</span><span class="s2">(</span><span class="s1">contract_code</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot;Render asset creation form for a specific contract&quot;&quot;&quot;</span>
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'contracts/asset_creation.html'</span><span class="s2">, </span><span class="s1">contract_code</span><span class="s2">=</span><span class="s1">contract_code</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/create_asset'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_add_assets'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">create_asset</span><span class="s2">():</span>
+    <span class="s6">&quot;&quot;&quot;Create a new asset&quot;&quot;&quot;</span>
+    <span class="s1">required_fields </span><span class="s2">= [</span><span class="s3">'contract'</span><span class="s2">, </span><span class="s3">'account_code'</span><span class="s2">, </span><span class="s3">'customer_name'</span><span class="s2">, </span><span class="s3">'serial_number'</span><span class="s2">, </span><span class="s3">'service_location'</span><span class="s2">,</span>
+                       <span class="s3">'region'</span><span class="s2">, </span><span class="s3">'technician_name'</span><span class="s2">, </span><span class="s3">'technician_email'</span><span class="s2">, </span><span class="s3">'asset_Description'</span><span class="s2">, </span><span class="s3">'contract_expiry_date'</span><span class="s2">,</span>
+                       <span class="s3">'last_pm_date'</span><span class="s2">, </span><span class="s3">'pm_freq'</span><span class="s2">, </span><span class="s3">'install_date'</span><span class="s2">]</span>
+
+    <span class="s0">for </span><span class="s1">field </span><span class="s0">in </span><span class="s1">required_fields</span><span class="s2">:</span>
+        <span class="s0">if not </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">field</span><span class="s2">):</span>
+            <span class="s1">print</span><span class="s2">(</span><span class="s3">f&quot;❌ Missing required field: </span><span class="s0">{</span><span class="s1">field</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">)  </span><span class="s4"># Debugging</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s3">&quot;error&quot;</span><span class="s2">: </span><span class="s3">f&quot;Missing required field: </span><span class="s0">{</span><span class="s1">field</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">}), </span><span class="s5">400</span>
+
+    <span class="s4"># Convert dates correctly</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">contract_expiry_date </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'contract_expiry_date'</span><span class="s2">), </span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+        <span class="s1">last_pm_date </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'last_pm_date'</span><span class="s2">), </span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+        <span class="s1">install_date </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'install_date'</span><span class="s2">), </span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+    <span class="s0">except </span><span class="s1">ValueError</span><span class="s2">:</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s3">&quot;error&quot;</span><span class="s2">: </span><span class="s3">&quot;Invalid date format&quot;</span><span class="s2">}), </span><span class="s5">400</span>
+
+    <span class="s4"># Save to DB</span>
+    <span class="s1">new_asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">(</span>
+        <span class="s1">account_code</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'account_code'</span><span class="s2">),</span>
+        <span class="s1">customer_name</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'customer_name'</span><span class="s2">),</span>
+        <span class="s1">serial_number</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'serial_number'</span><span class="s2">),</span>
+        <span class="s1">service_location</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'service_location'</span><span class="s2">),</span>
+        <span class="s1">region</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'region'</span><span class="s2">),</span>
+        <span class="s1">technician_name</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_name'</span><span class="s2">),</span>
+        <span class="s1">technician_email</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_email'</span><span class="s2">),</span>
+        <span class="s1">contract</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'contract'</span><span class="s2">),</span>
+        <span class="s1">asset_Description</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'asset_Description'</span><span class="s2">),</span>
+        <span class="s1">contract_expiry_date</span><span class="s2">=</span><span class="s1">contract_expiry_date</span><span class="s2">,</span>
+        <span class="s1">last_pm_date</span><span class="s2">=</span><span class="s1">last_pm_date</span><span class="s2">,</span>
+        <span class="s1">pm_freq</span><span class="s2">=</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'pm_freq'</span><span class="s2">),</span>
+        <span class="s1">install_date</span><span class="s2">=</span><span class="s1">install_date</span>
+    <span class="s2">)</span>
+
+    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_asset</span><span class="s2">)</span>
+    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+
+    <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s3">&quot;success&quot;</span><span class="s2">: </span><span class="s0">True</span><span class="s2">, </span><span class="s3">&quot;message&quot;</span><span class="s2">: </span><span class="s3">&quot;Asset created successfully&quot;</span><span class="s2">})</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customers/list'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_assets'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">customer_list</span><span class="s2">():</span>
+    <span class="s0">from </span><span class="s1">sqlalchemy </span><span class="s0">import </span><span class="s1">func</span><span class="s2">, </span><span class="s1">distinct</span>
+
+    <span class="s1">customers </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Customer</span><span class="s2">,</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">distinct</span><span class="s2">(</span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">id</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">&quot;contract_count&quot;</span><span class="s2">),</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">distinct</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">id</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">&quot;asset_count&quot;</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Contract</span><span class="s2">,</span>
+                <span class="s2">(</span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_code </span><span class="s2">== </span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">) &amp; (</span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">billing_company </span><span class="s2">== </span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">billing_company</span><span class="s2">)) </span><span class="s1">\</span>
+        <span class="s2">.</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">, </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_name </span><span class="s2">== </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">) </span><span class="s1">\</span>
+        <span class="s2">.</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;assets/customer_list.html&quot;</span><span class="s2">, </span><span class="s1">customers</span><span class="s2">=</span><span class="s1">customers</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customers/edit/&lt;int:customer_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_manage_customers'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">edit_customer</span><span class="s2">(</span><span class="s1">customer_id</span><span class="s2">):</span>
+    <span class="s1">customer </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">customer_id</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">customer</span><span class="s2">.</span><span class="s1">cust_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'cust_name'</span><span class="s2">].</span><span class="s1">strip</span><span class="s2">()</span>
+        <span class="s1">customer</span><span class="s2">.</span><span class="s1">cust_code </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'cust_code'</span><span class="s2">].</span><span class="s1">strip</span><span class="s2">()</span>
+        <span class="s1">customer</span><span class="s2">.</span><span class="s1">billing_company </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'billing_company'</span><span class="s2">].</span><span class="s1">strip</span><span class="s2">()</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ Customer updated successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.customer_list'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/edit_customer.html'</span><span class="s2">, </span><span class="s1">customer</span><span class="s2">=</span><span class="s1">customer</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customers/delete/&lt;int:customer_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_delete_customers'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">delete_customer</span><span class="s2">(</span><span class="s1">customer_id</span><span class="s2">):</span>
+    <span class="s1">customer </span><span class="s2">= </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">customer_id</span><span class="s2">)</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s1">customer</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;🗑️ Customer deleted successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;❌ Error deleting customer: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.customer_list'</span><span class="s2">))</span>
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/customers/export'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">export_customers</span><span class="s2">():</span>
+    <span class="s0">from </span><span class="s1">sqlalchemy </span><span class="s0">import </span><span class="s1">func</span><span class="s2">, </span><span class="s1">distinct</span>
+
+    <span class="s4"># Join and count contracts and assets</span>
+    <span class="s1">data </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">,</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_name</span><span class="s2">,</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">billing_company</span><span class="s2">,</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">distinct</span><span class="s2">(</span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">id</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">&quot;contract_count&quot;</span><span class="s2">),</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">distinct</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">id</span><span class="s2">)).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">&quot;asset_count&quot;</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span>
+        <span class="s1">Contract</span><span class="s2">,</span>
+        <span class="s2">(</span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_code </span><span class="s2">== </span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">) &amp; (</span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">billing_company </span><span class="s2">== </span><span class="s1">Contract</span><span class="s2">.</span><span class="s1">billing_company</span><span class="s2">)</span>
+    <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span>
+        <span class="s1">Assets</span><span class="s2">, </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_name </span><span class="s2">== </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">customer_name</span>
+    <span class="s2">).</span><span class="s1">group_by</span><span class="s2">(</span>
+        <span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">, </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">cust_name</span><span class="s2">, </span><span class="s1">Customer</span><span class="s2">.</span><span class="s1">billing_company</span>
+    <span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s4"># Prepare data for export</span>
+    <span class="s1">export_data </span><span class="s2">= []</span>
+    <span class="s0">for </span><span class="s1">row </span><span class="s0">in </span><span class="s1">data</span><span class="s2">:</span>
+        <span class="s1">export_data</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
+            <span class="s3">&quot;Customer Code&quot;</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">cust_code</span><span class="s2">,</span>
+            <span class="s3">&quot;Customer Name&quot;</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">cust_name</span><span class="s2">,</span>
+            <span class="s3">&quot;Billing Company&quot;</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">billing_company</span><span class="s2">,</span>
+            <span class="s3">&quot;No. of Contracts&quot;</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">contract_count</span><span class="s2">,</span>
+            <span class="s3">&quot;No. of Assets&quot;</span><span class="s2">: </span><span class="s1">row</span><span class="s2">.</span><span class="s1">asset_count</span><span class="s2">,</span>
+        <span class="s2">})</span>
+
+    <span class="s4"># Convert to Excel using pandas</span>
+    <span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+    <span class="s0">import </span><span class="s1">io</span>
+
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">export_data</span><span class="s2">)</span>
+    <span class="s1">output </span><span class="s2">= </span><span class="s1">io</span><span class="s2">.</span><span class="s1">BytesIO</span><span class="s2">()</span>
+    <span class="s0">with </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">ExcelWriter</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">engine</span><span class="s2">=</span><span class="s3">'xlsxwriter'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">writer</span><span class="s2">:</span>
+        <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">writer</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">, </span><span class="s1">sheet_name</span><span class="s2">=</span><span class="s3">'Customers'</span><span class="s2">)</span>
+
+    <span class="s1">output</span><span class="s2">.</span><span class="s1">seek</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span>
+        <span class="s1">output</span><span class="s2">,</span>
+        <span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;customers.xlsx&quot;</span><span class="s2">,</span>
+        <span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">mimetype</span><span class="s2">=</span><span class="s3">&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;</span>
+    <span class="s2">)</span>
+
+    <span class="s4"># Convert to Excel using pandas</span>
+    <span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+    <span class="s0">import </span><span class="s1">io</span>
+
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">export_data</span><span class="s2">)</span>
+    <span class="s1">output </span><span class="s2">= </span><span class="s1">io</span><span class="s2">.</span><span class="s1">BytesIO</span><span class="s2">()</span>
+    <span class="s0">with </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">ExcelWriter</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">engine</span><span class="s2">=</span><span class="s3">'xlsxwriter'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">writer</span><span class="s2">:</span>
+        <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">writer</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">, </span><span class="s1">sheet_name</span><span class="s2">=</span><span class="s3">'Customers'</span><span class="s2">)</span>
+
+    <span class="s1">output</span><span class="s2">.</span><span class="s1">seek</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span>
+        <span class="s1">output</span><span class="s2">,</span>
+        <span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;customers.xlsx&quot;</span><span class="s2">,</span>
+        <span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+        <span class="s1">mimetype</span><span class="s2">=</span><span class="s3">&quot;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&quot;</span>
+    <span class="s2">)</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span><span class="s2">, </span><span class="s1">timedelta</span>
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">render_template</span>
+
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/pm_dashboard'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_pm'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">pm_dashboard</span><span class="s2">():</span>
+    <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Assets</span><span class="s2">, </span><span class="s1">Ticket</span>
+    <span class="s0">from </span><span class="s1">sqlalchemy </span><span class="s0">import </span><span class="s1">func</span>
+    <span class="s1">today </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">today</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()</span>
+
+    <span class="s4"># Filters from request</span>
+    <span class="s1">filters </span><span class="s2">= {</span>
+        <span class="s3">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;customer_name&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;service_location&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;region&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;region&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;technician_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;technician_name&quot;</span><span class="s2">)</span>
+    <span class="s2">}</span>
+
+    <span class="s4"># Subquery to get serials with active PM tickets</span>
+    <span class="s1">active_pm_subq </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span>
+        <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">call_type </span><span class="s2">== </span><span class="s3">'PM'</span><span class="s2">,</span>
+        <span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status</span><span class="s2">.</span><span class="s1">in_</span><span class="s2">([</span><span class="s3">'Open'</span><span class="s2">, </span><span class="s3">'In Process'</span><span class="s2">])</span>
+    <span class="s2">).</span><span class="s1">distinct</span><span class="s2">().</span><span class="s1">subquery</span><span class="s2">()</span>
+
+    <span class="s4"># Base query with filters and excluding active PMs</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(~</span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">.</span><span class="s1">in_</span><span class="s2">(</span><span class="s1">active_pm_subq</span><span class="s2">))</span>
+
+    <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">value </span><span class="s0">in </span><span class="s1">filters</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+        <span class="s0">if </span><span class="s1">value</span><span class="s2">:</span>
+            <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">, </span><span class="s1">field</span><span class="s2">).</span><span class="s1">ilike</span><span class="s2">(</span><span class="s3">f&quot;%</span><span class="s0">{</span><span class="s1">value</span><span class="s0">}</span><span class="s3">%&quot;</span><span class="s2">))</span>
+
+    <span class="s4"># Only fetch assets with both last_pm_date and pm_freq</span>
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">last_pm_date</span><span class="s2">.</span><span class="s1">isnot</span><span class="s2">(</span><span class="s0">None</span><span class="s2">), </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">pm_freq</span><span class="s2">.</span><span class="s1">isnot</span><span class="s2">(</span><span class="s0">None</span><span class="s2">))</span>
+
+    <span class="s1">due_assets </span><span class="s2">= []</span>
+    <span class="s0">for </span><span class="s1">asset </span><span class="s0">in </span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">():</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">last_pm </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">last_pm_date</span><span class="s2">, </span><span class="s3">'%Y-%m-%d'</span><span class="s2">).</span><span class="s1">date</span><span class="s2">()</span>
+            <span class="s1">freq_days </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">pm_freq</span><span class="s2">.</span><span class="s1">split</span><span class="s2">()[</span><span class="s5">0</span><span class="s2">])</span>
+            <span class="s1">next_due </span><span class="s2">= </span><span class="s1">last_pm </span><span class="s2">+ </span><span class="s1">timedelta</span><span class="s2">(</span><span class="s1">days</span><span class="s2">=</span><span class="s1">freq_days</span><span class="s2">)</span>
+            <span class="s0">if </span><span class="s1">next_due </span><span class="s2">&lt;= </span><span class="s1">today</span><span class="s2">:</span>
+                <span class="s1">due_assets</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
+                    <span class="s3">&quot;serial_number&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">,</span>
+                    <span class="s3">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">,</span>
+                    <span class="s3">&quot;next_due&quot;</span><span class="s2">: </span><span class="s1">next_due</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">),</span>
+                    <span class="s3">&quot;technician_name&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_name</span><span class="s2">,</span>
+                    <span class="s3">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">,</span>
+                    <span class="s3">&quot;region&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region</span><span class="s2">,</span>
+                    <span class="s3">&quot;asset_description&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description</span><span class="s2">,</span>
+                    <span class="s3">&quot;contract&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">contract</span>
+                <span class="s2">})</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">print</span><span class="s2">(</span><span class="s3">f&quot;Error processing asset </span><span class="s0">{</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s0">}</span><span class="s3">: </span><span class="s0">{</span><span class="s1">e</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+            <span class="s0">continue</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;assets/pm_dashboard.html&quot;</span><span class="s2">, </span><span class="s1">due_assets</span><span class="s2">=</span><span class="s1">due_assets</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/pm_complete/&lt;serial_number&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_edit_pm'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">complete_pm</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">):</span>
+    <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">PreventiveMaintenance</span><span class="s2">, </span><span class="s1">Assets</span>
+    <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">serial_number</span><span class="s2">).</span><span class="s1">first_or_404</span><span class="s2">()</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">scheduled_date </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'scheduled_date'</span><span class="s2">) </span><span class="s0">or </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()</span>
+        <span class="s1">performed_date </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'performed_date'</span><span class="s2">) </span><span class="s0">or </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()</span>
+        <span class="s1">technician_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'technician_name'</span><span class="s2">)</span>
+        <span class="s1">remarks </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'remarks'</span><span class="s2">)</span>
+
+        <span class="s4"># Save record</span>
+        <span class="s1">pm </span><span class="s2">= </span><span class="s1">PreventiveMaintenance</span><span class="s2">(</span>
+            <span class="s1">serial_number</span><span class="s2">=</span><span class="s1">serial_number</span><span class="s2">,</span>
+            <span class="s1">scheduled_date</span><span class="s2">=</span><span class="s1">scheduled_date</span><span class="s2">,</span>
+            <span class="s1">performed_date</span><span class="s2">=</span><span class="s1">performed_date</span><span class="s2">,</span>
+            <span class="s1">technician_name</span><span class="s2">=</span><span class="s1">technician_name</span><span class="s2">,</span>
+            <span class="s1">remarks</span><span class="s2">=</span><span class="s1">remarks</span><span class="s2">,</span>
+            <span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Completed&quot;</span>
+        <span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">pm</span><span class="s2">)</span>
+
+        <span class="s4"># ✅ Update asset last_pm_date</span>
+        <span class="s1">asset</span><span class="s2">.</span><span class="s1">last_pm_date </span><span class="s2">= </span><span class="s1">performed_date</span><span class="s2">.</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">'%Y-%m-%d'</span><span class="s2">)</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ PM record saved and asset updated.&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'assets.pm_dashboard'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'assets/pm_complete.html'</span><span class="s2">, </span><span class="s1">asset</span><span class="s2">=</span><span class="s1">asset</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/pm_history'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_pm'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">pm_history</span><span class="s2">():</span>
+    <span class="s1">history </span><span class="s2">= </span><span class="s1">PreventiveMaintenance</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">order_by</span><span class="s2">(</span>
+        <span class="s1">PreventiveMaintenance</span><span class="s2">.</span><span class="s1">performed_date</span><span class="s2">.</span><span class="s1">desc</span><span class="s2">()</span>
+    <span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
+
+    <span class="s4"># Enhance each record with asset details</span>
+    <span class="s1">enriched </span><span class="s2">= []</span>
+    <span class="s0">for </span><span class="s1">r </span><span class="s0">in </span><span class="s1">history</span><span class="s2">:</span>
+        <span class="s1">asset </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">r</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">).</span><span class="s1">first</span><span class="s2">()</span>
+        <span class="s1">enriched</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
+            <span class="s3">&quot;serial_number&quot;</span><span class="s2">: </span><span class="s1">r</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">,</span>
+            <span class="s3">&quot;scheduled_date&quot;</span><span class="s2">: </span><span class="s1">r</span><span class="s2">.</span><span class="s1">scheduled_date</span><span class="s2">,</span>
+            <span class="s3">&quot;performed_date&quot;</span><span class="s2">: </span><span class="s1">r</span><span class="s2">.</span><span class="s1">performed_date</span><span class="s2">,</span>
+            <span class="s3">&quot;technician_name&quot;</span><span class="s2">: </span><span class="s1">r</span><span class="s2">.</span><span class="s1">technician_name</span><span class="s2">,</span>
+            <span class="s3">&quot;remarks&quot;</span><span class="s2">: </span><span class="s1">r</span><span class="s2">.</span><span class="s1">remarks</span><span class="s2">,</span>
+            <span class="s3">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name </span><span class="s0">if </span><span class="s1">asset </span><span class="s0">else </span><span class="s3">''</span><span class="s2">,</span>
+            <span class="s3">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location </span><span class="s0">if </span><span class="s1">asset </span><span class="s0">else </span><span class="s3">''</span><span class="s2">,</span>
+            <span class="s3">&quot;region&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region </span><span class="s0">if </span><span class="s1">asset </span><span class="s0">else </span><span class="s3">''</span>
+        <span class="s2">})</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">&quot;assets/pm_history.html&quot;</span><span class="s2">, </span><span class="s1">records</span><span class="s2">=</span><span class="s1">enriched</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">assets_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/export_pm_filtered'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_view_pm'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">export_pm_filtered</span><span class="s2">():</span>
+    <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Assets</span>
+    <span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+    <span class="s0">from </span><span class="s1">io </span><span class="s0">import </span><span class="s1">BytesIO</span>
+
+    <span class="s1">filters </span><span class="s2">= {</span>
+        <span class="s3">&quot;customer_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;customer_name&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;service_location&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;service_location&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;region&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;region&quot;</span><span class="s2">),</span>
+        <span class="s3">&quot;technician_name&quot;</span><span class="s2">: </span><span class="s1">request</span><span class="s2">.</span><span class="s1">args</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;technician_name&quot;</span><span class="s2">)</span>
+    <span class="s2">}</span>
+
+    <span class="s1">query </span><span class="s2">= </span><span class="s1">Assets</span><span class="s2">.</span><span class="s1">query</span>
+    <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">value </span><span class="s0">in </span><span class="s1">filters</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+        <span class="s0">if </span><span class="s1">value</span><span class="s2">:</span>
+            <span class="s1">query </span><span class="s2">= </span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">Assets</span><span class="s2">, </span><span class="s1">field</span><span class="s2">).</span><span class="s1">ilike</span><span class="s2">(</span><span class="s3">f&quot;%</span><span class="s0">{</span><span class="s1">value</span><span class="s0">}</span><span class="s3">%&quot;</span><span class="s2">))</span>
+
+    <span class="s1">today </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">today</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()</span>
+    <span class="s1">rows </span><span class="s2">= []</span>
+
+    <span class="s0">for </span><span class="s1">asset </span><span class="s0">in </span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">():</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s0">if </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">last_pm_date </span><span class="s0">and </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">pm_freq</span><span class="s2">:</span>
+                <span class="s1">last_pm </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">last_pm_date</span><span class="s2">, </span><span class="s3">'%Y-%m-%d'</span><span class="s2">).</span><span class="s1">date</span><span class="s2">()</span>
+                <span class="s1">freq_days </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">pm_freq</span><span class="s2">.</span><span class="s1">split</span><span class="s2">()[</span><span class="s5">0</span><span class="s2">])</span>
+                <span class="s1">next_due </span><span class="s2">= </span><span class="s1">last_pm </span><span class="s2">+ </span><span class="s1">timedelta</span><span class="s2">(</span><span class="s1">days</span><span class="s2">=</span><span class="s1">freq_days</span><span class="s2">)</span>
+
+                <span class="s1">existing_pm </span><span class="s2">= </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">filter_by</span><span class="s2">(</span><span class="s1">serial_number</span><span class="s2">=</span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">, </span><span class="s1">call_type</span><span class="s2">=</span><span class="s3">'PM'</span><span class="s2">)</span><span class="s1">\</span>
+                    <span class="s2">.</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">status</span><span class="s2">.</span><span class="s1">in_</span><span class="s2">([</span><span class="s3">'Open'</span><span class="s2">, </span><span class="s3">'In Process'</span><span class="s2">])).</span><span class="s1">first</span><span class="s2">()</span>
+
+                <span class="s0">if </span><span class="s1">next_due </span><span class="s2">&lt;= </span><span class="s1">today </span><span class="s0">and not </span><span class="s1">existing_pm</span><span class="s2">:</span>
+                    <span class="s1">rows</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
+                        <span class="s3">&quot;Serial Number&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">serial_number</span><span class="s2">,</span>
+                        <span class="s3">&quot;Customer&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">customer_name</span><span class="s2">,</span>
+                        <span class="s3">&quot;Next Due&quot;</span><span class="s2">: </span><span class="s1">next_due</span><span class="s2">,</span>
+                        <span class="s3">&quot;Technician&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">technician_name</span><span class="s2">,</span>
+                        <span class="s3">&quot;Location&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">,</span>
+                        <span class="s3">&quot;Region&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">region</span><span class="s2">,</span>
+                        <span class="s3">&quot;Asset Description&quot;</span><span class="s2">: </span><span class="s1">asset</span><span class="s2">.</span><span class="s1">asset_Description</span>
+                    <span class="s2">})</span>
+        <span class="s0">except</span><span class="s2">:</span>
+            <span class="s0">continue</span>
+
+    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">rows</span><span class="s2">)</span>
+    <span class="s1">output </span><span class="s2">= </span><span class="s1">BytesIO</span><span class="s2">()</span>
+    <span class="s0">with </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">ExcelWriter</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">engine</span><span class="s2">=</span><span class="s3">'xlsxwriter'</span><span class="s2">) </span><span class="s0">as </span><span class="s1">writer</span><span class="s2">:</span>
+        <span class="s1">df</span><span class="s2">.</span><span class="s1">to_excel</span><span class="s2">(</span><span class="s1">writer</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s0">False</span><span class="s2">, </span><span class="s1">sheet_name</span><span class="s2">=</span><span class="s3">&quot;Pending PM&quot;</span><span class="s2">)</span>
+
+    <span class="s1">output</span><span class="s2">.</span><span class="s1">seek</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">send_file</span><span class="s2">(</span><span class="s1">output</span><span class="s2">, </span><span class="s1">as_attachment</span><span class="s2">=</span><span class="s0">True</span><span class="s2">, </span><span class="s1">download_name</span><span class="s2">=</span><span class="s3">&quot;pending_pm_filtered.xlsx&quot;</span><span class="s2">)</span>
+
 </pre>
 </body>
 </html>

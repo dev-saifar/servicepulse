@@ -105,6 +105,12 @@
     {% set perms_list = ['can_schedule_pm', 'can_view_pm', 'can_edit_pm', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'] %}
     {% include 'users/perm_block.html' %}
 </div>
+                      <div class="col-md-4">
+    <h6>Gate Pass</h6>
+    {% set perms_list = ['can_create_gatepass', 'can_view_gatepass', 'can_edit_gatepass', 'can_export_gatepass'] %}
+    {% include 'users/perm_block.html' %}
+</div>
+
 
                     </div>
                 </div>
