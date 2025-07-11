@@ -7,7 +7,7 @@
 .s1 { color: #bcbec4;}
 .s2 { color: #bcbec4;}
 .s3 { color: #6aab73;}
-.s4 { color: #5f826b; font-style: italic;}
+.s4 { color: #7a7e85;}
 </style>
 </head>
 <body bgcolor="#1e1f22">
@@ -16,25 +16,27 @@
 <font face="Arial, Helvetica" color="#000000">
 users.py</font>
 </center></td></tr></table>
-<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">jsonify</span>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span>
 <span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">security </span><span class="s0">import </span><span class="s1">generate_password_hash</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">User</span>
 <span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_required</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">utils</span><span class="s2">.</span><span class="s1">permission_required </span><span class="s0">import </span><span class="s1">permission_required</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">modules</span><span class="s2">.</span><span class="s1">test_smtp </span><span class="s0">import </span><span class="s1">send_email</span>
 
 <span class="s1">users_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'users'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/users'</span><span class="s2">)</span>
 
 <span class="s2">@</span><span class="s1">users_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
 <span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_add_user'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">user_list</span><span class="s2">():</span>
-    <span class="s4">&quot;&quot;&quot;Show all users&quot;&quot;&quot;</span>
     <span class="s1">users </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">all</span><span class="s2">()</span>
     <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'users/index.html'</span><span class="s2">, </span><span class="s1">users</span><span class="s2">=</span><span class="s1">users</span><span class="s2">)</span>
 
 <span class="s2">@</span><span class="s1">users_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/add'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
 <span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_add_user'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">add_user</span><span class="s2">():</span>
-    <span class="s4">&quot;&quot;&quot;Add a new user via UI&quot;&quot;&quot;</span>
     <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
         <span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'username'</span><span class="s2">)</span>
         <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'email'</span><span class="s2">)</span>
@@ -48,24 +50,164 @@ users.py</font>
             <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Email already registered!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
             <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'users.add_user'</span><span class="s2">))</span>
 
+        <span class="s1">plain_password </span><span class="s2">= </span><span class="s1">password  </span><span class="s4"># Keep plain password to send email</span>
         <span class="s1">new_user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">(</span><span class="s1">username</span><span class="s2">=</span><span class="s1">username</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">password_hash</span><span class="s2">=</span><span class="s1">generate_password_hash</span><span class="s2">(</span><span class="s1">password</span><span class="s2">))</span>
+
+        <span class="s1">permission_fields </span><span class="s2">= [</span>
+            <span class="s3">'can_add_user'</span><span class="s2">, </span><span class="s3">'can_edit_user'</span><span class="s2">, </span><span class="s3">'can_delete_user'</span><span class="s2">, </span><span class="s3">'can_assign_roles'</span><span class="s2">,</span>
+            <span class="s3">'can_view_tickets'</span><span class="s2">, </span><span class="s3">'can_create_tickets'</span><span class="s2">, </span><span class="s3">'can_edit_tickets'</span><span class="s2">, </span><span class="s3">'can_close_tickets'</span><span class="s2">, </span><span class="s3">'can_assign_tickets'</span><span class="s2">,</span>
+            <span class="s3">'can_view_technicians'</span><span class="s2">, </span><span class="s3">'can_add_technicians'</span><span class="s2">, </span><span class="s3">'can_edit_technicians'</span><span class="s2">,</span>
+            <span class="s3">'can_view_assets'</span><span class="s2">, </span><span class="s3">'can_add_assets'</span><span class="s2">, </span><span class="s3">'can_edit_assets'</span><span class="s2">, </span><span class="s3">'can_delete_assets'</span><span class="s2">,</span>
+            <span class="s3">'can_view_customers'</span><span class="s2">, </span><span class="s3">'can_manage_customers'</span><span class="s2">, </span><span class="s3">'can_delete_customers'</span><span class="s2">,</span>
+            <span class="s3">'can_view_contracts'</span><span class="s2">, </span><span class="s3">'can_add_contracts'</span><span class="s2">, </span><span class="s3">'can_edit_contracts'</span><span class="s2">, </span><span class="s3">'can_delete_contracts'</span><span class="s2">,</span>
+            <span class="s3">'can_request_toner'</span><span class="s2">, </span><span class="s3">'can_edit_toner_requests'</span><span class="s2">, </span><span class="s3">'can_view_toner_dashboard'</span><span class="s2">, </span><span class="s3">'can_delete_toner_request'</span><span class="s2">,</span>
+            <span class="s3">'can_request_spares'</span><span class="s2">, </span><span class="s3">'can_view_spare_dashboard'</span><span class="s2">, </span><span class="s3">'can_delete_spare_request'</span><span class="s2">,</span>
+            <span class="s3">'can_view_reports'</span><span class="s2">, </span><span class="s3">'can_export_data'</span><span class="s2">,</span>
+            <span class="s3">'can_view_financials'</span><span class="s2">, </span><span class="s3">'can_export_financials'</span><span class="s2">,</span>
+            <span class="s3">'can_view_pm'</span><span class="s2">, </span><span class="s3">'can_edit_pm'</span><span class="s2">, </span><span class="s3">'can_schedule_pm'</span><span class="s2">, </span><span class="s3">'can_view_pm_dashboard'</span><span class="s2">,</span>
+            <span class="s3">'can_access_settings'</span><span class="s2">, </span><span class="s3">'can_upload_documents'</span><span class="s2">, </span><span class="s3">'can_view_audit_logs'</span>
+        <span class="s2">]</span>
+
+        <span class="s0">for </span><span class="s1">field </span><span class="s0">in </span><span class="s1">permission_fields</span><span class="s2">:</span>
+            <span class="s1">setattr</span><span class="s2">(</span><span class="s1">new_user</span><span class="s2">, </span><span class="s1">field</span><span class="s2">, </span><span class="s1">bool</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">field</span><span class="s2">)))</span>
+
         <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_user</span><span class="s2">)</span>
         <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
 
-        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;User added successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">if </span><span class="s1">new_user</span><span class="s2">.</span><span class="s1">email</span><span class="s2">:</span>
+            <span class="s4"># Prepare permissions list</span>
+            <span class="s1">permissions_list </span><span class="s2">= []</span>
+            <span class="s1">permission_labels </span><span class="s2">= {</span>
+                <span class="s3">'can_view_tickets'</span><span class="s2">: </span><span class="s3">&quot;View Tickets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_create_tickets'</span><span class="s2">: </span><span class="s3">&quot;Create Tickets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_tickets'</span><span class="s2">: </span><span class="s3">&quot;Edit Tickets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_close_tickets'</span><span class="s2">: </span><span class="s3">&quot;Close Tickets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_assign_tickets'</span><span class="s2">: </span><span class="s3">&quot;Assign Tickets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_technicians'</span><span class="s2">: </span><span class="s3">&quot;View Technicians&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_add_technicians'</span><span class="s2">: </span><span class="s3">&quot;Add Technicians&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_technicians'</span><span class="s2">: </span><span class="s3">&quot;Edit Technicians&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_assets'</span><span class="s2">: </span><span class="s3">&quot;View Assets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_add_assets'</span><span class="s2">: </span><span class="s3">&quot;Add Assets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_assets'</span><span class="s2">: </span><span class="s3">&quot;Edit Assets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_delete_assets'</span><span class="s2">: </span><span class="s3">&quot;Delete Assets&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_customers'</span><span class="s2">: </span><span class="s3">&quot;View Customers&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_manage_customers'</span><span class="s2">: </span><span class="s3">&quot;Manage Customers&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_delete_customers'</span><span class="s2">: </span><span class="s3">&quot;Delete Customers&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_contracts'</span><span class="s2">: </span><span class="s3">&quot;View Contracts&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_add_contracts'</span><span class="s2">: </span><span class="s3">&quot;Add Contracts&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_contracts'</span><span class="s2">: </span><span class="s3">&quot;Edit Contracts&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_delete_contracts'</span><span class="s2">: </span><span class="s3">&quot;Delete Contracts&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_request_toner'</span><span class="s2">: </span><span class="s3">&quot;Request Toner&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_toner_requests'</span><span class="s2">: </span><span class="s3">&quot;Edit Toner Requests&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_toner_dashboard'</span><span class="s2">: </span><span class="s3">&quot;View Toner Dashboard&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_delete_toner_request'</span><span class="s2">: </span><span class="s3">&quot;Delete Toner Request&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_request_spares'</span><span class="s2">: </span><span class="s3">&quot;Request Spares&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_spare_dashboard'</span><span class="s2">: </span><span class="s3">&quot;View Spare Dashboard&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_delete_spare_request'</span><span class="s2">: </span><span class="s3">&quot;Delete Spare Request&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_reports'</span><span class="s2">: </span><span class="s3">&quot;View Reports&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_export_data'</span><span class="s2">: </span><span class="s3">&quot;Export Data&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_financials'</span><span class="s2">: </span><span class="s3">&quot;View Financials&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_export_financials'</span><span class="s2">: </span><span class="s3">&quot;Export Financials&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_pm'</span><span class="s2">: </span><span class="s3">&quot;View PM&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_edit_pm'</span><span class="s2">: </span><span class="s3">&quot;Edit PM&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_schedule_pm'</span><span class="s2">: </span><span class="s3">&quot;Schedule PM&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_pm_dashboard'</span><span class="s2">: </span><span class="s3">&quot;View PM Dashboard&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_access_settings'</span><span class="s2">: </span><span class="s3">&quot;Access Settings&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_upload_documents'</span><span class="s2">: </span><span class="s3">&quot;Upload Documents&quot;</span><span class="s2">,</span>
+                <span class="s3">'can_view_audit_logs'</span><span class="s2">: </span><span class="s3">&quot;View Audit Logs&quot;</span><span class="s2">,</span>
+            <span class="s2">}</span>
+
+            <span class="s0">for </span><span class="s1">field</span><span class="s2">, </span><span class="s1">label </span><span class="s0">in </span><span class="s1">permission_labels</span><span class="s2">.</span><span class="s1">items</span><span class="s2">():</span>
+                <span class="s0">if </span><span class="s1">getattr</span><span class="s2">(</span><span class="s1">new_user</span><span class="s2">, </span><span class="s1">field</span><span class="s2">, </span><span class="s0">False</span><span class="s2">):</span>
+                    <span class="s1">permissions_list</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">label</span><span class="s2">)</span>
+
+            <span class="s4"># Prepare email</span>
+            <span class="s1">email_body </span><span class="s2">= </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'email_templates/new_user_email.html'</span><span class="s2">,</span>
+                                         <span class="s1">username</span><span class="s2">=</span><span class="s1">new_user</span><span class="s2">.</span><span class="s1">username</span><span class="s2">,</span>
+                                         <span class="s1">password</span><span class="s2">=</span><span class="s1">plain_password</span><span class="s2">,</span>
+                                         <span class="s1">rights</span><span class="s2">=</span><span class="s1">permissions_list</span><span class="s2">)</span>
+
+            <span class="s0">try</span><span class="s2">:</span>
+                <span class="s1">send_email</span><span class="s2">(</span>
+                    <span class="s1">to_email</span><span class="s2">=</span><span class="s1">new_user</span><span class="s2">.</span><span class="s1">email</span><span class="s2">,</span>
+                    <span class="s1">subject</span><span class="s2">=</span><span class="s3">&quot;🎉 Welcome to ServicePulse - Your Login Details&quot;</span><span class="s2">,</span>
+                    <span class="s1">html</span><span class="s2">=</span><span class="s1">email_body  </span><span class="s4"># ✅ Matches what `send_email()` expects</span>
+                <span class="s2">)</span>
+
+                <span class="s1">flash</span><span class="s2">(</span><span class="s3">'✅ User created and welcome email sent!'</span><span class="s2">, </span><span class="s3">'success'</span><span class="s2">)</span>
+            <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                <span class="s1">flash</span><span class="s2">(</span><span class="s3">f'⚠️ User created, but email sending failed: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">'</span><span class="s2">, </span><span class="s3">'warning'</span><span class="s2">)</span>
+
         <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'users.user_list'</span><span class="s2">))</span>
 
     <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'users/add_user.html'</span><span class="s2">)</span>
 
+<span class="s2">@</span><span class="s1">users_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/edit/&lt;int:user_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_edit_user'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">edit_user</span><span class="s2">(</span><span class="s1">user_id</span><span class="s2">):</span>
+    <span class="s1">user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">user_id</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s1">user</span><span class="s2">.</span><span class="s1">username </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'username'</span><span class="s2">)</span>
+        <span class="s1">user</span><span class="s2">.</span><span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'email'</span><span class="s2">)</span>
+        <span class="s1">user</span><span class="s2">.</span><span class="s1">role </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'role'</span><span class="s2">)</span>
+
+        <span class="s1">new_password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'new_password'</span><span class="s2">)</span>
+        <span class="s0">if </span><span class="s1">new_password</span><span class="s2">:</span>
+            <span class="s1">user</span><span class="s2">.</span><span class="s1">password_hash </span><span class="s2">= </span><span class="s1">generate_password_hash</span><span class="s2">(</span><span class="s1">new_password</span><span class="s2">)</span>
+
+        <span class="s1">permission_fields </span><span class="s2">= [</span>
+            <span class="s3">'can_add_user'</span><span class="s2">, </span><span class="s3">'can_edit_user'</span><span class="s2">, </span><span class="s3">'can_delete_user'</span><span class="s2">, </span><span class="s3">'can_assign_roles'</span><span class="s2">,</span>
+            <span class="s3">'can_view_tickets'</span><span class="s2">, </span><span class="s3">'can_create_tickets'</span><span class="s2">, </span><span class="s3">'can_edit_tickets'</span><span class="s2">, </span><span class="s3">'can_close_tickets'</span><span class="s2">, </span><span class="s3">'can_assign_tickets'</span><span class="s2">,</span>
+            <span class="s3">'can_view_technicians'</span><span class="s2">, </span><span class="s3">'can_add_technicians'</span><span class="s2">, </span><span class="s3">'can_edit_technicians'</span><span class="s2">,</span>
+            <span class="s3">'can_view_assets'</span><span class="s2">, </span><span class="s3">'can_add_assets'</span><span class="s2">, </span><span class="s3">'can_edit_assets'</span><span class="s2">, </span><span class="s3">'can_delete_assets'</span><span class="s2">,</span>
+            <span class="s3">'can_view_customers'</span><span class="s2">, </span><span class="s3">'can_manage_customers'</span><span class="s2">, </span><span class="s3">'can_delete_customers'</span><span class="s2">,</span>
+            <span class="s3">'can_view_contracts'</span><span class="s2">, </span><span class="s3">'can_add_contracts'</span><span class="s2">, </span><span class="s3">'can_edit_contracts'</span><span class="s2">, </span><span class="s3">'can_delete_contracts'</span><span class="s2">,</span>
+            <span class="s3">'can_request_toner'</span><span class="s2">, </span><span class="s3">'can_edit_toner_requests'</span><span class="s2">, </span><span class="s3">'can_view_toner_dashboard'</span><span class="s2">, </span><span class="s3">'can_delete_toner_request'</span><span class="s2">,</span>
+            <span class="s3">'can_request_spares'</span><span class="s2">, </span><span class="s3">'can_view_spare_dashboard'</span><span class="s2">, </span><span class="s3">'can_delete_spare_request'</span><span class="s2">,</span>
+            <span class="s3">'can_view_reports'</span><span class="s2">, </span><span class="s3">'can_export_data'</span><span class="s2">,</span>
+            <span class="s3">'can_view_financials'</span><span class="s2">, </span><span class="s3">'can_export_financials'</span><span class="s2">,</span>
+            <span class="s3">'can_view_pm'</span><span class="s2">, </span><span class="s3">'can_edit_pm'</span><span class="s2">, </span><span class="s3">'can_schedule_pm'</span><span class="s2">, </span><span class="s3">'can_view_pm_dashboard'</span><span class="s2">,</span>
+            <span class="s3">'can_access_settings'</span><span class="s2">, </span><span class="s3">'can_upload_documents'</span><span class="s2">, </span><span class="s3">'can_view_audit_logs'</span>
+        <span class="s2">]</span>
+
+        <span class="s0">for </span><span class="s1">field </span><span class="s0">in </span><span class="s1">permission_fields</span><span class="s2">:</span>
+            <span class="s1">setattr</span><span class="s2">(</span><span class="s1">user</span><span class="s2">, </span><span class="s1">field</span><span class="s2">, </span><span class="s1">bool</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">field</span><span class="s2">)))</span>
+
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ User updated successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'users.user_list'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'users/edit_user.html'</span><span class="s2">, </span><span class="s1">user</span><span class="s2">=</span><span class="s1">user</span><span class="s2">)</span>
+
 <span class="s2">@</span><span class="s1">users_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/delete/&lt;int:user_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
 <span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s3">'can_delete_user'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">delete_user</span><span class="s2">(</span><span class="s1">user_id</span><span class="s2">):</span>
-    <span class="s4">&quot;&quot;&quot;Delete a user&quot;&quot;&quot;</span>
     <span class="s1">user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">user_id</span><span class="s2">)</span>
     <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s1">user</span><span class="s2">)</span>
     <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
-    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;User deleted successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ User deleted successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
     <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'users.user_list'</span><span class="s2">))</span>
+<span class="s2">@</span><span class="s1">users_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/reset_own_password'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s0">def </span><span class="s1">reset_own_password</span><span class="s2">():</span>
+    <span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">current_user</span>
+    <span class="s0">from </span><span class="s1">werkzeug</span><span class="s2">.</span><span class="s1">security </span><span class="s0">import </span><span class="s1">generate_password_hash</span>
+
+    <span class="s1">new_password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;new_password&quot;</span><span class="s2">)</span>
+    <span class="s1">confirm_password </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;confirm_password&quot;</span><span class="s2">)</span>
+
+    <span class="s0">if not </span><span class="s1">new_password </span><span class="s0">or </span><span class="s1">new_password </span><span class="s2">!= </span><span class="s1">confirm_password</span><span class="s2">:</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;❌ Passwords do not match or are empty.&quot;</span><span class="s2">, </span><span class="s3">&quot;danger&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">referrer</span><span class="s2">)</span>
+
+    <span class="s1">user </span><span class="s2">= </span><span class="s1">User</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">current_user</span><span class="s2">.</span><span class="s1">id</span><span class="s2">)</span>
+    <span class="s1">user</span><span class="s2">.</span><span class="s1">password_hash </span><span class="s2">= </span><span class="s1">generate_password_hash</span><span class="s2">(</span><span class="s1">new_password</span><span class="s2">)</span>
+    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ Password updated successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">request</span><span class="s2">.</span><span class="s1">referrer</span><span class="s2">)</span>
 </pre>
 </body>
 </html>

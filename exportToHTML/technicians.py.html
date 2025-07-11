@@ -6,8 +6,8 @@
 .s0 { color: #cf8e6d;}
 .s1 { color: #bcbec4;}
 .s2 { color: #bcbec4;}
-.s3 { color: #6aab73;}
-.s4 { color: #7a7e85;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
 .s5 { color: #2aacb8;}
 </style>
 </head>
@@ -21,88 +21,323 @@ technicians.py</font>
 <span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span><span class="s2">, </span><span class="s1">timedelta</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">extensions </span><span class="s0">import </span><span class="s1">db</span>
 <span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Technician</span><span class="s2">, </span><span class="s1">Ticket</span>
+<span class="s0">from </span><span class="s1">sqlalchemy </span><span class="s0">import </span><span class="s1">func</span>
+<span class="s0">from </span><span class="s1">flask_login </span><span class="s0">import </span><span class="s1">login_required</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">utils</span><span class="s2">.</span><span class="s1">permission_required </span><span class="s0">import </span><span class="s1">permission_required</span>
+<span class="s0">import </span><span class="s1">os</span>
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">current_app</span>
+<span class="s0">from </span><span class="s1">sqlalchemy </span><span class="s0">import </span><span class="s1">and_</span>
+<span class="s0">from </span><span class="s1">PIL </span><span class="s0">import </span><span class="s1">Image </span><span class="s3"># Import Image from Pillow for potential image processing</span>
 
-<span class="s1">technicians_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'technicians'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates/technicians'</span><span class="s2">)</span>
+<span class="s1">technicians_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s4">'technicians'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s4">'../templates/technicians'</span><span class="s2">)</span>
 
-
-<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s4">'can_view_technicians'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">index</span><span class="s2">():</span>
     <span class="s1">technicians </span><span class="s2">= </span><span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">query</span><span class="s2">(</span>
         <span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
         <span class="s1">Technician</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
         <span class="s1">Technician</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">description</span><span class="s2">, </span><span class="s3">'Unknown'</span><span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'last_location'</span><span class="s2">),</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at </span><span class="s2">&gt;= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'calls_today'</span><span class="s2">),</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">expected_completion_time</span><span class="s2">, </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s3">'expected_free_time'</span><span class="s2">)</span>
+        <span class="s1">func</span><span class="s2">.</span><span class="s1">concat</span><span class="s2">(</span>
+            <span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">region</span><span class="s2">, </span><span class="s4">' '</span><span class="s2">),</span>
+            <span class="s4">' - '</span><span class="s2">,</span>
+            <span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">service_location</span><span class="s2">, </span><span class="s4">' '</span><span class="s2">),</span>
+            <span class="s4">' - '</span><span class="s2">,</span>
+            <span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">customer</span><span class="s2">, </span><span class="s4">' '</span><span class="s2">)</span>
+        <span class="s2">).</span><span class="s1">label</span><span class="s2">(</span><span class="s4">'last_location'</span><span class="s2">),</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">count</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">filter</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">created_at </span><span class="s2">&gt;= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">().</span><span class="s1">date</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s4">'calls_today'</span><span class="s2">),</span>
+        <span class="s1">db</span><span class="s2">.</span><span class="s1">func</span><span class="s2">.</span><span class="s1">coalesce</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">expected_completion_time</span><span class="s2">, </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()).</span><span class="s1">label</span><span class="s2">(</span><span class="s4">'expected_free_time'</span><span class="s2">)</span>
     <span class="s2">).</span><span class="s1">outerjoin</span><span class="s2">(</span><span class="s1">Ticket</span><span class="s2">, </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id </span><span class="s2">== </span><span class="s1">Ticket</span><span class="s2">.</span><span class="s1">technician_id</span><span class="s2">) </span><span class="s1">\</span>
         <span class="s2">.</span><span class="s1">group_by</span><span class="s2">(</span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">id</span><span class="s2">).</span><span class="s1">all</span><span class="s2">()</span>
 
-    <span class="s4"># Process estimated free time</span>
     <span class="s1">technician_list </span><span class="s2">= []</span>
     <span class="s0">for </span><span class="s1">tech </span><span class="s0">in </span><span class="s1">technicians</span><span class="s2">:</span>
         <span class="s1">minutes_left </span><span class="s2">= </span><span class="s1">max</span><span class="s2">((</span><span class="s1">tech</span><span class="s2">.</span><span class="s1">expected_free_time </span><span class="s2">- </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">utcnow</span><span class="s2">()).</span><span class="s1">total_seconds</span><span class="s2">() / </span><span class="s5">60</span><span class="s2">, </span><span class="s5">0</span><span class="s2">)</span>
         <span class="s1">progress_percentage </span><span class="s2">= </span><span class="s1">min</span><span class="s2">(</span><span class="s5">100</span><span class="s2">, (</span><span class="s1">minutes_left </span><span class="s2">/ </span><span class="s5">60</span><span class="s2">) * </span><span class="s5">100</span><span class="s2">)</span>
 
         <span class="s1">technician_list</span><span class="s2">.</span><span class="s1">append</span><span class="s2">({</span>
-            <span class="s3">&quot;id&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
-            <span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
-            <span class="s3">&quot;status&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
-            <span class="s3">&quot;last_location&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">last_location</span><span class="s2">,</span>
-            <span class="s3">&quot;calls_today&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">calls_today</span><span class="s2">,</span>
-            <span class="s3">&quot;minutes_left&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">minutes_left</span><span class="s2">),</span>
-            <span class="s3">&quot;progress_percentage&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">progress_percentage</span><span class="s2">),</span>
+            <span class="s4">&quot;id&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">id</span><span class="s2">,</span>
+            <span class="s4">&quot;name&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">name</span><span class="s2">,</span>
+            <span class="s4">&quot;status&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">status</span><span class="s2">,</span>
+            <span class="s4">&quot;last_location&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">last_location</span><span class="s2">,</span>
+            <span class="s4">&quot;calls_today&quot;</span><span class="s2">: </span><span class="s1">tech</span><span class="s2">.</span><span class="s1">calls_today</span><span class="s2">,</span>
+            <span class="s4">&quot;minutes_left&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">minutes_left</span><span class="s2">),</span>
+            <span class="s4">&quot;progress_percentage&quot;</span><span class="s2">: </span><span class="s1">int</span><span class="s2">(</span><span class="s1">progress_percentage</span><span class="s2">),</span>
         <span class="s2">})</span>
 
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/index.html'</span><span class="s2">, </span><span class="s1">technicians</span><span class="s2">=</span><span class="s1">technician_list</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'technicians/index.html'</span><span class="s2">, </span><span class="s1">technicians</span><span class="s2">=</span><span class="s1">technician_list</span><span class="s2">)</span>
 
 
-<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/add'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/add'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">, </span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s4">'can_add_technicians'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">add_technician</span><span class="s2">():</span>
-    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
-        <span class="s1">name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'name'</span><span class="s2">]</span>
-        <span class="s1">mobile </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'mobile'</span><span class="s2">]</span>
-        <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">[</span><span class="s3">'email'</span><span class="s2">]</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s4">'POST'</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'name'</span><span class="s2">)</span>
+            <span class="s1">mobile </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'mobile'</span><span class="s2">)</span>
+            <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'email'</span><span class="s2">)</span>
+            <span class="s1">dob_str </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'dob'</span><span class="s2">)</span>
+            <span class="s1">status </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'status'</span><span class="s2">, </span><span class="s4">'Free'</span><span class="s2">)</span>
+            <span class="s1">next_of_kin </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'next_of_kin'</span><span class="s2">)</span>
+            <span class="s1">kin_relation </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'kin_relation'</span><span class="s2">)</span>
 
-        <span class="s0">if not </span><span class="s1">name </span><span class="s0">or not </span><span class="s1">mobile </span><span class="s0">or not </span><span class="s1">email</span><span class="s2">:</span>
-            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;All fields are required!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
-            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.add_technician'</span><span class="s2">))</span>
+            <span class="s1">dob </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">dob_str</span><span class="s2">, </span><span class="s4">'%Y-%m-%d'</span><span class="s2">).</span><span class="s1">date</span><span class="s2">() </span><span class="s0">if </span><span class="s1">dob_str </span><span class="s0">else None</span>
 
-        <span class="s1">new_technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Free&quot;</span><span class="s2">)</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">new_technician</span><span class="s2">)</span>
-        <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
-        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Technician added successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
-        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.index'</span><span class="s2">))</span>
+            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span>
+                <span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">,</span>
+                <span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">,</span>
+                <span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">,</span>
+                <span class="s1">dob</span><span class="s2">=</span><span class="s1">dob</span><span class="s2">,</span>
+                <span class="s1">status</span><span class="s2">=</span><span class="s1">status</span><span class="s2">,</span>
+                <span class="s1">next_of_kin</span><span class="s2">=</span><span class="s1">next_of_kin</span><span class="s2">,</span>
+                <span class="s1">kin_relation</span><span class="s2">=</span><span class="s1">kin_relation</span>
+            <span class="s2">)</span>
 
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/add_technician.html'</span><span class="s2">)</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">technician</span><span class="s2">)</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+
+            <span class="s1">upload_folder </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s4">'static'</span><span class="s2">, </span><span class="s4">'uploads'</span><span class="s2">)</span>
+            <span class="s1">os</span><span class="s2">.</span><span class="s1">makedirs</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">exist_ok</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+            <span class="s3"># Handle profile photo</span>
+            <span class="s0">if </span><span class="s4">'photo' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">photo </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'photo'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">photo</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id</span><span class="s0">}</span><span class="s4">_photo.</span><span class="s0">{</span><span class="s1">photo</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">photo_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">img </span><span class="s2">= </span><span class="s1">Image</span><span class="s2">.</span><span class="s1">open</span><span class="s2">(</span><span class="s1">photo</span><span class="s2">)</span>
+                        <span class="s1">img</span><span class="s2">.</span><span class="s1">thumbnail</span><span class="s2">((</span><span class="s5">400</span><span class="s2">, </span><span class="s5">400</span><span class="s2">))</span>
+                        <span class="s1">img</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">photo_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Photo upload failed: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s3"># Handle ID proof</span>
+            <span class="s0">if </span><span class="s4">'id_card' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">id_card </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'id_card'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">id_card</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id</span><span class="s0">}</span><span class="s4">_id.</span><span class="s0">{</span><span class="s1">id_card</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">id_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">id_card</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">id_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'ID card upload failed: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s3"># Handle CV</span>
+            <span class="s0">if </span><span class="s4">'cv' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">cv </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'cv'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">cv</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id</span><span class="s0">}</span><span class="s4">_cv.</span><span class="s0">{</span><span class="s1">cv</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">cv_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">cv</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">cv_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'CV upload failed: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">'Technician added successfully!'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.index'</span><span class="s2">))</span>
+
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">rollback</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error adding technician: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'technicians/add_technician.html'</span><span class="s2">)</span>
 
 
-<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/import'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/import'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">, </span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s4">'can_add_technicians'</span><span class="s2">)</span>
 <span class="s0">def </span><span class="s1">import_technicians</span><span class="s2">():</span>
-    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
-        <span class="s1">file </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s3">'file'</span><span class="s2">]</span>
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s4">'POST'</span><span class="s2">:</span>
+        <span class="s1">file </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'file'</span><span class="s2">]</span>
         <span class="s0">if not </span><span class="s1">file</span><span class="s2">:</span>
-            <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;No file selected!&quot;</span><span class="s2">, </span><span class="s3">&quot;error&quot;</span><span class="s2">)</span>
-            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.import_technicians'</span><span class="s2">))</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;No file selected!&quot;</span><span class="s2">, </span><span class="s4">&quot;error&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.import_technicians'</span><span class="s2">))</span>
 
         <span class="s0">import </span><span class="s1">csv</span>
         <span class="s0">from </span><span class="s1">io </span><span class="s0">import </span><span class="s1">TextIOWrapper</span>
 
-        <span class="s1">file_stream </span><span class="s2">= </span><span class="s1">TextIOWrapper</span><span class="s2">(</span><span class="s1">file</span><span class="s2">.</span><span class="s1">stream</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s3">'utf-8'</span><span class="s2">)</span>
+        <span class="s1">file_stream </span><span class="s2">= </span><span class="s1">TextIOWrapper</span><span class="s2">(</span><span class="s1">file</span><span class="s2">.</span><span class="s1">stream</span><span class="s2">, </span><span class="s1">encoding</span><span class="s2">=</span><span class="s4">'utf-8'</span><span class="s2">)</span>
         <span class="s1">csv_reader </span><span class="s2">= </span><span class="s1">csv</span><span class="s2">.</span><span class="s1">reader</span><span class="s2">(</span><span class="s1">file_stream</span><span class="s2">)</span>
-        <span class="s1">next</span><span class="s2">(</span><span class="s1">csv_reader</span><span class="s2">)  </span><span class="s4"># Skip header row</span>
+        <span class="s1">next</span><span class="s2">(</span><span class="s1">csv_reader</span><span class="s2">)  </span><span class="s3"># Skip header row</span>
 
         <span class="s0">for </span><span class="s1">row </span><span class="s0">in </span><span class="s1">csv_reader</span><span class="s2">:</span>
             <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">row</span><span class="s2">) &lt; </span><span class="s5">3</span><span class="s2">:</span>
                 <span class="s0">continue</span>
             <span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email </span><span class="s2">= </span><span class="s1">row</span><span class="s2">[:</span><span class="s5">3</span><span class="s2">]</span>
-            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s3">&quot;Free&quot;</span><span class="s2">)</span>
+            <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">(</span><span class="s1">name</span><span class="s2">=</span><span class="s1">name</span><span class="s2">, </span><span class="s1">mobile</span><span class="s2">=</span><span class="s1">mobile</span><span class="s2">, </span><span class="s1">email</span><span class="s2">=</span><span class="s1">email</span><span class="s2">, </span><span class="s1">status</span><span class="s2">=</span><span class="s4">&quot;Free&quot;</span><span class="s2">)</span>
             <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">add</span><span class="s2">(</span><span class="s1">technician</span><span class="s2">)</span>
 
         <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
-        <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;Technicians imported successfully!&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
-        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'technicians.index'</span><span class="s2">))</span>
+        <span class="s1">flash</span><span class="s2">(</span><span class="s4">&quot;Technicians imported successfully!&quot;</span><span class="s2">, </span><span class="s4">&quot;success&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.index'</span><span class="s2">))</span>
 
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'technicians/import_technicians.html'</span><span class="s2">)</span>
-</pre>
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'technicians/import_technicians.html'</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/edit/&lt;int:tech_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'GET'</span><span class="s2">, </span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s4">'can_edit_technicians'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">edit_technician</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">):</span>
+    <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s4">'POST'</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s3"># Update basic info</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'name'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">mobile </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'mobile'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'email'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">status </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'status'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">next_of_kin </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'next_of_kin'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">kin_relation </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'kin_relation'</span><span class="s2">)</span>
+
+            <span class="s3"># Handle DOB</span>
+            <span class="s1">dob_str </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'dob'</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">dob </span><span class="s2">= </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">strptime</span><span class="s2">(</span><span class="s1">dob_str</span><span class="s2">, </span><span class="s4">'%Y-%m-%d'</span><span class="s2">).</span><span class="s1">date</span><span class="s2">() </span><span class="s0">if </span><span class="s1">dob_str </span><span class="s0">else None</span>
+
+            <span class="s3"># Define upload folder</span>
+            <span class="s1">upload_folder </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s4">'static'</span><span class="s2">, </span><span class="s4">'uploads'</span><span class="s2">)</span>
+            <span class="s1">os</span><span class="s2">.</span><span class="s1">makedirs</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">exist_ok</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+            <span class="s3"># Handle photo deletion</span>
+            <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">'delete_photo'</span><span class="s2">) == </span><span class="s4">'1'</span><span class="s2">:</span>
+                <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url</span><span class="s2">:</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+                        <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">path</span><span class="s2">):</span>
+                            <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url </span><span class="s2">= </span><span class="s0">None</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">'Profile photo removed successfully!'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+                    <span class="s0">except </span><span class="s1">OSError </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error deleting old photo file: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s3"># Photo upload</span>
+            <span class="s0">if </span><span class="s4">'photo' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">photo </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'photo'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">photo</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s3"># Delete old photo if it exists before saving new one</span>
+                    <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url</span><span class="s2">:</span>
+                        <span class="s0">try</span><span class="s2">:</span>
+                            <span class="s1">old_photo_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+                            <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">old_photo_path</span><span class="s2">):</span>
+                                <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">old_photo_path</span><span class="s2">)</span>
+                        <span class="s0">except </span><span class="s1">OSError </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error deleting old photo file: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+                    <span class="s3"># Save new photo</span>
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">tech_id</span><span class="s0">}</span><span class="s4">_photo.</span><span class="s0">{</span><span class="s1">photo</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">photo_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s3"># Optional: Resize/compress image using Pillow</span>
+                        <span class="s1">img </span><span class="s2">= </span><span class="s1">Image</span><span class="s2">.</span><span class="s1">open</span><span class="s2">(</span><span class="s1">photo</span><span class="s2">)</span>
+                        <span class="s1">img</span><span class="s2">.</span><span class="s1">thumbnail</span><span class="s2">((</span><span class="s5">400</span><span class="s2">, </span><span class="s5">400</span><span class="s2">)) </span><span class="s3"># Resize to a max of 400x400</span>
+                        <span class="s1">img</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">photo_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">photo_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error processing or saving photo: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+
+            <span class="s3"># ID card upload</span>
+            <span class="s0">if </span><span class="s4">'id_card' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">id_card </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'id_card'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">id_card</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s3"># Delete old ID card if it exists</span>
+                    <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url</span><span class="s2">:</span>
+                        <span class="s0">try</span><span class="s2">:</span>
+                            <span class="s1">old_id_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+                            <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">old_id_path</span><span class="s2">):</span>
+                                <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">old_id_path</span><span class="s2">)</span>
+                        <span class="s0">except </span><span class="s1">OSError </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error deleting old ID card file: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">tech_id</span><span class="s0">}</span><span class="s4">_id.</span><span class="s0">{</span><span class="s1">id_card</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">id_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">id_card</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">id_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error saving ID card: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s3"># CV upload</span>
+            <span class="s0">if </span><span class="s4">'cv' </span><span class="s0">in </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">:</span>
+                <span class="s1">cv </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">files</span><span class="s2">[</span><span class="s4">'cv'</span><span class="s2">]</span>
+                <span class="s0">if </span><span class="s1">cv</span><span class="s2">.</span><span class="s1">filename </span><span class="s2">!= </span><span class="s4">''</span><span class="s2">:</span>
+                    <span class="s3"># Delete old CV if it exists</span>
+                    <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url</span><span class="s2">:</span>
+                        <span class="s0">try</span><span class="s2">:</span>
+                            <span class="s1">old_cv_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+                            <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">old_cv_path</span><span class="s2">):</span>
+                                <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">old_cv_path</span><span class="s2">)</span>
+                        <span class="s0">except </span><span class="s1">OSError </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error deleting old CV file: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+                    <span class="s1">filename </span><span class="s2">= </span><span class="s4">f&quot;tech_</span><span class="s0">{</span><span class="s1">tech_id</span><span class="s0">}</span><span class="s4">_cv.</span><span class="s0">{</span><span class="s1">cv</span><span class="s2">.</span><span class="s1">filename</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(</span><span class="s4">'.'</span><span class="s2">)[-</span><span class="s5">1</span><span class="s2">]</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s1">cv_path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">upload_folder</span><span class="s2">, </span><span class="s1">filename</span><span class="s2">)</span>
+                    <span class="s0">try</span><span class="s2">:</span>
+                        <span class="s1">cv</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s1">cv_path</span><span class="s2">)</span>
+                        <span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url </span><span class="s2">= </span><span class="s4">f&quot;/static/uploads/</span><span class="s0">{</span><span class="s1">filename</span><span class="s0">}</span><span class="s4">&quot;</span>
+                    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+                        <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error saving CV: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">'Technician updated successfully!'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.edit_technician'</span><span class="s2">, </span><span class="s1">tech_id</span><span class="s2">=</span><span class="s1">tech_id</span><span class="s2">)) </span><span class="s3"># Redirect back to edit page to show changes</span>
+
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">rollback</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error updating technician: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'technicians/edit.html'</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">=</span><span class="s1">technician</span><span class="s2">)</span>
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/remove_id/&lt;int:tech_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s0">def </span><span class="s1">remove_id</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">):</span>
+    <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">)</span>
+    <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+            <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">path</span><span class="s2">):</span>
+                <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">path</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">id_card_url </span><span class="s2">= </span><span class="s0">None</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">'ID proof removed successfully'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">rollback</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error removing ID: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.edit_technician'</span><span class="s2">, </span><span class="s1">tech_id</span><span class="s2">=</span><span class="s1">tech_id</span><span class="s2">))</span>
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/remove_cv/&lt;int:tech_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s0">def </span><span class="s1">remove_cv</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">):</span>
+    <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">)</span>
+    <span class="s0">if </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">path </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s1">current_app</span><span class="s2">.</span><span class="s1">root_path</span><span class="s2">, </span><span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:])</span>
+            <span class="s0">if </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">path</span><span class="s2">):</span>
+                <span class="s1">os</span><span class="s2">.</span><span class="s1">remove</span><span class="s2">(</span><span class="s1">path</span><span class="s2">)</span>
+            <span class="s1">technician</span><span class="s2">.</span><span class="s1">cv_url </span><span class="s2">= </span><span class="s0">None</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">'CV removed successfully'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">rollback</span><span class="s2">()</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s4">f'Error removing CV: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">'</span><span class="s2">, </span><span class="s4">'danger'</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.edit_technician'</span><span class="s2">, </span><span class="s1">tech_id</span><span class="s2">=</span><span class="s1">tech_id</span><span class="s2">))</span>
+
+<span class="s2">@</span><span class="s1">technicians_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/delete/&lt;int:tech_id&gt;'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s2">@</span><span class="s1">login_required</span>
+<span class="s2">@</span><span class="s1">permission_required</span><span class="s2">(</span><span class="s4">'can_edit_technicians'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">delete_technician</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">):</span>
+    <span class="s1">technician </span><span class="s2">= </span><span class="s1">Technician</span><span class="s2">.</span><span class="s1">query</span><span class="s2">.</span><span class="s1">get_or_404</span><span class="s2">(</span><span class="s1">tech_id</span><span class="s2">)</span>
+    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">delete</span><span class="s2">(</span><span class="s1">technician</span><span class="s2">)</span>
+    <span class="s1">db</span><span class="s2">.</span><span class="s1">session</span><span class="s2">.</span><span class="s1">commit</span><span class="s2">()</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s4">'Technician deleted successfully!'</span><span class="s2">, </span><span class="s4">'success'</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s4">'technicians.index'</span><span class="s2">))</span></pre>
 </body>
 </html>

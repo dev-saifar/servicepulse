@@ -39,15 +39,15 @@ def add_user():
             'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',
             'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',
             'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',
-            'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
             'can_view_customers', 'can_manage_customers', 'can_delete_customers',
+            'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
             'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',
             'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',
             'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',
-            'can_view_reports', 'can_export_data',
-            'can_view_financials', 'can_export_financials',
-            'can_view_pm', 'can_edit_pm', 'can_schedule_pm', 'can_view_pm_dashboard',
-            'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'
+            'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',
+            'can_schedule_pm', 'can_view_pm', 'can_edit_pm',
+            'can_access_settings', 'can_upload_documents', 'can_view_audit_logs',
+            'can_create_gatepass', 'can_view_gatepass', 'can_edit_gatepass', 'can_export_gatepass'
         ]
 
         for field in permission_fields:
@@ -97,6 +97,11 @@ def add_user():
                 'can_access_settings': "Access Settings",
                 'can_upload_documents': "Upload Documents",
                 'can_view_audit_logs': "View Audit Logs",
+                'can_view_gatepass_tasks': "View Gate Pass Tasks",
+'can_add_gatepass': "Add Gate Pass",
+'can_edit_gatepass': "Edit Gate Pass",
+'can_export_gatepass': "Export Gate Pass",
+
             }
 
             for field, label in permission_labels.items():
@@ -143,15 +148,15 @@ def edit_user(user_id):
             'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',
             'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',
             'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',
-            'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
             'can_view_customers', 'can_manage_customers', 'can_delete_customers',
+            'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',
             'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',
             'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',
             'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',
-            'can_view_reports', 'can_export_data',
-            'can_view_financials', 'can_export_financials',
-            'can_view_pm', 'can_edit_pm', 'can_schedule_pm', 'can_view_pm_dashboard',
-            'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'
+            'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',
+            'can_schedule_pm', 'can_view_pm', 'can_edit_pm',
+            'can_access_settings', 'can_upload_documents', 'can_view_audit_logs',
+            'can_create_gatepass', 'can_view_gatepass', 'can_edit_gatepass', 'can_export_gatepass'
         ]
 
         for field in permission_fields:

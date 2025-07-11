@@ -6,8 +6,7 @@
 .s0 { color: #cf8e6d;}
 .s1 { color: #bcbec4;}
 .s2 { color: #bcbec4;}
-.s3 { color: #7a7e85;}
-.s4 { color: #6aab73;}
+.s3 { color: #6aab73;}
 </style>
 </head>
 <body bgcolor="#1e1f22">
@@ -16,14 +15,69 @@
 <font face="Arial, Helvetica" color="#000000">
 about.py</font>
 </center></td></tr></table>
-<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Blueprint</span><span class="s2">, </span><span class="s1">render_template</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">redirect</span><span class="s2">, </span><span class="s1">url_for</span><span class="s2">, </span><span class="s1">flash</span><span class="s2">, </span><span class="s1">jsonify</span><span class="s2">, </span><span class="s1">make_response</span>
+<span class="s0">from </span><span class="s1">app</span><span class="s2">.</span><span class="s1">modules</span><span class="s2">.</span><span class="s1">license_utils </span><span class="s0">import </span><span class="s2">(</span>
+    <span class="s1">is_license_valid</span><span class="s2">, </span><span class="s1">get_domain</span><span class="s2">, </span><span class="s1">get_hardware_id</span><span class="s2">,</span>
+    <span class="s1">create_trial_license</span>
+<span class="s2">)</span>
+<span class="s0">from </span><span class="s1">datetime </span><span class="s0">import </span><span class="s1">datetime</span>
 
-<span class="s3"># Create a new Blueprint for About Page</span>
-<span class="s1">about_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s4">'about'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s4">'../templates'</span><span class="s2">)</span>
+<span class="s1">about_bp </span><span class="s2">= </span><span class="s1">Blueprint</span><span class="s2">(</span><span class="s3">'about'</span><span class="s2">, </span><span class="s1">__name__</span><span class="s2">, </span><span class="s1">template_folder</span><span class="s2">=</span><span class="s3">'../templates'</span><span class="s2">)</span>
 
-<span class="s2">@</span><span class="s1">about_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/about'</span><span class="s2">)</span>
+<span class="s2">@</span><span class="s1">about_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/about'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'GET'</span><span class="s2">, </span><span class="s3">'POST'</span><span class="s2">])</span>
 <span class="s0">def </span><span class="s1">about</span><span class="s2">():</span>
-    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s4">'about/about.html'</span><span class="s2">)</span>
+    <span class="s1">license_info </span><span class="s2">= {</span>
+        <span class="s3">&quot;client_name&quot;</span><span class="s2">: </span><span class="s3">&quot;&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;address&quot;</span><span class="s2">: </span><span class="s3">&quot;&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;email&quot;</span><span class="s2">: </span><span class="s3">&quot;&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;domain&quot;</span><span class="s2">: </span><span class="s1">get_domain</span><span class="s2">(),</span>
+        <span class="s3">&quot;hardware_id&quot;</span><span class="s2">: </span><span class="s1">get_hardware_id</span><span class="s2">(),</span>
+        <span class="s3">&quot;license_type&quot;</span><span class="s2">: </span><span class="s3">&quot;N/A&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;expiry_date&quot;</span><span class="s2">: </span><span class="s3">&quot;N/A&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;status&quot;</span><span class="s2">: </span><span class="s3">&quot;❌ Not Activated&quot;</span>
+    <span class="s2">}</span>
+
+    <span class="s1">valid</span><span class="s2">, </span><span class="s1">result </span><span class="s2">= </span><span class="s1">is_license_valid</span><span class="s2">()</span>
+    <span class="s0">if </span><span class="s1">valid </span><span class="s0">and </span><span class="s1">isinstance</span><span class="s2">(</span><span class="s1">result</span><span class="s2">, </span><span class="s1">dict</span><span class="s2">):</span>
+        <span class="s1">license_info</span><span class="s2">.</span><span class="s1">update</span><span class="s2">(</span><span class="s1">result</span><span class="s2">)</span>
+        <span class="s1">license_info</span><span class="s2">[</span><span class="s3">&quot;status&quot;</span><span class="s2">] = </span><span class="s3">&quot;✅ Valid&quot;</span>
+    <span class="s0">elif </span><span class="s1">isinstance</span><span class="s2">(</span><span class="s1">result</span><span class="s2">, </span><span class="s1">str</span><span class="s2">):</span>
+        <span class="s1">license_info</span><span class="s2">[</span><span class="s3">&quot;status&quot;</span><span class="s2">] = </span><span class="s3">f&quot;❌ </span><span class="s0">{</span><span class="s1">result</span><span class="s0">}</span><span class="s3">&quot;</span>
+
+    <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">method </span><span class="s2">== </span><span class="s3">'POST'</span><span class="s2">:</span>
+        <span class="s0">if </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;action&quot;</span><span class="s2">) == </span><span class="s3">&quot;activate_trial&quot;</span><span class="s2">:</span>
+            <span class="s1">client_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;client_name&quot;</span><span class="s2">)</span>
+            <span class="s1">address </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;address&quot;</span><span class="s2">)</span>
+            <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;email&quot;</span><span class="s2">)</span>
+            <span class="s1">trial </span><span class="s2">= </span><span class="s1">create_trial_license</span><span class="s2">(</span><span class="s1">client_name</span><span class="s2">, </span><span class="s1">address</span><span class="s2">, </span><span class="s1">email</span><span class="s2">)</span>
+            <span class="s1">license_info</span><span class="s2">.</span><span class="s1">update</span><span class="s2">(</span><span class="s1">trial</span><span class="s2">)</span>
+            <span class="s1">license_info</span><span class="s2">[</span><span class="s3">&quot;status&quot;</span><span class="s2">] = </span><span class="s3">&quot;✅ Trial Activated&quot;</span>
+            <span class="s1">flash</span><span class="s2">(</span><span class="s3">f&quot;✅ Trial license activated for 90 days (until </span><span class="s0">{</span><span class="s1">trial</span><span class="s2">[</span><span class="s3">'expiry_date'</span><span class="s2">]</span><span class="s0">}</span><span class="s3">).&quot;</span><span class="s2">, </span><span class="s3">&quot;success&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">redirect</span><span class="s2">(</span><span class="s1">url_for</span><span class="s2">(</span><span class="s3">'about.about'</span><span class="s2">))</span>
+
+    <span class="s0">return </span><span class="s1">render_template</span><span class="s2">(</span><span class="s3">'about/about.html'</span><span class="s2">, </span><span class="s1">license</span><span class="s2">=</span><span class="s1">license_info</span><span class="s2">)</span>
+
+
+<span class="s2">@</span><span class="s1">about_bp</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s3">'/download-license-info'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s3">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">download_license_info</span><span class="s2">():</span>
+    <span class="s1">client_name </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;client_name&quot;</span><span class="s2">)</span>
+    <span class="s1">address </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;address&quot;</span><span class="s2">)</span>
+    <span class="s1">email </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;email&quot;</span><span class="s2">)</span>
+
+    <span class="s1">info </span><span class="s2">= {</span>
+        <span class="s3">&quot;client_name&quot;</span><span class="s2">: </span><span class="s1">client_name</span><span class="s2">,</span>
+        <span class="s3">&quot;address&quot;</span><span class="s2">: </span><span class="s1">address</span><span class="s2">,</span>
+        <span class="s3">&quot;email&quot;</span><span class="s2">: </span><span class="s1">email</span><span class="s2">,</span>
+        <span class="s3">&quot;domain&quot;</span><span class="s2">: </span><span class="s1">get_domain</span><span class="s2">(),</span>
+        <span class="s3">&quot;hardware_id&quot;</span><span class="s2">: </span><span class="s1">get_hardware_id</span><span class="s2">(),</span>
+        <span class="s3">&quot;requested_on&quot;</span><span class="s2">: </span><span class="s1">datetime</span><span class="s2">.</span><span class="s1">today</span><span class="s2">().</span><span class="s1">strftime</span><span class="s2">(</span><span class="s3">&quot;%Y-%m-%d %H:%M:%S&quot;</span><span class="s2">)</span>
+    <span class="s2">}</span>
+
+    <span class="s1">response </span><span class="s2">= </span><span class="s1">make_response</span><span class="s2">(</span><span class="s1">jsonify</span><span class="s2">(</span><span class="s1">info</span><span class="s2">))</span>
+    <span class="s1">response</span><span class="s2">.</span><span class="s1">headers</span><span class="s2">[</span><span class="s3">'Content-Disposition'</span><span class="s2">] = </span><span class="s3">'attachment; filename=client_info.json'</span>
+    <span class="s1">response</span><span class="s2">.</span><span class="s1">mimetype </span><span class="s2">= </span><span class="s3">'application/json'</span>
+    <span class="s1">flash</span><span class="s2">(</span><span class="s3">&quot;✅ License info generated. Kindly share the downloaded file with the ServPulse Team.&quot;</span><span class="s2">, </span><span class="s3">&quot;info&quot;</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">response</span>
 </pre>
 </body>
 </html>

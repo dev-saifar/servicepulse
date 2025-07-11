@@ -48,9 +48,84 @@ import.html</font>
             <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-primary&quot;</span><span class="s1">&gt;</span><span class="s0">Import</span><span class="s1">&lt;/button&gt;</span>
             <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.download_template') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-secondary&quot;</span><span class="s1">&gt;</span><span class="s0">Download Template</span><span class="s1">&lt;/a&gt;</span>
             <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('assets.index') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-light&quot;</span><span class="s1">&gt;</span><span class="s0">Back to Assets</span><span class="s1">&lt;/a&gt;</span>
+            <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-danger&quot; </span><span class="s2">id</span><span class="s3">=&quot;resetButton&quot;</span><span class="s1">&gt;</span><span class="s0">Reset</span><span class="s1">&lt;/button&gt;</span>
         <span class="s1">&lt;/form&gt;</span>
     <span class="s1">&lt;/div&gt;</span>
+
+    <span class="s4">&lt;!-- Search Results Section --&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mt-4&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;h3&gt;</span><span class="s0">Search Results</span><span class="s1">&lt;/h3&gt;</span>
+        <span class="s1">&lt;table </span><span class="s2">class</span><span class="s3">=&quot;table table-bordered&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;thead&gt;</span>
+                <span class="s1">&lt;tr&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Serial No</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Customer Name</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Service Location</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Region</span><span class="s1">&lt;/th&gt;</span>
+                    <span class="s1">&lt;th&gt;</span><span class="s0">Asset Description</span><span class="s1">&lt;/th&gt;</span>
+                <span class="s1">&lt;/tr&gt;</span>
+            <span class="s1">&lt;/thead&gt;</span>
+            <span class="s1">&lt;tbody </span><span class="s2">id</span><span class="s3">=&quot;assetResults&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;tr&gt;&lt;td </span><span class="s2">colspan</span><span class="s3">=&quot;5&quot; </span><span class="s2">class</span><span class="s3">=&quot;text-center&quot;</span><span class="s1">&gt;</span><span class="s0">No results found.</span><span class="s1">&lt;/td&gt;&lt;/tr&gt;</span>
+            <span class="s1">&lt;/tbody&gt;</span>
+        <span class="s1">&lt;/table&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
 <span class="s1">&lt;/div&gt;</span>
+
+<span class="s1">&lt;script&gt;</span>
+    <span class="s0">document.getElementById(&quot;resetButton&quot;).addEventListener(&quot;click&quot;, function() {</span>
+        <span class="s0">document.getElementById(&quot;file&quot;).value = &quot;&quot;;</span>
+    <span class="s0">});</span>
+
+    <span class="s0">function searchAssets() {</span>
+        <span class="s0">let serialNo = document.getElementById(&quot;serial_number&quot;).value.trim();</span>
+        <span class="s0">let customerName = document.getElementById(&quot;customer_name&quot;).value.trim();</span>
+        <span class="s0">let serviceLocation = document.getElementById(&quot;service_location&quot;).value.trim();</span>
+        <span class="s0">let region = document.getElementById(&quot;region&quot;).value.trim();</span>
+
+        <span class="s0">fetch(&quot;/tickets/search_assets&quot;, {</span>
+            <span class="s0">method: &quot;POST&quot;,</span>
+            <span class="s0">body: JSON.stringify({</span>
+                <span class="s0">serial_number: serialNo,</span>
+                <span class="s0">customer_name: customerName,</span>
+                <span class="s0">service_location: serviceLocation,</span>
+                <span class="s0">region: region</span>
+            <span class="s0">}),</span>
+            <span class="s0">headers: { &quot;Content-Type&quot;: &quot;application/json&quot; }</span>
+        <span class="s0">})</span>
+        <span class="s0">.then(response =&gt; {</span>
+            <span class="s0">if (!response.ok) {</span>
+                <span class="s0">throw new Error(`HTTP Error! Status: ${response.status}`);</span>
+            <span class="s0">}</span>
+            <span class="s0">return response.json();</span>
+        <span class="s0">})</span>
+        <span class="s0">.then(data =&gt; {</span>
+            <span class="s0">let tableBody = document.getElementById(&quot;assetResults&quot;);</span>
+            <span class="s0">tableBody.innerHTML = &quot;&quot;;</span>
+
+            <span class="s0">if (data.message) {</span>
+                <span class="s0">tableBody.innerHTML = `&lt;tr&gt;&lt;td colspan='5' class='text-center text-danger'&gt;${data.message}&lt;/td&gt;&lt;/tr&gt;`;</span>
+                <span class="s0">return;</span>
+            <span class="s0">}</span>
+
+            <span class="s0">data.forEach(asset =&gt; {</span>
+                <span class="s0">let row = `&lt;tr&gt;</span>
+                    <span class="s0">&lt;td&gt;${asset.serial_number}&lt;/td&gt;</span>
+                    <span class="s0">&lt;td&gt;${asset.customer_name}&lt;/td&gt;</span>
+                    <span class="s0">&lt;td&gt;${asset.service_location}&lt;/td&gt;</span>
+                    <span class="s0">&lt;td&gt;${asset.region}&lt;/td&gt;</span>
+                    <span class="s0">&lt;td&gt;${asset.asset_description}&lt;/td&gt;</span>
+                <span class="s0">&lt;/tr&gt;`;</span>
+                <span class="s0">tableBody.innerHTML += row;</span>
+            <span class="s0">});</span>
+        <span class="s0">})</span>
+        <span class="s0">.catch(error =&gt; {</span>
+            <span class="s0">console.error(&quot;Error fetching assets:&quot;, error);</span>
+            <span class="s0">let tableBody = document.getElementById(&quot;assetResults&quot;);</span>
+            <span class="s0">tableBody.innerHTML = `&lt;tr&gt;&lt;td colspan='5' class='text-center text-danger'&gt;An error occurred. Please try again.&lt;/td&gt;&lt;/tr&gt;`;</span>
+        <span class="s0">});</span>
+    <span class="s0">}</span>
+<span class="s1">&lt;/script&gt;</span>
 
 <span class="s0">{% endblock %}</span>
 </pre>

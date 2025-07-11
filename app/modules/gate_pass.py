@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app import db
 from datetime import datetime, timedelta
+from flask_login import login_required
+from app.utils.permission_required import permission_required
 
 import os
 import uuid
@@ -11,98 +13,110 @@ gate_pass_bp = Blueprint('gate_pass', __name__, url_prefix='/gatepass')
 
 
 @gate_pass_bp.route('/delivery', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_create_gatepass')
 def create_delivery():
     if request.method == 'POST':
         data = request.form
-        # Check if serial number already exists in assets table
+
+        # Check if serial exists
         existing = Assets.query.filter_by(serial_number=data.get('serial_number')).first()
         if existing:
             flash("🚫 Serial Number already exists in Assets. Please make a collection note first.", "danger")
             return redirect(url_for('gate_pass.create_delivery'))
 
-        asset_code = generate_asset_code(data.get('asset_type'))
+        try:
+            asset_code = generate_asset_code(data.get('asset_type'))
+            qr_path = generate_qr_code(f"{data.get('customer_name')} | {data.get('serial_number')} | {asset_code}")
+            gp_number = generate_gp_number()
 
-        qr_path = generate_qr_code(f"{data.get('customer_name')} | {data.get('serial_number')} | {asset_code}")
-        gp_number = generate_gp_number()
+            gp = GatePassRequest(
+                gp_number=gp_number,
+                type='delivery',
+                customer_name=data.get('customer_name'),
+                contract_code=data.get('contract_code'),
+                department=data.get('department'),
+                serial_number=data.get('serial_number'),
+                asset_code=asset_code,
+                asset_type=data.get('asset_type'),
+                technician_name=data.get('technician_name'),
+                technician_email=data.get('technician_email'),
+                service_location=data.get('service_location'),
+                region=data.get('region'),
+                delivery_datetime=data.get('delivery_datetime'),
+                asset_description=data.get('asset_description'),
+                part_number=data.get('part_number'),
+                mono_reading=data.get('mono_reading'),
+                color_reading=data.get('color_reading'),
+                contact_number=data.get('contact_number'),
+                remarks=data.get('remarks'),
+                qr_code_path=qr_path,
+            )
+            db.session.add(gp)
 
-        gp = GatePassRequest(
-            gp_number=gp_number,
-            type='delivery',
-            customer_name=data.get('customer_name'),
-            contract_code=data.get('contract_code'),
-            department=data.get('department'),
-            serial_number=data.get('serial_number'),
-            asset_code=asset_code,
-            asset_type=data.get('asset_type'),
-            technician_name=data.get('technician_name'),
-            technician_email=data.get('technician_email'),
-            service_location=data.get('service_location'),
-            region=data.get('region'),
-            delivery_datetime=data.get('delivery_datetime'),
-            asset_description=data.get('asset_description'),
-            part_number=data.get('part_number'),
-            mono_reading=data.get('mono_reading'),
-            color_reading=data.get('color_reading'),
-            contact_number=data.get('contact_number'),
-            remarks=data.get('remarks'),
-            qr_code_path=qr_path,
-        )
-        db.session.add(gp)
+            asset = Assets(
+                account_code="",
+                customer_name=data.get('customer_name'),
+                serial_number=data.get('serial_number'),
+                service_location=data.get('service_location'),
+                region=data.get('region'),
+                technician_name=data.get('technician_name'),
+                technician_email=data.get('technician_email'),
+                contract=data.get('contract_code'),
+                asset_Description=data.get('asset_description'),
+                asset_code=asset_code,
+                part_no=data.get('part_number'),
+                pm_freq='60',
+                install_date=datetime.now().strftime("%Y-%m-%d"),
+                asset_status='Active',
+                department=data.get('department')
+            )
+            db.session.add(asset)
 
-        asset = Assets(
-            account_code="",
-            customer_name=data.get('customer_name'),
-            serial_number=data.get('serial_number'),
-            service_location=data.get('service_location'),
-            region=data.get('region'),
-            technician_name=data.get('technician_name'),
-            technician_email=data.get('technician_email'),
-            contract=data.get('contract_code'),
-            asset_Description=data.get('asset_description'),
-            asset_code=asset_code,
-            part_no=data.get('part_number'),
-            pm_freq='60',
-            install_date=datetime.now().strftime("%Y-%m-%d"),
-            asset_status='Active',
-            department=data.get('department')
-        )
-        db.session.add(asset)
+            ticket = Ticket(
+                reference_no=generate_reference_number(),
+                serial_number=data.get('serial_number'),
+                customer=data.get('customer_name'),
+                service_location=data.get('service_location'),
+                region=data.get('region'),
+                asset_Description=data.get('asset_description'),
+                title="Installation Ticket",
+                description="Auto-generated from Delivery Gate Pass",
+                called_by="System",
+                email_id=data.get('technician_email'),
+                phone=data.get('contact_number'),
+                call_type="Installation",
+                technician_id=data.get('technician_id'),
+                estimated_time=60,
+                travel_time=15,
+                expected_completion_time=datetime.utcnow() + timedelta(minutes=75),
+                status="Open",
+                created_at=datetime.utcnow()
+            )
+            db.session.add(ticket)
 
-        ticket = Ticket(
-            reference_no=generate_reference_number(),
-            serial_number=data.get('serial_number'),
-            customer=data.get('customer_name'),
-            service_location=data.get('service_location'),
-            region=data.get('region'),
-            asset_Description=data.get('asset_description'),
-            title="Installation Ticket",
-            description="Auto-generated from Delivery Gate Pass",
-            called_by="System",
-            email_id=data.get('technician_email'),
-            phone=data.get('contact_number'),
-            call_type="Installation",
-            technician_id=data.get('technician_id'),
-            estimated_time=60,
-            travel_time=15,
-            expected_completion_time=datetime.utcnow() + timedelta(minutes=75),
-            status="Open",
-            created_at=datetime.utcnow()
-        )
-        db.session.add(ticket)
+            tech_id = data.get('technician_id')
+            if tech_id:
+                technician = Technician.query.get(tech_id)
+                if technician:
+                    technician.status = "Busy"
 
-        tech_id = data.get('technician_id')
-        if tech_id:
-            technician = Technician.query.get(tech_id)
-            if technician:
-                technician.status = "Busy"
+            db.session.commit()
+            flash("✅ Gate Pass created and asset delivered.", "success")
+            return redirect(url_for('gate_pass.delivery_task_list'))
 
-        db.session.commit()
-        flash("Gate Pass created and asset delivered.", "success")
-        return redirect(url_for('gate_pass.delivery_task_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"❌ An error occurred: {str(e)}", "danger")
+            return redirect(url_for('gate_pass.create_delivery'))
 
+    # Final fallback: handle GET or invalid POST
     return render_template('gatepass/delivery_form.html')
 
+
 @gate_pass_bp.route('/collection', methods=['GET', 'POST'])
+@login_required
+@permission_required('can_create_gatepass')
 def create_collection():
     if request.method == 'POST':
         data = request.form
@@ -137,18 +151,17 @@ def create_collection():
         db.session.add(gp)
         db.session.commit()
         flash("Collection Gate Pass Created", "success")
-        return redirect(url_for('gate_pass.gate_pass_tasks'))
+        return redirect(url_for('gate_pass.task_list'))
+
 
     return render_template('gatepass/collection_form.html')
 
 
-@gate_pass_bp.route('/tasks')
-def gate_pass_tasks():
-    all_tasks = GatePassRequest.query.order_by(GatePassRequest.created_at.desc()).all()
-    return render_template('gatepass/task_list.html', tasks=all_tasks)
 
 
 @gate_pass_bp.route('/delivery/tasks')
+@login_required
+@permission_required('can_view_gatepass')
 def delivery_task_list():
     pending = GatePassRequest.query.filter_by(type='delivery', status='pending').all()
     return render_template('gatepass/task_list.html', tasks=pending, title="Delivery Tasks")
@@ -180,6 +193,8 @@ def autocomplete_technicians():
 
 
 @gate_pass_bp.route('/print/<int:gp_id>')
+@login_required
+@permission_required('can_view_gatepass')
 def print_gate_pass(gp_id):
     gate_pass = GatePassRequest.query.get_or_404(gp_id)
     contract = Contract.query.filter_by(contract_code=gate_pass.contract_code).first()
@@ -188,6 +203,8 @@ def print_gate_pass(gp_id):
 
 
 @gate_pass_bp.route('/mark-completed/<int:gp_id>')
+@login_required
+@permission_required('can_edit_gatepass')
 def mark_completed(gp_id):
     gp = GatePassRequest.query.get_or_404(gp_id)
     gp.status = 'completed'
@@ -221,7 +238,8 @@ def mark_completed(gp_id):
 
     db.session.commit()
     flash("Marked as completed.", "success")
-    return redirect(url_for('gate_pass.gate_pass_tasks'))
+    return redirect(url_for('gate_pass.task_list'))
+
 
 # -------------------------
 # Utility functions
@@ -284,6 +302,7 @@ def generate_qr_code(content):
 
 
 @gate_pass_bp.route('/collection/<serial_number>', methods=['GET'])
+@permission_required('can_create_gatepass')
 def load_collection_form(serial_number):
     asset = Assets.query.filter_by(serial_number=serial_number).first()
     if not asset:
@@ -324,6 +343,8 @@ def search_assets_for_collection():
 from datetime import datetime, timedelta
 
 @gate_pass_bp.route('/workshop-assets')
+@login_required
+@permission_required('can_create_gatepass')
 def workshop_assets():
     assets = WorkshopAsset.query.order_by(WorkshopAsset.collected_date.desc()).all()
     return render_template('gatepass/workshop_assets.html', assets=assets, now=datetime.now(), timedelta=timedelta)
@@ -341,3 +362,55 @@ def check_serial_exists():
     ).first() is not None
 
     return jsonify({"exists": exists})
+
+@gate_pass_bp.route('/tasks')
+@login_required
+@permission_required('can_view_gatepass')
+def task_list():
+    status_filter = request.args.get('status_filter')   # ← remove leading space
+    if status_filter:
+        tasks = GatePassRequest.query.filter_by(status=status_filter).all()
+    else:
+        tasks = GatePassRequest.query.all()
+    return render_template('gatepass/task_list.html',
+                           tasks=tasks,
+                           status_filter=status_filter)
+
+
+@gate_pass_bp.route('/export')
+@login_required
+@permission_required('can_export_gatepass')
+def export_tasks_excel():
+    import pandas as pd
+    from flask import make_response, request
+    from io import BytesIO
+
+    # ✅ read filter from query string
+    status_filter = request.args.get('status_filter')
+    if status_filter:
+        tasks = GatePassRequest.query.filter_by(status=status_filter).all()
+    else:
+        tasks = GatePassRequest.query.all()
+
+    # Convert to Excel
+    data = [{
+        "GP No.": gp.gp_number,
+        "Type": gp.type,
+        "Customer": gp.customer_name,
+        "Serial": gp.serial_number,
+        "Location": gp.service_location,
+        "Technician": gp.technician_name,
+        "Date": gp.delivery_datetime,
+        "Status": gp.status
+    } for gp in tasks]
+
+    df = pd.DataFrame(data)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='GatePassTasks')
+
+    output.seek(0)
+    response = make_response(output.read())
+    response.headers['Content-Disposition'] = f'attachment; filename=GatePassTasks_{status_filter or "all"}.xlsx'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return response

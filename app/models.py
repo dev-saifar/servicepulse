@@ -169,6 +169,12 @@ class User(db.Model, UserMixin):
     can_upload_documents = db.Column(db.Boolean, default=False)
     can_view_audit_logs = db.Column(db.Boolean, default=False)
 
+    # In your User model (example fields)
+    can_create_gatepass = db.Column(db.Boolean, default=False)
+    can_view_gatepass = db.Column(db.Boolean, default=False)
+    can_edit_gatepass = db.Column(db.Boolean, default=False)
+    can_export_gatepass = db.Column(db.Boolean, default=False)
+
 
 class spare_req(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

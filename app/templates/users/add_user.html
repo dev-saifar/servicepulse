@@ -93,7 +93,13 @@
    {% set perms_list = ['can_schedule_pm', 'can_view_pm', 'can_edit_pm', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'] %}
     {% include 'users/perm_block.html' %}
 </div>
-
+                    </div
+                      <h6>PM & System</h6>
+<label><input type="checkbox" name="can_create_gatepass"> Create Gate Pass</label>
+<label><input type="checkbox" name="can_view_gatepass"> View Gate Pass</label>
+<label><input type="checkbox" name="can_edit_gatepass"> Edit Gate Pass</label>
+<label><input type="checkbox" name="can_export_gatepass"> Export Gate Pass</label>
+</div
 
                 </div>
 

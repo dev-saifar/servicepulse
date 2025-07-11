@@ -7,6 +7,7 @@
 .s1 { color: #d5b778;}
 .s2 { color: #bababa;}
 .s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
 </style>
 </head>
 <body bgcolor="#1e1f22">
@@ -18,22 +19,239 @@ add_user.html</font>
 <pre><span class="s0">{% extends 'base.html' %}</span>
 
 <span class="s0">{% block content %}</span>
-<span class="s1">&lt;h2&gt;</span><span class="s0">Add New User</span><span class="s1">&lt;/h2&gt;</span>
+<span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;container mt-4&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;h1 </span><span class="s2">class</span><span class="s3">=&quot;text-center text-primary fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Add New User</span><span class="s1">&lt;/h1&gt;</span>
 
-<span class="s1">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;POST&quot;</span><span class="s1">&gt;</span>
-    <span class="s1">&lt;label&gt;</span><span class="s0">Username:</span><span class="s1">&lt;/label&gt;</span>
-    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">name</span><span class="s3">=&quot;username&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card mt-4 shadow-sm&quot;</span><span class="s1">&gt;</span>
+        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;card-body&quot;</span><span class="s1">&gt;</span>
+            <span class="s4">&lt;!-- Flash Messages --&gt;</span>
+            <span class="s0">{% with messages = get_flashed_messages(with_categories=true) %}</span>
+                <span class="s0">{% if messages %}</span>
+                    <span class="s0">{% for category, message in messages %}</span>
+                        <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;alert alert-{{ category }} alert-dismissible fade show&quot; </span><span class="s2">role</span><span class="s3">=&quot;alert&quot;</span><span class="s1">&gt;</span>
+                            <span class="s0">{{ message }}</span>
+                            <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn-close&quot; </span><span class="s2">data-bs-dismiss</span><span class="s3">=&quot;alert&quot; </span><span class="s2">aria-label</span><span class="s3">=&quot;Close&quot;</span><span class="s1">&gt;&lt;/button&gt;</span>
+                        <span class="s1">&lt;/div&gt;</span>
+                    <span class="s0">{% endfor %}</span>
+                <span class="s0">{% endif %}</span>
+            <span class="s0">{% endwith %}</span>
 
-    <span class="s1">&lt;label&gt;</span><span class="s0">Email:</span><span class="s1">&lt;/label&gt;</span>
-    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;email&quot; </span><span class="s2">name</span><span class="s3">=&quot;email&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;form </span><span class="s2">method</span><span class="s3">=&quot;POST&quot;</span><span class="s1">&gt;</span>
+                <span class="s4">&lt;!-- Username --&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;username&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-label fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Username</span><span class="s1">&lt;/label&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;text&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">id</span><span class="s3">=&quot;username&quot; </span><span class="s2">name</span><span class="s3">=&quot;username&quot; </span><span class="s2">placeholder</span><span class="s3">=&quot;Enter username&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
 
-    <span class="s1">&lt;label&gt;</span><span class="s0">Password:</span><span class="s1">&lt;/label&gt;</span>
-    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;password&quot; </span><span class="s2">name</span><span class="s3">=&quot;password&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s4">&lt;!-- Email --&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;email&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-label fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Email</span><span class="s1">&lt;/label&gt;</span>
+                    <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;email&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">id</span><span class="s3">=&quot;email&quot; </span><span class="s2">name</span><span class="s3">=&quot;email&quot; </span><span class="s2">placeholder</span><span class="s3">=&quot;Enter email&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
 
-    <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-primary&quot;</span><span class="s1">&gt;</span><span class="s0">Add User</span><span class="s1">&lt;/button&gt;</span>
-<span class="s1">&lt;/form&gt;</span>
+                <span class="s1">&lt;h5 </span><span class="s2">class</span><span class="s3">=&quot;mt-4&quot;</span><span class="s1">&gt;</span><span class="s0">Permissions</span><span class="s1">&lt;/h5&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;row&quot;</span><span class="s1">&gt;</span>
 
-<span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('users.user_list') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-secondary&quot;</span><span class="s1">&gt;</span><span class="s0">Back to Users</span><span class="s1">&lt;/a&gt;</span>
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">User &amp; Admin</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Tickets</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Technicians</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_view_technicians', 'can_add_technicians', 'can_edit_technicians'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Assets</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;h6&gt;</span><span class="s0">Customers</span><span class="s1">&lt;/h6&gt;</span>
+                    <span class="s0">{% set perms_list = ['can_view_customers', 'can_manage_customers', 'can_delete_customers'] %}</span>
+                    <span class="s0">{% include 'users/perm_block.html' %}</span>
+                        <span class="s1">&lt;/div&gt;</span>
+
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Contracts</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Toner</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Spares</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;h6&gt;</span><span class="s0">Reports &amp; Finance</span><span class="s1">&lt;/h6&gt;</span>
+                        <span class="s0">{% set perms_list = ['can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials'] %}</span>
+                        <span class="s0">{% include 'users/perm_block.html' %}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;col-md-4&quot;</span><span class="s1">&gt;</span>
+    <span class="s1">&lt;h6&gt;</span><span class="s0">PM &amp; System</span><span class="s1">&lt;/h6&gt;</span>
+   <span class="s0">{% set perms_list = ['can_schedule_pm', 'can_view_pm', 'can_edit_pm', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'] %}</span>
+    <span class="s0">{% include 'users/perm_block.html' %}</span>
+<span class="s1">&lt;/div&gt;</span>
+
+
+                <span class="s1">&lt;/div&gt;</span>
+
+                <span class="s4">&lt;!-- Password --&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;password&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-label fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Password</span><span class="s1">&lt;/label&gt;</span>
+                    <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;input-group&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;input </span><span class="s2">type</span><span class="s3">=&quot;password&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">id</span><span class="s3">=&quot;password&quot; </span><span class="s2">name</span><span class="s3">=&quot;password&quot; </span><span class="s2">placeholder</span><span class="s3">=&quot;Enter password&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;button </span><span class="s2">class</span><span class="s3">=&quot;btn btn-outline-secondary&quot; </span><span class="s2">type</span><span class="s3">=&quot;button&quot; </span><span class="s2">onclick</span><span class="s3">=&quot;togglePassword()&quot;</span><span class="s1">&gt;</span>
+                            <span class="s1">&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-eye&quot;</span><span class="s1">&gt;&lt;/i&gt;</span>
+                        <span class="s1">&lt;/button&gt;</span>
+                    <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+
+                <span class="s4">&lt;!-- Role Dropdown --&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;mb-3&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;label </span><span class="s2">for</span><span class="s3">=&quot;role&quot; </span><span class="s2">class</span><span class="s3">=&quot;form-label fw-bold&quot;</span><span class="s1">&gt;</span><span class="s0">Role</span><span class="s1">&lt;/label&gt;</span>
+                    <span class="s1">&lt;select </span><span class="s2">class</span><span class="s3">=&quot;form-control&quot; </span><span class="s2">id</span><span class="s3">=&quot;roleSelector&quot; </span><span class="s2">name</span><span class="s3">=&quot;role&quot; </span><span class="s2">required</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Admin&quot;</span><span class="s1">&gt;</span><span class="s0">Admin</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Technician&quot;</span><span class="s1">&gt;</span><span class="s0">Technician</span><span class="s1">&lt;/option&gt;</span>
+                        <span class="s1">&lt;option </span><span class="s2">value</span><span class="s3">=&quot;Viewer&quot;</span><span class="s1">&gt;</span><span class="s0">Viewer</span><span class="s1">&lt;/option&gt;</span>
+                    <span class="s1">&lt;/select&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+
+                <span class="s4">&lt;!-- Buttons --&gt;</span>
+                <span class="s1">&lt;div </span><span class="s2">class</span><span class="s3">=&quot;d-flex justify-content-between&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;button </span><span class="s2">type</span><span class="s3">=&quot;submit&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-success&quot;</span><span class="s1">&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-user-plus&quot;</span><span class="s1">&gt;&lt;/i&gt; </span><span class="s0">Add User</span><span class="s1">&lt;/button&gt;</span>
+                    <span class="s1">&lt;a </span><span class="s2">href</span><span class="s3">=&quot;{{ url_for('users.user_list') }}&quot; </span><span class="s2">class</span><span class="s3">=&quot;btn btn-secondary&quot;</span><span class="s1">&gt;&lt;i </span><span class="s2">class</span><span class="s3">=&quot;fas fa-arrow-left&quot;</span><span class="s1">&gt;&lt;/i&gt; </span><span class="s0">Cancel</span><span class="s1">&lt;/a&gt;</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/form&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+    <span class="s1">&lt;/div&gt;</span>
+<span class="s1">&lt;/div&gt;</span>
+
+<span class="s1">&lt;script&gt;</span>
+    <span class="s0">function togglePassword() {</span>
+        <span class="s0">let passwordField = document.getElementById(&quot;password&quot;);</span>
+        <span class="s0">let toggleButton = document.querySelector(&quot;.btn-outline-secondary i&quot;);</span>
+
+        <span class="s0">if (passwordField.type === &quot;password&quot;) {</span>
+            <span class="s0">passwordField.type = &quot;text&quot;;</span>
+            <span class="s0">toggleButton.classList.remove(&quot;fa-eye&quot;);</span>
+            <span class="s0">toggleButton.classList.add(&quot;fa-eye-slash&quot;);</span>
+        <span class="s0">} else {</span>
+            <span class="s0">passwordField.type = &quot;password&quot;;</span>
+            <span class="s0">toggleButton.classList.remove(&quot;fa-eye-slash&quot;);</span>
+            <span class="s0">toggleButton.classList.add(&quot;fa-eye&quot;);</span>
+        <span class="s0">}</span>
+    <span class="s0">}</span>
+
+    <span class="s0">const rolePermissions = {</span>
+      <span class="s0">Admin: [</span>
+        <span class="s0">'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',</span>
+        <span class="s0">'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',</span>
+        <span class="s0">'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',</span>
+        <span class="s0">'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',</span>
+        <span class="s0">'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',</span>
+        <span class="s0">'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',</span>
+        <span class="s0">'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',</span>
+        <span class="s0">'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',</span>
+        <span class="s0">'can_schedule_pm', 'can_view_pm_dashboard', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'</span>
+      <span class="s0">],</span>
+      <span class="s0">Supervisor: [</span>
+        <span class="s0">'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_assign_tickets',</span>
+        <span class="s0">'can_view_assets', 'can_edit_assets',</span>
+        <span class="s0">'can_view_contracts', 'can_edit_contracts',</span>
+        <span class="s0">'can_view_reports'</span>
+      <span class="s0">],</span>
+      <span class="s0">Technician: [</span>
+        <span class="s0">'can_view_tickets', 'can_close_tickets',</span>
+        <span class="s0">'can_view_assets', 'can_view_contracts', 'can_request_toner', 'can_request_spares'</span>
+      <span class="s0">]</span>
+    <span class="s0">};</span>
+
+    <span class="s0">document.getElementById('roleSelector').addEventListener('change', function () {</span>
+      <span class="s0">const selected = this.value;</span>
+      <span class="s0">document.querySelectorAll('input[type=checkbox]').forEach(cb =&gt; cb.checked = false);</span>
+      <span class="s0">if (rolePermissions[selected]) {</span>
+        <span class="s0">rolePermissions[selected].forEach(perm =&gt; {</span>
+          <span class="s0">const box = document.getElementById(perm);</span>
+          <span class="s0">if (box) box.checked = true;</span>
+        <span class="s0">});</span>
+      <span class="s0">}</span>
+    <span class="s0">});</span>
+
+<span class="s0">&lt;!-- Password Visibility Toggle --&gt;</span>
+<span class="s0">&lt;script&gt;</span>
+    <span class="s0">function togglePassword() {</span>
+        <span class="s0">let passwordField = document.getElementById(&quot;password&quot;);</span>
+        <span class="s0">let toggleButton = document.querySelector(&quot;.btn-outline-secondary i&quot;);</span>
+
+        <span class="s0">if (passwordField.type === &quot;password&quot;) {</span>
+            <span class="s0">passwordField.type = &quot;text&quot;;</span>
+            <span class="s0">toggleButton.classList.remove(&quot;fa-eye&quot;);</span>
+            <span class="s0">toggleButton.classList.add(&quot;fa-eye-slash&quot;);</span>
+        <span class="s0">} else {</span>
+            <span class="s0">passwordField.type = &quot;password&quot;;</span>
+            <span class="s0">toggleButton.classList.remove(&quot;fa-eye-slash&quot;);</span>
+            <span class="s0">toggleButton.classList.add(&quot;fa-eye&quot;);</span>
+        <span class="s0">}</span>
+    <span class="s0">}</span>
+
+<span class="s0">const rolePermissions = {</span>
+  <span class="s0">admin: [</span>
+    <span class="s0">'can_add_user', 'can_edit_user', 'can_delete_user', 'can_assign_roles',</span>
+    <span class="s0">'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_close_tickets', 'can_assign_tickets',</span>
+    <span class="s0">'can_view_technicians', 'can_add_technicians', 'can_edit_technicians',</span>
+    <span class="s0">'can_view_assets', 'can_add_assets', 'can_edit_assets', 'can_delete_assets',</span>
+    <span class="s0">'can_view_contracts', 'can_add_contracts', 'can_edit_contracts', 'can_delete_contracts',</span>
+    <span class="s0">'can_request_toner', 'can_edit_toner_requests', 'can_view_toner_dashboard', 'can_delete_toner_request',</span>
+    <span class="s0">'can_request_spares', 'can_view_spare_dashboard', 'can_delete_spare_request',</span>
+    <span class="s0">'can_view_reports', 'can_export_data', 'can_view_financials', 'can_export_financials',</span>
+    <span class="s0">'can_schedule_pm', 'can_view_pm_dashboard', 'can_access_settings', 'can_upload_documents', 'can_view_audit_logs'</span>
+  <span class="s0">],</span>
+  <span class="s0">supervisor: [</span>
+    <span class="s0">'can_view_tickets', 'can_create_tickets', 'can_edit_tickets', 'can_assign_tickets',</span>
+    <span class="s0">'can_view_assets', 'can_edit_assets',</span>
+    <span class="s0">'can_view_contracts', 'can_edit_contracts',</span>
+    <span class="s0">'can_view_reports'</span>
+  <span class="s0">],</span>
+  <span class="s0">technician: [</span>
+    <span class="s0">'can_view_tickets', 'can_close_tickets',</span>
+    <span class="s0">'can_view_assets', 'can_view_contracts', 'can_request_toner', 'can_request_spares'</span>
+  <span class="s0">]</span>
+<span class="s0">};</span>
+
+<span class="s0">document.getElementById('roleSelector').addEventListener('change', function () {</span>
+  <span class="s0">const selected = this.value;</span>
+  <span class="s0">document.querySelectorAll('input[type=checkbox]').forEach(cb =&gt; cb.checked = false);</span>
+  <span class="s0">if (rolePermissions[selected]) {</span>
+    <span class="s0">rolePermissions[selected].forEach(perm =&gt; {</span>
+      <span class="s0">const box = document.getElementById(perm);</span>
+      <span class="s0">if (box) box.checked = true;</span>
+    <span class="s0">});</span>
+  <span class="s0">}</span>
+<span class="s0">});</span>
+
+
+<span class="s1">&lt;/script&gt;</span>
+
 <span class="s0">{% endblock %}</span>
 </pre>
 </body>
