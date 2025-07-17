@@ -36,8 +36,8 @@
             <fieldset>
                 <legend>Basic Details</legend>
                 <div class="mb-3">
-                    <label for="contract_code" class="form-label">Contract Code</label>
-                    <input type="text" id="contract_code" name="contract_code" class="form-control" readonly required>
+                    <!--<label for="contract_code" class="form-label">Contract Code</label>-->
+                    <input type="hidden" id="contract_code" name="contract_code">
                     <input type="hidden" id="cust_code_hidden" name="cust_code">
                     <input type="hidden" id="billing_company_hidden" name="billing_company">
                     <input type="hidden" id="cust_name_hidden" name="cust_name">
@@ -58,9 +58,9 @@
                     <label for="sales_person" class="form-label">Sales Person</label>
                     <input type="text" id="sales_person" name="sales_person" class="form-control" required>
                 </div>
-                <div class="mb-3">
-                    <label for="durations" class="form-label">Duration (Months)</label>
-                    <input ype="hidden" id="durations" name="durations" class="form-control" readonly>
+                <div>
+                    <input type="hidden" id="durations" name="durations">
+
                 </div>
             </fieldset>
 
