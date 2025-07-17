@@ -124,20 +124,34 @@ def create_contract():
     return jsonify({"success": True, "message": "Contract created successfully", "contract_code": contract_code})
 
 def generate_contract_code(cust_code, billing_company, start_date, end_date):
-    """Generate contract code in the format: DS_YY_YY_XXX"""
-    if not billing_company:
+    """Generate unique contract code like DS2526006"""
+    if not billing_company or not start_date or not end_date:
         return None
 
     year_signed = start_date.year
     year_expiry = end_date.year
 
-    # Use SQLAlchemy's extract function to filter by year
-    contracts_in_year = Contract.query.filter(
-        Contract.billing_company == billing_company,
-        extract('year', Contract.contract_start_date) == year_signed
-    ).count() + 1  # Increment contract count for that year
+    prefix = f"{billing_company[:2]}{str(year_signed)[2:]}{str(year_expiry)[2:]}"  # e.g., DS2526
 
-    return f"{billing_company[:2]}{str(year_signed)[2:]}{str(year_expiry)[2:]}{str(contracts_in_year).zfill(3)}"
+    # Get the max contract number starting with this prefix
+    latest_contract = Contract.query.filter(
+        Contract.billing_company == billing_company,
+        Contract.contract_code.like(f"{prefix}%")
+    ).order_by(Contract.contract_code.desc()).first()
+
+    if latest_contract:
+        try:
+            last_number = int(latest_contract.contract_code[-3:])
+            next_number = last_number + 1
+        except:
+            next_number = 1
+    else:
+        next_number = 1
+
+    return f"{prefix}{str(next_number).zfill(3)}"
+
+
+
 
 
 from flask import Blueprint, render_template, request, jsonify, send_file
