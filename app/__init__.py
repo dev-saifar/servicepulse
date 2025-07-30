@@ -16,6 +16,9 @@ celery = None
 migrate = Migrate()
 login_manager = LoginManager()
 from celery import Celery
+from dotenv import load_dotenv
+load_dotenv()
+
 
 celery = Celery(__name__, broker='redis://localhost:6379/0')
 from flask_mail import Mail
@@ -33,6 +36,10 @@ def create_app():
     app.config["ENV"] = "development"
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///techtrack.db"
     mail.init_app(app)
+
+    @app.context_processor
+    def inject_user_role():
+        return dict(current_user=current_user)
 
     @app.errorhandler(403)
     def forbidden(e):
@@ -139,6 +146,8 @@ def create_app():
     app.register_blueprint(contract_alerts_bp, url_prefix='/contract_alert')
     from app.modules.gate_pass import gate_pass_bp
     app.register_blueprint(gate_pass_bp, url_prefix='/gatepass')
+    from app.modules.settings import settings_bp
+    app.register_blueprint(settings_bp)
 
     app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')
