@@ -94,7 +94,7 @@ def test_email():
         msg = Message(
             subject="✅ SMTP Test Email",
             recipients=[test_email_address],
-            body="This is a test email from Biztra ERP SMTP settings.",
+            body="This is a test email from SERVICE PULSE ERP SMTP settings.",
         )
         mail.send(msg)
         flash(f"✅ Test email sent successfully to {test_email_address}.", "success")

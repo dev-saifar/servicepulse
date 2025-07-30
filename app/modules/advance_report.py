@@ -41,7 +41,7 @@ def send_email_report(report, file_path):
     from email.mime.base import MIMEBase
     from email import encoders
 
-    sender_email = Config.MAIL_USERNAME
+    sender_email = Config.MAIL_DEFAULT_SENDER
     receiver_email = report.email
     subject = f"📊 Scheduled Report: {report.report_type}"
 
