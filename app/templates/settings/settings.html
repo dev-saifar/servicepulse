@@ -1,0 +1,92 @@
+<!-- templates/settings/settings.html -->
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mt-2">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <h2>⚙️ Application Settings</h2>
+  <hr>
+
+  <!-- SMTP SETTINGS -->
+  <h4>📧 SMTP Settings</h4>
+  <form method="POST" action="/settings">
+    <input type="hidden" name="smtp_save" value="1">
+    <div class="row">
+      <div class="col-md-6">
+        <label>Mail Server</label>
+        <input name="MAIL_SERVER" class="form-control" value="{{ smtp.MAIL_SERVER }}">
+      </div>
+      <div class="col-md-2">
+        <label>Port</label>
+        <input name="MAIL_PORT" class="form-control" value="{{ smtp.MAIL_PORT }}">
+      </div>
+      <div class="col-md-4">
+        <label>Use TLS</label>
+        <div class="form-check">
+          <input type="checkbox" name="MAIL_USE_TLS" class="form-check-input" {% if smtp.MAIL_USE_TLS == 'True' %}checked{% endif %}>
+          <label class="form-check-label">Enable</label>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-2">
+      <div class="col-md-6">
+        <label>Username</label>
+        <input name="MAIL_USERNAME" class="form-control" value="{{ smtp.MAIL_USERNAME }}">
+      </div>
+      <div class="col-md-6">
+        <label>Password</label>
+        <input name="MAIL_PASSWORD" type="password" class="form-control" value="{{ smtp.MAIL_PASSWORD }}">
+      </div>
+    </div>
+    <div class="mt-2">
+      <label>Default Sender Email</label>
+      <input name="MAIL_DEFAULT_SENDER" class="form-control" value="{{ smtp.MAIL_DEFAULT_SENDER }}">
+    </div>
+    <div class="mt-3">
+      <button class="btn btn-primary" type="submit">💾 Save Settings</button>
+    </div>
+  </form>
+
+  <!-- Test SMTP Email -->
+  <form method="POST" action="/test-email" class="mt-4">
+    <label for="test_email" class="form-label">📨 Send Test Email</label>
+    <div class="input-group">
+      <input type="email" name="test_email" id="test_email" class="form-control" placeholder="Enter email to test SMTP" required>
+      <button class="btn btn-warning" type="submit">🧪 Send Test</button>
+    </div>
+  </form>
+
+  <hr class="my-4">
+
+  <!-- IMPORT SECTION -->
+  <h4>📤 Import Data from Excel</h4>
+  <div class="row">
+    {% for model in ['assets', 'spares', 'tonermodel', 'tonercosting', 'customer', 'contract'] %}
+    <div class="col-md-6">
+      <form action="/settings/upload/{{ model }}" method="POST" enctype="multipart/form-data" class="border p-3 mb-3">
+        <label class="form-label fw-bold">Upload {{ model|capitalize }} File (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" class="form-control" required>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <button type="submit" class="btn btn-success">Upload</button>
+          <a href="/settings/download-template/{{ model }}" class="btn btn-outline-primary">⬇ Download Template</a>
+        </div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

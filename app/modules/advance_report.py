@@ -29,6 +29,8 @@ from app.modules.delivery_report import (
 
 import threading
 from config import Config  # Import SMTP settings from config.py
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 # Create Blueprint for Advanced Reports
 advance_report_bp = Blueprint('advance_report', __name__, url_prefix='/advance_report')
