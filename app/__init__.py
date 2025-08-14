@@ -148,6 +148,7 @@ def create_app():
     app.register_blueprint(gate_pass_bp, url_prefix='/gatepass')
     from app.modules.settings import settings_bp
     app.register_blueprint(settings_bp)
+    from app.models import PendingDelivery
 
     app.register_blueprint(delivery_report_bp, url_prefix='/delivery_report')
     app.register_blueprint(financial_bp, url_prefix='/financial')

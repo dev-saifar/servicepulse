@@ -46,26 +46,39 @@
                     <th>Asset Desc</th>
                     <th>Collected On</th>
                     <th>Status</th>
+                    <th>Actions</th>
+
                 </tr>
             </thead>
             <tbody>
-                {% for asset in assets %}
-                {% set age = (now - asset.collected_date).days if asset.collected_date else 0 %}
-                <tr class="{% if age > 30 %}table-danger{% endif %}">
-                    <td>{{ asset.serial_number }}</td>
-                    <td>{{ asset.customer_name }}</td>
-                    <td>{{ asset.service_location }}</td>
-                    <td>{{ asset.region }}</td>
-                    <td>{{ asset.technician_name }}</td>
-                    <td>{{ asset.asset_Description }}</td>
-                    <td>{{ asset.collected_date.strftime('%d-%b-%Y %I:%M %p') if asset.collected_date else '' }}</td>
-                    <td><span class="badge bg-warning text-dark">In Workshop</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    {% for asset in assets %}
+    {% set age = (now - asset.collected_date).days if asset.collected_date else 0 %}
+    <tr class="{% if age > 30 %}table-danger{% endif %}">
+        <td>{{ asset.serial_number }}</td>
+        <td>{{ asset.customer_name }}</td>
+        <td>{{ asset.service_location }}</td>
+        <td>{{ asset.region }}</td>
+        <td>{{ asset.technician_name }}</td>
+        <td>{{ asset.asset_Description }}</td>
+        <td>{{ asset.collected_date.strftime('%d-%b-%Y %I:%M %p') if asset.collected_date else '' }}</td>
+        <td>{{ asset.asset_status }}</td>
+        <td class="text-nowrap">
+            <a href="{{ url_for('gate_pass.edit_workshop_asset', asset_id=asset.id) }}" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% if asset.asset_status != 'decommissioned' %}
+            <a href="{{ url_for('gate_pass.view_decommission_form', serial_number=asset.serial_number) }}"
+               class="btn btn-sm btn-outline-danger" title="Decommission">
+                <i class="fas fa-trash-alt"></i> Decommission
+            </a>
+            {% else %}
+            <span class="badge bg-danger">Decommissioned</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
 
 <!-- ✅ DataTables & Export -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
