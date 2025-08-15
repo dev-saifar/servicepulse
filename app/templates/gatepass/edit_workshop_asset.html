@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Edit Workshop Asset{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>Edit Workshop Asset: {{ asset.serial_number }}</h3>
+    <form method="post">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label>Customer Name</label>
+                <input type="text" name="customer_name" class="form-control" value="{{ asset.customer_name }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Service Location</label>
+                <input type="text" name="service_location" class="form-control" value="{{ asset.service_location }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Region</label>
+                <input type="text" name="region" class="form-control" value="{{ asset.region }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Technician Name</label>
+                <input type="text" name="technician_name" class="form-control" value="{{ asset.technician_name }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Technician Email</label>
+                <input type="email" name="technician_email" class="form-control" value="{{ asset.technician_email }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Contract</label>
+                <input type="text" name="contract" class="form-control" value="{{ asset.contract }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Asset Description</label>
+                <input type="text" name="asset_Description" class="form-control" value="{{ asset.asset_Description }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Contract Expiry Date</label>
+                <input type="text" name="contract_expiry_date" class="form-control" value="{{ asset.contract_expiry_date }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Last PM Date</label>
+                <input type="text" name="last_pm_date" class="form-control" value="{{ asset.last_pm_date }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>PM Frequency</label>
+                <input type="text" name="pm_freq" class="form-control" value="{{ asset.pm_freq }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Install Date</label>
+                <input type="text" name="install_date" class="form-control" value="{{ asset.install_date }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Asset Code</label>
+                <input type="text" name="asset_code" class="form-control" value="{{ asset.asset_code }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Status</label>
+                <input type="text" name="asset_status" class="form-control" value="{{ asset.asset_status }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Part No</label>
+                <input type="text" name="part_no" class="form-control" value="{{ asset.part_no }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label>Department</label>
+                <input type="text" name="department" class="form-control" value="{{ asset.department }}">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{{ url_for('gate_pass.workshop_assets') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
