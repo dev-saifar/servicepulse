@@ -3,6 +3,7 @@
 <div class="container mt-4">
   <h4 class="mb-3"><i class="fas fa-boxes"></i> Bulk Collection Gate Pass</h4>
 
+  <!-- CUSTOMER FIELD (always visible) -->
   <div class="row g-2 align-items-end">
     <div class="col-md-6">
       <label class="form-label">Customer Name</label>
@@ -21,77 +22,92 @@
     </div>
   </div>
 
-  <div id="no_results" class="alert alert-warning mt-3 d-none">
-    No machines found for <strong id="no_results_name"></strong>.
+  <!-- EVERYTHING BELOW THIS WRAPS INTO after_customer AND STARTS HIDDEN -->
+  <div id="after_customer" style="display:none;">
+    <div id="no_results" class="alert alert-warning mt-3 d-none">
+      No machines found for <strong id="no_results_name"></strong>.
+    </div>
+
+    <form id="bulkCollectionForm" class="mt-3" method="POST" action="{{ url_for('gate_pass.bulk_collection') }}">
+      {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+      <input type="hidden" name="customer_name" id="hidden_customer">
+      <input type="hidden" name="selected_count" id="selected_count" value="0">
+      <input type="hidden" name="row_count" id="row_count" value="0">
+
+      <div id="table_container" class="table-responsive" style="display:none; max-height:65vh; overflow:auto;">
+        <table class="table table-sm table-bordered align-middle" id="assets_table">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th class="text-center" style="width:44px;">
+                <input type="checkbox" id="select_all" title="Select all">
+              </th>
+              <th class="sortable" data-type="text">Serial Number <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Asset Code <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Description <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Location <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Region <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Technician <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="number" style="width:120px;">Mono Reading <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="number" style="width:120px;">Color Reading <i class="fa fa-sort ms-1"></i></th>
+              <th class="sortable" data-type="text">Accessories <i class="fa fa-sort ms-1"></i></th>
+            </tr>
+          </thead>
+          <tbody id="assets_body"></tbody>
+        </table>
+      </div>
+
+      <!-- selection tools -->
+      <div id="selectionTools" class="mt-2 d-flex flex-wrap gap-2" style="display:none;">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Selection">
+          <button type="button" class="btn btn-outline-secondary" id="btn_sel_all">All</button>
+          <button type="button" class="btn btn-outline-secondary" id="btn_sel_none">None</button>
+          <button type="button" class="btn btn-outline-secondary" id="btn_sel_filtered">Filtered</button>
+          <button type="button" class="btn btn-outline-secondary" id="btn_sel_invert">Invert</button>
+        </div>
+
+        <div class="vr mx-2 d-none d-md-block"></div>
+
+        <div class="input-group input-group-sm" style="max-width:380px;">
+          <span class="input-group-text">Set readings</span>
+          <input type="number" min="0" class="form-control" id="bulk_mono" placeholder="Mono">
+          <input type="number" min="0" class="form-control" id="bulk_color" placeholder="Color">
+          <button class="btn btn-outline-primary" type="button" id="btn_apply_bulk">Apply to selected</button>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline-dark ms-auto" id="btn_export_csv">
+          Export CSV (selected)
+        </button>
+      </div>
+
+      <!-- footer / submit -->
+      <div id="footer_bar" class="d-flex justify-content-between align-items-center mt-3" style="display:none;">
+        <div class="small text-muted">
+          <span id="found_count">0</span> machines found &middot;
+          <span id="sel_count">0</span> selected
+        </div>
+        <button type="submit" class="btn btn-success" id="submitBtn" disabled>✅ Submit Collection</button>
+      </div>
+    </form>
   </div>
-
-  <form id="bulkCollectionForm" class="mt-3" method="POST" action="{{ url_for('gate_pass.bulk_collection') }}">
-    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
-    <input type="hidden" name="customer_name" id="hidden_customer">
-    <input type="hidden" name="selected_count" id="selected_count" value="0">
-    <input type="hidden" name="row_count" id="row_count" value="0">
-
-    <div id="table_container" class="table-responsive" style="display:none; max-height:65vh; overflow:auto;">
-      <table class="table table-sm table-bordered align-middle" id="assets_table">
-        <thead class="table-light sticky-top">
-          <tr>
-            <th class="text-center" style="width:44px;">
-              <input type="checkbox" id="select_all" title="Select all">
-            </th>
-            <th class="sortable" data-type="text">Serial Number <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Asset Code <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Description <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Location <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Region <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Technician <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="number" style="width:120px;">Mono Reading <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="number" style="width:120px;">Color Reading <i class="fa fa-sort ms-1"></i></th>
-            <th class="sortable" data-type="text">Accessories <i class="fa fa-sort ms-1"></i></th>
-          </tr>
-        </thead>
-        <tbody id="assets_body"></tbody>
-      </table>
-    </div>
-
-    <div id="selectionTools" class="mt-2 d-flex flex-wrap gap-2" style="display:none;">
-      <div class="btn-group btn-group-sm" role="group" aria-label="Selection">
-        <button type="button" class="btn btn-outline-secondary" id="btn_sel_all">All</button>
-        <button type="button" class="btn btn-outline-secondary" id="btn_sel_none">None</button>
-        <button type="button" class="btn btn-outline-secondary" id="btn_sel_filtered">Filtered</button>
-        <button type="button" class="btn btn-outline-secondary" id="btn_sel_invert">Invert</button>
-      </div>
-
-      <div class="vr mx-2 d-none d-md-block"></div>
-
-      <div class="input-group input-group-sm" style="max-width:380px;">
-        <span class="input-group-text">Set readings</span>
-        <input type="number" min="0" class="form-control" id="bulk_mono" placeholder="Mono">
-        <input type="number" min="0" class="form-control" id="bulk_color" placeholder="Color">
-        <button class="btn btn-outline-primary" type="button" id="btn_apply_bulk">Apply to selected</button>
-      </div>
-
-      <button type="button" class="btn btn-sm btn-outline-dark ms-auto" id="btn_export_csv">
-        Export CSV (selected)
-      </button>
-    </div>
-
-    <div id="footer_bar" class="d-flex justify-content-between align-items-center mt-3" style="display:none;">
-      <div class="small text-muted">
-        <span id="found_count">0</span> machines found &middot;
-        <span id="sel_count">0</span> selected
-      </div>
-      <button type="submit" class="btn btn-success" id="submitBtn" disabled>✅ Submit Collection</button>
-    </div>
-  </form>
 </div>
 
+<!-- styles -->
 <style>
   th.sortable { cursor: pointer; user-select: none; }
   th.sortable .fa { opacity:.6; transition: transform .15s; }
   th.sortable[aria-sort="ascending"]  .fa { transform: rotate(180deg); }
   th.sortable[aria-sort="descending"] .fa { transform: none; }
+
+  /* make autocomplete always float on top and not clipped */
+  .ui-autocomplete.ui-front{
+    z-index: 4000 !important;
+    max-height: 280px; overflow-y: auto; overflow-x: hidden;
+    background:#fff; border:1px solid rgba(0,0,0,.15); box-shadow:0 .5rem 1rem rgba(0,0,0,.15);
+  }
+  .ui-menu .ui-menu-item-wrapper{ padding:.5rem .75rem; line-height:1.25; }
 </style>
 
+<!-- libs (remove if already loaded in base.html) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
@@ -101,291 +117,220 @@ document.addEventListener('DOMContentLoaded', function() {
   const $customer = $("#customer_name");
   const $custLoad = $("#cust_loading");
   const $hiddenCustomer = $("#hidden_customer");
+
+  const $after = $("#after_customer");         // everything below the customer field
   const $assetsBody = $("#assets_body");
   const $tableContainer = $("#table_container");
   const $footerBar = $("#footer_bar");
+  const $tools = $("#selectionTools");
   const $submit = $("#submitBtn");
-  const $selCount = $("#sel_count");
-  const $foundCount = $("#found_count");
+  const $filter = $("#assetFilter");
+  const $selectAll = $("#select_all");
   const $noResults = $("#no_results");
   const $noResultsName = $("#no_results_name");
-  const $filter = $("#assetFilter");
+  const $selCount = $("#sel_count");
+  const $foundCount = $("#found_count");
   const $selectedCount = $("#selected_count");
   const $rowCount = $("#row_count");
-  const $selectAll = $("#select_all");
-  const $tools = $("#selectionTools");
 
-  const esc = (s) => String(s ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-
+  let customerChosen = false;
   let assetsCache = {};  // customer -> array
 
-  function showSelectionTools(show) { $tools.toggle(!!show); }
-  function showLoading(isLoading) { $custLoad.toggle(isLoading); $customer.prop("disabled", isLoading); }
-  function showNoResults(name) {
-    $noResultsName.text(name || "");
-    $noResults.removeClass("d-none");
-    $tableContainer.hide();
-    $footerBar.hide();
-    showSelectionTools(false);
+  const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+  function showAfter()   { $after.show(); }
+  function hideAfter()   { $after.hide(); }
+  function showLoading(b){ $custLoad.toggle(b); $customer.prop("disabled", b); }
+  function hideNoResults(){ $noResults.addClass("d-none"); }
+  function showNoResults(name){
+    $noResultsName.text(name||""); $noResults.removeClass("d-none");
+    $tableContainer.hide(); $footerBar.hide(); $tools.hide();
   }
-  function hideNoResults() { $noResults.addClass("d-none"); }
+
+  // Autocomplete: render menu at body level and size it to the input
+  $customer.autocomplete({
+    source: (req, res) => $.get("{{ url_for('gate_pass.search_customers_bulk') }}", { term: req.term }, res),
+    minLength: 2,
+    delay: 150,
+    appendTo: "body",
+    autoFocus: true,
+    position: { my: "left top+8", at: "left bottom", of: "#customer_name", collision: "flipfit" },
+    open: function(){ $(".ui-autocomplete:visible").outerWidth($customer.outerWidth()); },
+    select: function(_e, ui){
+      customerChosen = true;
+      $("#hidden_customer").val(ui.item.value);
+      fetchAssets(ui.item.value);
+    }
+  });
+
+  // while typing (before selecting) keep the rest hidden so nothing overlaps
+  $customer.on("input", function(){
+    customerChosen = false;
+    hideAfter();
+  });
 
   function updateSelectionState() {
     const checked = $(".row-select:checked").length;
-    $selCount.text(checked);
+    $("#sel_count").text(checked);
     $selectedCount.val(checked);
     $submit.prop("disabled", checked === 0);
   }
-
-  // Allow null readings/accessories: enable inputs but do NOT require values
-  function toggleRowInputs($row, enable) {
+  function toggleRowInputs($row, enable){
     $row.find(".reading-input, .accessory-input")
         .prop("disabled", !enable)
-        .prop("required", false);
+        .prop("required", false); // allow nulls
   }
 
-  function renderRows(assets) {
+  function renderRows(assets){
     let rows = "";
-    assets.forEach((a, i) => {
+    assets.forEach((a,i) => {
       rows += `
         <tr data-index="${i}">
           <td class="text-center">
             <input type="checkbox" class="row-select form-check-input" name="select_${i}" value="on">
           </td>
-          <td>
-            <input type="hidden" name="serial_number_${i}" value="${esc(a.serial_number)}">
-            <span class="fw-semibold">${esc(a.serial_number)}</span>
-          </td>
-          <td>
-            <input type="hidden" name="asset_code_${i}" value="${esc(a.asset_code)}">
-            ${esc(a.asset_code)}
-          </td>
-          <td>
-            <input type="hidden" name="asset_description_${i}" value="${esc(a.asset_description)}">
-            ${esc(a.asset_description)}
-          </td>
-          <td>
-            <input type="hidden" name="service_location_${i}" value="${esc(a.service_location)}">
-            ${esc(a.service_location)}
-          </td>
-          <td>
-            <input type="hidden" name="region_${i}" value="${esc(a.region)}">
-            ${esc(a.region)}
-          </td>
-          <td>
-            <input type="hidden" name="technician_name_${i}" value="${esc(a.technician_name)}">
-            ${esc(a.technician_name)}
-          </td>
-          <td>
-            <input type="number" min="0" step="1" name="mono_reading_${i}"
-                   class="form-control form-control-sm reading-input mono" placeholder="0" disabled>
-          </td>
-          <td>
-            <input type="number" min="0" step="1" name="color_reading_${i}"
-                   class="form-control form-control-sm reading-input color" placeholder="0" disabled>
-          </td>
-          <td>
-            <input type="text" name="accessories_${i}" class="form-control form-control-sm accessory-input" placeholder="e.g., Tray, Feeder" disabled>
-          </td>
+          <td><input type="hidden" name="serial_number_${i}" value="${esc(a.serial_number)}"><span class="fw-semibold">${esc(a.serial_number)}</span></td>
+          <td><input type="hidden" name="asset_code_${i}" value="${esc(a.asset_code)}">${esc(a.asset_code)}</td>
+          <td><input type="hidden" name="asset_description_${i}" value="${esc(a.asset_description)}">${esc(a.asset_description)}</td>
+          <td><input type="hidden" name="service_location_${i}" value="${esc(a.service_location)}">${esc(a.service_location)}</td>
+          <td><input type="hidden" name="region_${i}" value="${esc(a.region)}">${esc(a.region)}</td>
+          <td><input type="hidden" name="technician_name_${i}" value="${esc(a.technician_name)}">${esc(a.technician_name)}</td>
+          <td><input type="number" min="0" step="1" name="mono_reading_${i}"  class="form-control form-control-sm reading-input mono"  placeholder="0" disabled></td>
+          <td><input type="number" min="0" step="1" name="color_reading_${i}" class="form-control form-control-sm reading-input color" placeholder="0" disabled></td>
+          <td><input type="text" name="accessories_${i}" class="form-control form-control-sm accessory-input" placeholder="e.g., Tray, Feeder" disabled></td>
         </tr>`;
     });
     $assetsBody.html(rows);
     $rowCount.val(assets.length);
     $foundCount.text(assets.length);
-    $filter.prop("disabled", assets.length === 0);
+    $filter.prop("disabled", assets.length === 0).val("");
     $selectAll.prop("checked", false);
     updateSelectionState();
   }
 
-  function applyFilter(q) {
-    const needle = q.trim().toLowerCase();
-    $("#assets_body tr").each(function() {
-      const text = $(this).text().toLowerCase();
-      $(this).toggle(text.indexOf(needle) !== -1);
-    });
-  }
+  function fetchAssets(customer){
+    hideNoResults(); showLoading(true);
+    $tableContainer.hide(); $footerBar.hide(); $tools.hide();
+    $assetsBody.empty(); $submit.prop("disabled", true);
 
-  function fetchAssets(customer) {
-    hideNoResults();
-    showLoading(true);
-    $tableContainer.hide();
-    $footerBar.hide();
-    showSelectionTools(false);
-    $assetsBody.empty();
-    $submit.prop("disabled", true);
-    $filter.val("");
+    // show the rest only AFTER a client is selected (this function is called from select)
+    showAfter();
 
     if (assetsCache[customer]) {
       renderRows(assetsCache[customer]);
-      $tableContainer.show();
-      $footerBar.show();
-      showSelectionTools(true);
-      showLoading(false);
-      return;
+      finishShow();
+      return showLoading(false);
     }
 
     $.get("{{ url_for('gate_pass.get_assets_by_customer') }}", { customer_name: customer })
-      .done(function(result) {
+      .done(function(result){
         const assets = Array.isArray(result) ? result : (result.assets || []);
         assetsCache[customer] = assets;
-
-        if (assets.length === 0) { showNoResults(customer); return; }
+        if (!assets.length) { showNoResults(customer); return; }
         renderRows(assets);
-        $tableContainer.show();
-        $footerBar.show();
-        showSelectionTools(true);
+        finishShow();
       })
-      .fail(function(xhr) {
+      .fail(function(xhr){
         alert("Failed to load machines. Please try again.");
         console.error("Assets fetch failed:", xhr.responseText || xhr.statusText);
       })
-      .always(function() { showLoading(false); });
+      .always(function(){ showLoading(false); });
   }
 
-  $customer.autocomplete({
-    source: function (req, res) {
-      $.get("{{ url_for('gate_pass.search_customers_bulk') }}", { term: req.term }, res);
-    },
-    minLength: 2,
-    delay: 200,
-    select: function (_event, ui) {
-      const name = ui.item.value;
-      $hiddenCustomer.val(name);
-      fetchAssets(name);
-    }
-  });
+  function finishShow(){
+    $tableContainer.show(); $footerBar.show(); $tools.show();
+  }
 
+  // filter + selection logic
   $(document)
-    .on("change", ".row-select", function() {
+    .on("input", "#assetFilter", function(){
+      const needle = this.value.trim().toLowerCase();
+      $("#assets_body tr").each(function(){
+        const text = $(this).text().toLowerCase();
+        $(this).toggle(text.indexOf(needle) !== -1);
+      });
+    })
+    .on("change", ".row-select", function(){
       const $row = $(this).closest("tr");
       toggleRowInputs($row, this.checked);
       updateSelectionState();
-      const total = $(".row-select").length;
-      const checked = $(".row-select:checked").length;
-      $selectAll.prop("checked", total > 0 && checked === total);
-    })
-    .on("input", "#assetFilter", function() { applyFilter(this.value); });
+      const total = $(".row-select").length, checked = $(".row-select:checked").length;
+      $selectAll.prop("checked", total>0 && checked===total);
+    });
 
-  $selectAll.on("change", function() {
-    const check = this.checked;
-    $(".row-select").prop("checked", check).trigger("change");
+  $("#select_all").on("change", function(){
+    $(".row-select").prop("checked", this.checked).trigger("change");
   });
 
-  (function() {
-    const $thead = $("#assets_table thead");
-    function cellText($tr, idx) {
-      return $tr.children("td").eq(idx).clone().children().remove().end().text().trim();
+  // sorting (same as before)
+  (function(){
+    const $thead=$("#assets_table thead");
+    function cellText($tr, idx){ return $tr.children("td").eq(idx).clone().children().remove().end().text().trim(); }
+    function cmp(a,b,type){ if(type==="number"){const na=parseInt(a||"0",10)||0, nb=parseInt(b||"0",10)||0; return na-nb;} return a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"});}
+    function sortBy(colIdx,type,dir){
+      const $tbody=$("#assets_body"); const rows=$tbody.children("tr").get();
+      rows.sort((r1,r2)=>{const A=cellText($(r1),colIdx),B=cellText($(r2),colIdx),res=cmp(A,B,type); return dir==="asc"?res:-res;});
+      rows.forEach(r=> $tbody.append(r));
     }
-    function cmp(a, b, type) {
-      if (type === "number") {
-        const na = parseInt(a||"0",10) || 0, nb = parseInt(b||"0",10) || 0;
-        return na - nb;
-      }
-      return a.localeCompare(b, undefined, {numeric:true, sensitivity:"base"});
-    }
-    function sortBy(colIdx, type, dir) {
-      const $tbody = $("#assets_body");
-      const rows = $tbody.children("tr").get();
-      rows.sort((r1, r2) => {
-        const A = cellText($(r1), colIdx);
-        const B = cellText($(r2), colIdx);
-        const res = cmp(A, B, type);
-        return dir === "asc" ? res : -res;
-      });
-      rows.forEach(r => $tbody.append(r));
-    }
-    $thead.on("click", "th.sortable", function() {
-      const $th = $(this);
-      const colIdx = $th.index();
-      const type = $th.data("type") || "text";
-      const state = $th.attr("aria-sort");
-      const next = state === "ascending" ? "descending" : "ascending";
-      $thead.find("th.sortable").removeAttr("aria-sort");
-      $th.attr("aria-sort", next);
-      sortBy(colIdx, type, next === "ascending" ? "asc" : "desc");
+    $thead.on("click","th.sortable",function(){
+      const $th=$(this); const colIdx=$th.index(); const type=$th.data("type")||"text";
+      const state=$th.attr("aria-sort"); const next=state==="ascending"?"descending":"ascending";
+      $thead.find("th.sortable").removeAttr("aria-sort"); $th.attr("aria-sort",next);
+      sortBy(colIdx,type,next==="ascending"?"asc":"desc");
     });
   })();
 
-  $("#btn_sel_all").on("click", () => {
-    $("#assets_body .row-select").prop("checked", true).trigger("change");
-    $selectAll.prop("checked", true);
+  // selection tools
+  $("#btn_sel_all").on("click", ()=> { $("#assets_body .row-select").prop("checked",true).trigger("change"); $selectAll.prop("checked",true); });
+  $("#btn_sel_none").on("click", ()=> { $("#assets_body .row-select").prop("checked",false).trigger("change"); $selectAll.prop("checked",false); });
+  $("#btn_sel_filtered").on("click", ()=> {
+    $("#assets_body tr:visible .row-select").prop("checked",true).trigger("change");
+    $("#assets_body tr:not(:visible) .row-select").prop("checked",false).trigger("change");
+    const total=$(".row-select").length, checked=$(".row-select:checked").length;
+    $selectAll.prop("checked", total>0 && checked===total);
   });
-  $("#btn_sel_none").on("click", () => {
-    $("#assets_body .row-select").prop("checked", false).trigger("change");
-    $selectAll.prop("checked", false);
-  });
-  $("#btn_sel_filtered").on("click", () => {
-    $("#assets_body tr:visible .row-select").prop("checked", true).trigger("change");
-    $("#assets_body tr:not(:visible) .row-select").prop("checked", false).trigger("change");
-    const total = $(".row-select").length, checked = $(".row-select:checked").length;
-    $selectAll.prop("checked", total > 0 && checked === total);
-  });
-  $("#btn_sel_invert").on("click", () => {
-    $("#assets_body tr:visible").each(function() {
-      const $cb = $(this).find(".row-select");
-      $cb.prop("checked", !$cb.prop("checked")).trigger("change");
-    });
-    const total = $(".row-select").length, checked = $(".row-select:checked").length;
-    $selectAll.prop("checked", total > 0 && checked === total);
+  $("#btn_sel_invert").on("click", ()=> {
+    $("#assets_body tr:visible").each(function(){ const $cb=$(this).find(".row-select"); $cb.prop("checked",!$cb.prop("checked")).trigger("change"); });
+    const total=$(".row-select").length, checked=$(".row-select:checked").length;
+    $selectAll.prop("checked", total>0 && checked===total);
   });
 
-  $("#btn_apply_bulk").on("click", () => {
-    const mono = $("#bulk_mono").val().trim();
-    const color = $("#bulk_color").val().trim();
-    if (mono === "" && color === "") { alert("Enter Mono and/or Color values."); return; }
-    $("#assets_body .row-select:checked").each(function() {
-      const $row = $(this).closest("tr");
-      if (mono !== "")  $row.find('input[name^="mono_reading_"]').val(mono);
-      if (color !== "") $row.find('input[name^="color_reading_"]').val(color);
+  // bulk readings + export (unchanged)
+  $("#btn_apply_bulk").on("click", ()=>{
+    const mono=$("#bulk_mono").val().trim(), color=$("#bulk_color").val().trim();
+    if(mono==="" && color===""){ alert("Enter Mono and/or Color values."); return; }
+    $("#assets_body .row-select:checked").each(function(){
+      const $row=$(this).closest("tr");
+      if(mono!=="")  $row.find('input[name^="mono_reading_"]').val(mono);
+      if(color!=="") $row.find('input[name^="color_reading_"]').val(color);
     });
   });
-
-  $("#btn_export_csv").on("click", () => {
-    const headers = ["Serial Number","Asset Code","Description","Location","Region","Technician","Mono Reading","Color Reading","Accessories"];
-    const rows = [];
-    $("#assets_body .row-select:checked").each(function() {
-      const $row = $(this).closest("tr");
-      const cells = $row.children("td");
+  $("#btn_export_csv").on("click", ()=>{
+    const headers=["Serial Number","Asset Code","Description","Location","Region","Technician","Mono Reading","Color Reading","Accessories"];
+    const rows=[];
+    $("#assets_body .row-select:checked").each(function(){
+      const $row=$(this).closest("tr"), cells=$row.children("td");
       rows.push([
-        cells.eq(1).text().trim(),
-        cells.eq(2).text().trim(),
-        cells.eq(3).text().trim(),
-        cells.eq(4).text().trim(),
-        cells.eq(5).text().trim(),
-        cells.eq(6).text().trim(),
-        $row.find('input[name^="mono_reading_"]').val() || "",
-        $row.find('input[name^="color_reading_"]').val() || "",
-        $row.find('input[name^="accessories_"]').val() || "",
+        cells.eq(1).text().trim(), cells.eq(2).text().trim(), cells.eq(3).text().trim(),
+        cells.eq(4).text().trim(), cells.eq(5).text().trim(), cells.eq(6).text().trim(),
+        $row.find('input[name^="mono_reading_"]').val()||"", $row.find('input[name^="color_reading_"]').val()||"",
+        $row.find('input[name^="accessories_"]').val()||""
       ]);
     });
-    if (!rows.length) { alert("Select at least one machine to export."); return; }
-    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","))].join("\r\n");
-    const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "bulk_collection_selected.csv";
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+    if(!rows.length){ alert("Select at least one machine to export."); return; }
+    const csv=[headers.join(","), ...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))].join("\r\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="bulk_collection_selected.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   });
 
-  $("#bulkCollectionForm").on("submit", function(e) {
-    const checkedRows = $(".row-select:checked");
-    if (checkedRows.length === 0) { e.preventDefault(); alert("Please select at least one machine."); return false; }
-    // allow blanks; only block if non-empty and not a whole number
-    let bad = false;
-    checkedRows.each(function() {
-      const $row = $(this).closest("tr");
-      $row.find(".reading-input").each(function() {
-        const v = this.value.trim();
-        if (v !== "" && (!/^\d+$/.test(v))) bad = true;
-      });
-    });
-    if (bad) { e.preventDefault(); alert("Readings must be whole numbers (0 or higher)."); return false; }
+  // submit: allow blanks; only validate if filled
+  $("#bulkCollectionForm").on("submit", function(e){
+    const checkedRows=$(".row-select:checked"); if(!checkedRows.length){ e.preventDefault(); alert("Please select at least one machine."); return false; }
+    let bad=false; checkedRows.each(function(){ $(this).closest("tr").find(".reading-input").each(function(){ const v=this.value.trim(); if(v!=="" && !/^\d+$/.test(v)) bad=true; }); });
+    if(bad){ e.preventDefault(); alert("Readings must be whole numbers (0 or higher)."); return false; }
   });
-
-  $("#assetFilter").val("");
 });
 </script>
 {% endblock %}
