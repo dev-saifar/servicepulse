@@ -6,3 +6,8 @@ instance/techtrack.db
 __pycache__/
 *.pyc
 *.pyo
+.env
+codeql/
+codeql-db/
+scc
+scc.tar.gz
