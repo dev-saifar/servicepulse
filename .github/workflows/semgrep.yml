@@ -1,0 +1,24 @@
+name: Semgrep
+
+on:
+  push:
+    branches: [ "work" ]
+  pull_request:
+    branches: [ "work" ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+          generateSarif: true
+        continue-on-error: true

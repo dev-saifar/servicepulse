@@ -1,0 +1,83 @@
+HTTPSConnectionPool(host='semgrep.dev', port=443): Max retries exceeded with url: /c/auto (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))
+Traceback (most recent call last):
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 773, in urlopen
+    self._prepare_proxy(conn)
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 1042, in _prepare_proxy
+    conn.connect()
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connection.py", line 770, in connect
+    self._tunnel()
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/http/client.py", line 943, in _tunnel
+    raise OSError(f"Tunnel connection failed: {code} {message.strip()}")
+OSError: Tunnel connection failed: 403 Forbidden
+
+The above exception was the direct cause of the following exception:
+
+urllib3.exceptions.ProxyError: ('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden'))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 871, in urlopen
+    return self.urlopen(
+           ^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='semgrep.dev', port=443): Max retries exceeded with url: /c/auto (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/commands/wrapper.py", line 37, in wrapper
+    func(*args, **kwargs)
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/commands/scan.py", line 636, in scan
+    ) = semgrep.run_scan.run_scan(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/run_scan.py", line 411, in run_scan
+    configs_obj, config_errors = get_config(
+                                 ^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 939, in get_config
+    config, errors = Config.from_config_list(config_strs, project_url)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 540, in from_config_list
+    resolved_config = resolve_config(config, project_url)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 468, in resolve_config
+    config = parse_config_files(config_loader.load_config())
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 147, in load_config
+    return [self._download_config()]
+            ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 170, in _download_config
+    return self._download_config_from_url(self._config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/config_resolver.py", line 190, in _download_config_from_url
+    resp = app_session.get(url, headers={"Accept": "application/json"})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/requests/sessions.py", line 602, in get
+    return self.request("GET", url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/semgrep/app/session.py", line 195, in request
+    response = super().request(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.11.12/lib/python3.11/site-packages/requests/adapters.py", line 694, in send
+    raise ProxyError(e, request=request)
+requests.exceptions.ProxyError: HTTPSConnectionPool(host='semgrep.dev', port=443): Max retries exceeded with url: /c/auto (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))
