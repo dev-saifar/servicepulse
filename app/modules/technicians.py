@@ -8,7 +8,7 @@ from app.utils.permission_required import permission_required
 import os
 from flask import current_app
 from sqlalchemy import and_
-from PIL import Image # Import Image from Pillow for potential image processing
+from PIL import Image  # Import Image from Pillow for potential image processing
 
 technicians_bp = Blueprint('technicians', __name__, template_folder='../templates/technicians')
 
@@ -131,7 +131,6 @@ def add_technician():
     return render_template('technicians/add_technician.html')
 
 
-
 @technicians_bp.route('/import', methods=['GET', 'POST'])
 @login_required
 @permission_required('can_add_technicians')
@@ -187,8 +186,8 @@ def edit_technician(tech_id):
             upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
             os.makedirs(upload_folder, exist_ok=True)
 
-            # Handle photo deletion
-            if request.form.get('delete_photo') == '1':
+            # Handle photo deletion (only if no new file is uploaded)
+            if request.form.get('delete_photo') == '1' and (not request.files.get('photo') or request.files['photo'].filename == ''):
                 if technician.photo_url:
                     try:
                         path = os.path.join(current_app.root_path, technician.photo_url[1:])
@@ -216,20 +215,17 @@ def edit_technician(tech_id):
                     filename = f"tech_{tech_id}_photo.{photo.filename.split('.')[-1]}"
                     photo_path = os.path.join(upload_folder, filename)
                     try:
-                        # Optional: Resize/compress image using Pillow
                         img = Image.open(photo)
-                        img.thumbnail((400, 400)) # Resize to a max of 400x400
+                        img.thumbnail((400, 400))
                         img.save(photo_path)
                         technician.photo_url = f"/static/uploads/{filename}"
                     except Exception as e:
                         flash(f'Error processing or saving photo: {str(e)}', 'danger')
 
-
             # ID card upload
             if 'id_card' in request.files:
                 id_card = request.files['id_card']
                 if id_card.filename != '':
-                    # Delete old ID card if it exists
                     if technician.id_card_url:
                         try:
                             old_id_path = os.path.join(current_app.root_path, technician.id_card_url[1:])
@@ -250,7 +246,6 @@ def edit_technician(tech_id):
             if 'cv' in request.files:
                 cv = request.files['cv']
                 if cv.filename != '':
-                    # Delete old CV if it exists
                     if technician.cv_url:
                         try:
                             old_cv_path = os.path.join(current_app.root_path, technician.cv_url[1:])
@@ -269,13 +264,14 @@ def edit_technician(tech_id):
 
             db.session.commit()
             flash('Technician updated successfully!', 'success')
-            return redirect(url_for('technicians.edit_technician', tech_id=tech_id)) # Redirect back to edit page to show changes
+            return redirect(url_for('technicians.edit_technician', tech_id=tech_id))
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error updating technician: {str(e)}', 'danger')
 
     return render_template('technicians/edit.html', technician=technician)
+
 
 @technicians_bp.route('/remove_id/<int:tech_id>', methods=['POST'])
 @login_required

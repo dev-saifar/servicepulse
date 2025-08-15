@@ -42,6 +42,7 @@
 
         <hr>
 
+        <!-- Profile Photo -->
         <div class="mb-3">
             <label class="form-label">🖼️ Profile Photo:</label><br>
             {% if technician.photo_url %}
@@ -52,37 +53,49 @@
             class="rounded shadow-sm mb-2" style="width: 120px; height: 120px; object-fit: cover;">
 
             <input type="file" class="form-control" name="photo" accept="image/*" onchange="previewPhoto(event)">
+
+            <input type="hidden" name="delete_photo" id="deletePhotoHiddenInput" value="0">
+
             {% if technician.photo_url %}
                 <div class="mt-2 d-flex gap-2">
                     <a href="{{ technician.photo_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔍 View Photo</a>
                     <button type="button" class="btn btn-sm btn-outline-danger" id="deletePhotoButton" onclick="confirmDeletePhoto()">🗑️ Delete</button>
-                    <input type="hidden" name="delete_photo" id="deletePhotoHiddenInput" value="0">
                 </div>
             {% endif %}
         </div>
 
+        <!-- ID Proof -->
         <div class="mb-3">
             <label class="form-label">🆔 ID Proof (PDF/JPG):</label>
             <input type="file" class="form-control" name="id_card" accept=".pdf,image/*">
             {% if technician.id_card_url %}
                 <div class="mt-2 d-flex gap-2">
                     <a href="{{ technician.id_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">🔎 View ID</a>
-                    <form method="POST" action="{{ url_for('technicians.remove_id', tech_id=technician.id) }}">
-                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete ID Proof?')">🗑️ Delete</button>
-                    </form>
+                    <!-- Use button with formaction instead of nested form -->
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            formaction="{{ url_for('technicians.remove_id', tech_id=technician.id) }}"
+                            formmethod="post"
+                            formnovalidate
+                            onclick="return confirm('Delete ID Proof?')">🗑️ Delete</button>
                 </div>
             {% endif %}
         </div>
 
+        <!-- CV -->
         <div class="mb-3">
             <label class="form-label">📄 CV (PDF):</label>
             <input type="file" class="form-control" name="cv" accept=".pdf">
             {% if technician.cv_url %}
                 <div class="mt-2 d-flex gap-2">
                     <a href="{{ technician.cv_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">📥 View CV</a>
-                    <form method="POST" action="{{ url_for('technicians.remove_cv', tech_id=technician.id) }}">
-                        <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete CV?')">🗑️ Delete</button>
-                    </form>
+                    <!-- Use button with formaction instead of nested form -->
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-danger"
+                            formaction="{{ url_for('technicians.remove_cv', tech_id=technician.id) }}"
+                            formmethod="post"
+                            formnovalidate
+                            onclick="return confirm('Delete CV?')">🗑️ Delete</button>
                 </div>
             {% endif %}
         </div>
@@ -99,26 +112,28 @@ function previewPhoto(event) {
     const reader = new FileReader();
     reader.onload = function () {
         document.getElementById('photoPreview').src = reader.result;
-        // If a new photo is selected, ensure the delete flag is reset
-        document.getElementById('deletePhotoHiddenInput').value = '0';
-        // Hide the delete button if a new photo is being uploaded
+        // Reset delete flag if new photo is selected
+        const deleteFlag = document.getElementById('deletePhotoHiddenInput');
+        if (deleteFlag) deleteFlag.value = '0';
+        // Hide delete button when new photo chosen
         const deletePhotoButton = document.getElementById('deletePhotoButton');
         if (deletePhotoButton) {
             deletePhotoButton.style.display = 'none';
         }
     };
-    reader.readAsDataURL(event.target.files[0]);
+    if (event.target.files && event.target.files[0]) {
+        reader.readAsDataURL(event.target.files[0]);
+    }
 }
 
 function confirmDeletePhoto() {
     if (confirm('Are you sure you want to delete this profile photo? It will be removed when you save changes.')) {
-        document.getElementById('photoPreview').src = '/static/default-user.png';
-        document.getElementById('deletePhotoHiddenInput').value = '1';
-        // Hide the delete button
+        const preview = document.getElementById('photoPreview');
+        if (preview) preview.src = '/static/default-user.png';
+        const hidden = document.getElementById('deletePhotoHiddenInput');
+        if (hidden) hidden.value = '1';
         const deletePhotoButton = document.getElementById('deletePhotoButton');
-        if (deletePhotoButton) {
-            deletePhotoButton.style.display = 'none';
-        }
+        if (deletePhotoButton) deletePhotoButton.style.display = 'none';
     }
 }
 </script>
