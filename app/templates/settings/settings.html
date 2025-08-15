@@ -1,7 +1,8 @@
-<!-- templates/settings/settings.html -->
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
+
+  <h2 class="mb-3">Settings</h2>
 
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -17,71 +18,206 @@
     {% endif %}
   {% endwith %}
 
-  <h2>⚙️ Application Settings</h2>
-  <hr>
-
-  <!-- SMTP SETTINGS -->
-  <h4>📧 SMTP Settings</h4>
-  <form method="POST" action="/settings">
+  <!-- ================= SMTP SETTINGS ================= -->
+  <h4>📧 SMTP</h4>
+  <form method="POST" action="{{ url_for('settings.settings_page') }}" class="border p-3 mb-3">
     <input type="hidden" name="smtp_save" value="1">
-    <div class="row">
-      <div class="col-md-6">
-        <label>Mail Server</label>
-        <input name="MAIL_SERVER" class="form-control" value="{{ smtp.MAIL_SERVER }}">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Server</label>
+        <input type="text" class="form-control" name="MAIL_SERVER" value="{{ smtp.MAIL_SERVER or '' }}">
       </div>
       <div class="col-md-2">
-        <label>Port</label>
-        <input name="MAIL_PORT" class="form-control" value="{{ smtp.MAIL_PORT }}">
+        <label class="form-label">Port</label>
+        <input type="text" class="form-control" name="MAIL_PORT" value="{{ smtp.MAIL_PORT or '587' }}">
       </div>
-      <div class="col-md-4">
-        <label>Use TLS</label>
+      <div class="col-md-3">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-control" name="MAIL_USERNAME" value="{{ smtp.MAIL_USERNAME or '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control" name="MAIL_PASSWORD" value="{{ smtp.MAIL_PASSWORD or '' }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Default Sender</label>
+        <input type="text" class="form-control" name="MAIL_DEFAULT_SENDER" value="{{ smtp.MAIL_DEFAULT_SENDER or '' }}">
+      </div>
+      <div class="col-md-3 d-flex align-items-center">
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" name="MAIL_USE_TLS" id="MAIL_USE_TLS"
+                 {% if smtp.MAIL_USE_TLS == 'True' %}checked{% endif %}>
+          <label class="form-check-label" for="MAIL_USE_TLS">Use TLS</label>
+        </div>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">💾 Save SMTP</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Test Email -->
+  <form method="POST" action="{{ url_for('settings.test_email') }}" class="border p-3 mb-4">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Send test email to</label>
+        <input type="email" class="form-control" name="test_email" placeholder="user@example.com" required>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-outline-primary w-100" type="submit">✉ Send Test</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- ================= DATABASE BACKUP ================= -->
+  <h4>🗄️ Database Backup</h4>
+
+  <div class="alert alert-secondary py-2 mb-3">
+    <div><strong>Database file:</strong> {{ backup.db_path or '—' }}</div>
+    <div class="small text-muted">
+      If this shows <code>...\instance\techtrack.db</code>, backups will copy that exact file.
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('settings.settings_page') }}" class="border p-3 mb-3">
+    <input type="hidden" name="backup_save" value="1">
+    <div class="row g-3">
+      <div class="col-md-3 d-flex align-items-center">
         <div class="form-check">
-          <input type="checkbox" name="MAIL_USE_TLS" class="form-check-input" {% if smtp.MAIL_USE_TLS == 'True' %}checked{% endif %}>
-          <label class="form-check-label">Enable</label>
+          <input type="checkbox" name="DB_BACKUP_ENABLED" id="DB_BACKUP_ENABLED" class="form-check-input"
+                 {% if backup.enabled == 'True' %}checked{% endif %}>
+          <label class="form-check-label" for="DB_BACKUP_ENABLED">Enable Daily Backup</label>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Time (HH:MM)</label>
+        <input type="time" name="DB_BACKUP_TIME" class="form-control" value="{{ backup.time }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Keep (days)</label>
+        <input type="number" min="1" name="DB_BACKUP_KEEP_DAYS" class="form-control" value="{{ backup.keep }}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Folder (server path)</label>
+        <div class="input-group">
+          <input type="text" name="DB_BACKUP_DIR" id="DB_BACKUP_DIR" class="form-control" value="{{ backup.dir }}">
+          <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Quick pick</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><button class="dropdown-item" type="button" onclick="setBackupDir('{{ backup.quick_default|e }}')">Default (app/backups/db)</button></li>
+            <li><button class="dropdown-item" type="button" onclick="setBackupDir('{{ backup.quick_instance|e }}')">Instance (instance/backups/db)</button></li>
+          </ul>
+        </div>
+        <div class="form-text">
+          Use a UNC path for network (e.g., <code>\\\\SERVER\\share\\Biztra\\db</code>).
         </div>
       </div>
     </div>
-    <div class="row mt-2">
-      <div class="col-md-6">
-        <label>Username</label>
-        <input name="MAIL_USERNAME" class="form-control" value="{{ smtp.MAIL_USERNAME }}">
+
+    <!-- Network (SMB) -->
+    <div class="border rounded p-3 mt-3">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="SMB_ENABLED" id="SMB_ENABLED"
+               {% if backup.smb_enabled == 'True' %}checked{% endif %}>
+        <label class="form-check-label" for="SMB_ENABLED">Use network share credentials (Windows)</label>
       </div>
-      <div class="col-md-6">
-        <label>Password</label>
-        <input name="MAIL_PASSWORD" type="password" class="form-control" value="{{ smtp.MAIL_PASSWORD }}">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Share (optional)</label>
+          <input type="text" class="form-control" name="SMB_SHARE" placeholder="\\\\SERVER\\share" value="{{ backup.smb_share or '' }}">
+          <div class="form-text">If empty, derived from the folder path above.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">User</label>
+          <input type="text" class="form-control" name="SMB_USER" placeholder="DOMAIN\\user or user@domain" value="{{ backup.smb_user or '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-control" name="SMB_PASSWORD" placeholder="••••••••">
+          <div class="form-text">Leave blank to keep existing.</div>
+        </div>
+      </div>
+      <div class="small text-muted mt-2">
+        Tip: Running the app under an account that already has share access is simpler (you can keep this off).
       </div>
     </div>
-    <div class="mt-2">
-      <label>Default Sender Email</label>
-      <input name="MAIL_DEFAULT_SENDER" class="form-control" value="{{ smtp.MAIL_DEFAULT_SENDER }}">
+
+    <!-- Google Drive -->
+    <div class="border rounded p-3 mt-3">
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" name="GDRIVE_ENABLED" id="GDRIVE_ENABLED"
+               {% if backup.gdrive_enabled == 'True' %}checked{% endif %}>
+        <label class="form-check-label" for="GDRIVE_ENABLED">Also upload backups to Google Drive</label>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Google Drive Folder ID (or URL)</label>
+          <input type="text" class="form-control" name="GDRIVE_FOLDER_ID" placeholder="ID or folder URL" value="{{ backup.gdrive_folder or '' }}">
+          <div class="form-text">You can paste the full folder URL — we’ll extract the ID.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Service Account JSON</label>
+          <div class="input-group">
+            <input type="text" class="form-control" readonly value="{{ backup.gdrive_key_path or '—' }}">
+            <span class="input-group-text">Libs:</span>
+            <span class="input-group-text {% if backup.gdrive_libs=='Yes' %}text-success{% else %}text-danger{% endif %}">{{ backup.gdrive_libs }}</span>
+          </div>
+          <div class="form-text">Upload a Google Cloud service account key JSON (Drive API enabled).</div>
+        </div>
+      </div>
     </div>
-    <div class="mt-3">
-      <button class="btn btn-primary" type="submit">💾 Save Settings</button>
+
+    <div class="row mt-3 g-3">
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" type="submit">💾 Save Settings</button>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-success w-100" type="submit"
+                formaction="{{ url_for('settings.backup_now') }}" formmethod="post" formnovalidate>▶ Run Backup Now</button>
+      </div>
+      <div class="col-md-6 text-end">
+        <div class="small">
+          <strong>Last:</strong> {{ backup.last }} |
+          <strong>Status:</strong> {{ backup.last_status }} |
+          <strong>Next Run:</strong> {{ backup.next_run }}<br>
+          <strong>Drive last:</strong> {{ backup.cloud_last }} |
+          <strong>Drive status:</strong> {{ backup.cloud_status }}
+        </div>
+      </div>
     </div>
   </form>
 
-  <!-- Test SMTP Email -->
-  <form method="POST" action="/test-email" class="mt-4">
-    <label for="test_email" class="form-label">📨 Send Test Email</label>
-    <div class="input-group">
-      <input type="email" name="test_email" id="test_email" class="form-control" placeholder="Enter email to test SMTP" required>
-      <button class="btn btn-warning" type="submit">🧪 Send Test</button>
+  <!-- Upload GDrive Key -->
+  <form method="POST" action="{{ url_for('settings.upload_gdrive_key') }}" enctype="multipart/form-data" class="border p-3 mb-3">
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label">Upload Google Service Account JSON</label>
+        <input type="file" class="form-control" name="gdrive_key" accept=".json" required>
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <button class="btn btn-outline-secondary w-100" type="submit">⬆ Upload Key</button>
+      </div>
     </div>
   </form>
 
-  <hr class="my-4">
+  <!-- Upload last backup to Drive -->
+  <form method="POST" action="{{ url_for('settings.backup_upload_last') }}" class="mb-4">
+    <button class="btn btn-outline-primary">☁ Upload Last Backup to Google Drive</button>
+  </form>
 
-  <!-- IMPORT SECTION -->
-  <h4>📤 Import Data from Excel</h4>
-  <div class="row">
-    {% for model in ['assets', 'spares', 'tonermodel', 'tonercosting', 'customer', 'contract'] %}
+  <!-- ================= DATA UPLOAD (restored) ================= -->
+  <h4>📥 Import Data</h4>
+  <div class="row g-3">
+    {% for model in import_models %}
     <div class="col-md-6">
-      <form action="/settings/upload/{{ model }}" method="POST" enctype="multipart/form-data" class="border p-3 mb-3">
-        <label class="form-label fw-bold">Upload {{ model|capitalize }} File (.xlsx)</label>
-        <input type="file" name="file" accept=".xlsx" class="form-control" required>
-        <div class="d-flex justify-content-between align-items-center mt-2">
-          <button type="submit" class="btn btn-success">Upload</button>
-          <a href="/settings/download-template/{{ model }}" class="btn btn-outline-primary">⬇ Download Template</a>
+      <form action="{{ url_for('settings.upload_excel', table=model) }}" method="POST" enctype="multipart/form-data" class="border p-3">
+        <div class="mb-2 fw-bold">{{ model|capitalize }}</div>
+        <input type="file" name="file" accept=".xlsx" class="form-control mb-2" required>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary" type="submit">Upload</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('settings.download_template', model=model) }}">Template</a>
         </div>
       </form>
     </div>
@@ -89,4 +225,8 @@
   </div>
 
 </div>
+
+<script>
+function setBackupDir(val) { document.getElementById('DB_BACKUP_DIR').value = val; }
+</script>
 {% endblock %}
