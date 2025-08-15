@@ -18,6 +18,111 @@
     {% endif %}
   {% endwith %}
 
+  <!-- ================= BRANDING (Company name + logos) ================= -->
+  <h4>🏷️ Branding</h4>
+  <form method="POST" action="{{ url_for('settings.settings_page') }}" enctype="multipart/form-data" class="border p-3 mb-4">
+    <input type="hidden" name="branding_save" value="1">
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Company Name</label>
+        <input type="text" class="form-control" name="BRAND_COMPANY_NAME" value="{{ brand.company_name }}">
+        <div class="form-text">This text is used inside document titles/headers.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Document Title Format</label>
+        <input type="text" class="form-control" name="BRAND_DOC_TITLE_FORMAT" id="doc_fmt_input"
+               value="{{ brand.doc_fmt }}">
+        <div class="form-text">
+          Use placeholders: <code>{company_name}</code>, <code>{doc_type}</code>.<br>
+          Example: <code>{company_name} ({doc_type})</code> → “YourCo (DELIVERY NOTE)”.
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" name="BRAND_DOC_TYPE_UPPER" id="BRAND_DOC_TYPE_UPPER"
+                 {% if brand.doc_upper == 'True' %}checked{% endif %}>
+          <label class="form-check-label" for="BRAND_DOC_TYPE_UPPER">Uppercase doc type (DELIVERY NOTE)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-2">
+      <div class="col-md-4">
+        <label class="form-label">Logo (for light backgrounds)</label>
+        {% if brand.logo_light %}
+          <div class="mb-2"><img src="{{ brand.logo_light }}" style="max-height:60px"></div>
+        {% endif %}
+        <input type="file" class="form-control" name="logo_light" accept="image/*">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" name="clear_logo_light" id="clear_logo_light">
+          <label class="form-check-label" for="clear_logo_light">Remove current</label>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Logo (white/for dark headers)</label>
+        {% if brand.logo_dark %}
+          <div class="mb-2"><img src="{{ brand.logo_dark }}" style="max-height:60px; background:#333; padding:6px; border-radius:6px"></div>
+        {% endif %}
+        <input type="file" class="form-control" name="logo_dark" accept="image/*">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" name="clear_logo_dark" id="clear_logo_dark">
+          <label class="form-check-label" for="clear_logo_dark">Remove current</label>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Small Icon / Favicon</label>
+        {% if brand.logo_icon %}
+          <div class="mb-2"><img src="{{ brand.logo_icon }}" style="max-height:40px"></div>
+        {% endif %}
+        <input type="file" class="form-control" name="logo_icon" accept="image/*">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" name="clear_logo_icon" id="clear_logo_icon">
+          <label class="form-check-label" for="clear_logo_icon">Remove current</label>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Watermark (for PDFs)</label>
+        {% if brand.watermark %}
+          <div class="mb-2"><img src="{{ brand.watermark }}" style="max-height:80px; opacity:0.7"></div>
+        {% endif %}
+        <input type="file" class="form-control" name="watermark" accept="image/*">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" name="clear_watermark" id="clear_watermark">
+          <label class="form-check-label" for="clear_watermark">Remove current</label>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Company Stamp / Seal (optional)</label>
+        {% if brand.stamp %}
+          <div class="mb-2"><img src="{{ brand.stamp }}" style="max-height:80px"></div>
+        {% endif %}
+        <input type="file" class="form-control" name="stamp" accept="image/*">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" name="clear_stamp" id="clear_stamp">
+          <label class="form-check-label" for="clear_stamp">Remove current</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <button class="btn btn-primary" type="submit">💾 Save Branding</button>
+    </div>
+
+    <!-- Live examples -->
+    <div class="mt-3">
+      <div class="small text-muted mb-1">Live preview:</div>
+      <ul id="doc_preview" class="list-unstyled">
+        {% for p in brand_previews %}
+          <li>• {{ p.title }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </form>
+
   <!-- ================= SMTP SETTINGS ================= -->
   <h4>📧 SMTP</h4>
   <form method="POST" action="{{ url_for('settings.settings_page') }}" class="border p-3 mb-3">
@@ -155,7 +260,7 @@
         <div class="col-md-6">
           <label class="form-label">Google Drive Folder ID (or URL)</label>
           <input type="text" class="form-control" name="GDRIVE_FOLDER_ID" placeholder="ID or folder URL" value="{{ backup.gdrive_folder or '' }}">
-          <div class="form-text">You can paste the full folder URL — we’ll extract the ID.</div>
+          <div class="form-text">Paste the full folder URL or just the ID — both work.</div>
         </div>
         <div class="col-md-6">
           <label class="form-label">Service Account JSON</label>
@@ -207,7 +312,7 @@
     <button class="btn btn-outline-primary">☁ Upload Last Backup to Google Drive</button>
   </form>
 
-  <!-- ================= DATA UPLOAD (restored) ================= -->
+  <!-- ================= DATA UPLOAD ================= -->
   <h4>📥 Import Data</h4>
   <div class="row g-3">
     {% for model in import_models %}
@@ -227,6 +332,29 @@
 </div>
 
 <script>
-function setBackupDir(val) { document.getElementById('DB_BACKUP_DIR').value = val; }
+  function setBackupDir(val) { document.getElementById('DB_BACKUP_DIR').value = val; }
+
+  // Live preview for document title format
+  const fmtInput = document.getElementById('doc_fmt_input');
+  const upperChk = document.getElementById('BRAND_DOC_TYPE_UPPER');
+  const previewList = document.getElementById('doc_preview');
+  const companyNameInput = document.querySelector('input[name="BRAND_COMPANY_NAME"]');
+
+  function renderTitle(company, docType, fmt, upper) {
+    const dt = upper ? docType.toUpperCase() : docType;
+    return (fmt || '{company_name} ({doc_type})')
+      .replace('{company_name}', company || '')
+      .replace('{doc_type}', dt);
+  }
+
+  function updatePreview() {
+    const co = companyNameInput.value || '';
+    const fmt = fmtInput.value || '{company_name} ({doc_type})';
+    const upper = upperChk.checked;
+    const docs = ['Delivery Note','Collection Note','Invoice'];
+    previewList.innerHTML = docs.map(d => `<li>• ${renderTitle(co, d, fmt, upper)}</li>`).join('');
+  }
+
+  [fmtInput, upperChk, companyNameInput].forEach(el => el && el.addEventListener('input', updatePreview));
 </script>
 {% endblock %}
