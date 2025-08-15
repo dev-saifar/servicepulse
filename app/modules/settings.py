@@ -35,10 +35,14 @@ except Exception:
 settings_bp = Blueprint('settings', __name__, template_folder='../templates/settings')
 
 ENV_PATH = os.path.abspath('.env')
+
+# uploads
 UPLOAD_FOLDER = os.path.join('app', 'uploads', 'imports')
 KEYS_FOLDER = os.path.join('app', 'uploads', 'keys')
+BRAND_FOLDER = os.path.join('app', 'static', 'uploads', 'branding')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(KEYS_FOLDER, exist_ok=True)
+os.makedirs(BRAND_FOLDER, exist_ok=True)
 
 # ===================== Helpers =====================
 def _env(key, default=None):
@@ -78,7 +82,6 @@ def _backup_dir():
     path = os.path.expanduser(path)
     if not os.path.isabs(path):
         path = os.path.abspath(path)
-
     _maybe_connect_smb_for_path(path)
     os.makedirs(path, exist_ok=True)
     return path
@@ -115,17 +118,14 @@ def _maybe_connect_smb_for_path(path: str):
         return
     if _env("SMB_ENABLED", "False") != "True":
         return
-
     share = _env("SMB_SHARE", "") or _unc_share_root(path)
     user = _env("SMB_USER", "")
     password = _env("SMB_PASSWORD", "")
     if not (share and user and password):
         return
     try:
-        proc = subprocess.run(
-            ["net", "use", share, password, f"/user:{user}"],
-            capture_output=True, text=True
-        )
+        proc = subprocess.run(["net", "use", share, password, f"/user:{user}"],
+                              capture_output=True, text=True)
         if proc.returncode != 0:
             current_app.logger.info(f"SMB session attempt for {share} returned {proc.returncode}: {proc.stderr}")
     except Exception as e:
@@ -146,6 +146,51 @@ def _extract_drive_folder_id(s: str) -> str:
         return s.rsplit('/', 1)[-1].split('?', 1)[0]
     return s
 
+# Branding helpers
+_ALLOWED_BRAND_KEYS = {
+    "BRAND_LOGO_LIGHT": "logo_light",
+    "BRAND_LOGO_DARK": "logo_dark",
+    "BRAND_LOGO_ICON": "logo_icon",
+    "BRAND_WATERMARK": "watermark",
+    "BRAND_STAMP": "stamp",
+}
+def _brand_rel_path(filename: str) -> str:
+    # return web path under /static/uploads/branding/...
+    return f"/static/uploads/branding/{filename}"
+
+def _save_brand_file(file_storage, var_key: str) -> str:
+    """
+    Save an uploaded branding file; returns web path (/static/...).
+    """
+    if not file_storage or not file_storage.filename:
+        return _env(var_key, "")
+    fn = secure_filename(file_storage.filename)
+    root, ext = os.path.splitext(fn)
+    out_name = f"{var_key.lower()}_{_timestamp()}{ext or '.png'}"
+    dest = os.path.join(BRAND_FOLDER, out_name)
+    file_storage.save(dest)
+    return _brand_rel_path(out_name)
+
+def _delete_brand_file(var_key: str):
+    path = _env(var_key, "")
+    if not path:
+        return
+    # ensure we only delete inside BRAND_FOLDER
+    abs_path = os.path.abspath(os.path.join(current_app.root_path, path.lstrip('/')))
+    if os.path.commonpath([abs_path, os.path.abspath(BRAND_FOLDER)]) != os.path.abspath(BRAND_FOLDER):
+        return
+    try:
+        if os.path.isfile(abs_path):
+            os.remove(abs_path)
+    except Exception:
+        pass
+    _set_env(var_key, "")
+
+def _render_doc_title(company_name: str, doc_type: str, fmt: str, upper: bool) -> str:
+    dt = doc_type.upper() if upper else doc_type
+    safe_fmt = fmt or "{company_name} ({doc_type})"
+    return safe_fmt.replace("{company_name}", company_name or "").replace("{doc_type}", dt)
+
 # ===================== Scheduler =====================
 def _schedule_backup_job_from_env():
     if not _scheduler:
@@ -153,17 +198,14 @@ def _schedule_backup_job_from_env():
     enabled = _env("DB_BACKUP_ENABLED", "False") == "True"
     time_str = _env("DB_BACKUP_TIME", "02:00")
     job_id = "db_backup_job"
-
     try:
         job = _scheduler.get_job(job_id)
         if job:
             _scheduler.remove_job(job_id)
     except Exception:
         pass
-
     if not enabled:
         return
-
     try:
         hour, minute = [int(x) for x in time_str.split(":")]
     except Exception:
@@ -289,11 +331,9 @@ def backup_database():
         else:
             raise RuntimeError(f"Unsupported DB for auto-backup: {uri}")
 
-        # retention
         keep = _env("DB_BACKUP_KEEP_DAYS", "7")
         _prune_old_backups(dest_dir, keep)
 
-        # cloud (optional)
         cloud_note = ""
         try:
             if _env("GDRIVE_ENABLED", "False") == "True":
@@ -364,28 +404,44 @@ def settings_page():
 
     # Save Backup + Network + Drive
     if request.method == 'POST' and 'backup_save' in request.form:
-        # core backup
         _set_env("DB_BACKUP_ENABLED", "True" if request.form.get("DB_BACKUP_ENABLED") == "on" else "False")
         _set_env("DB_BACKUP_TIME", request.form.get("DB_BACKUP_TIME", "02:00"))
         _set_env("DB_BACKUP_KEEP_DAYS", request.form.get("DB_BACKUP_KEEP_DAYS", "7"))
         _set_env("DB_BACKUP_DIR", request.form.get("DB_BACKUP_DIR", _backup_dir()))
-
-        # SMB (network)
         _set_env("SMB_ENABLED", "True" if request.form.get("SMB_ENABLED") == "on" else "False")
         _set_env("SMB_SHARE", request.form.get("SMB_SHARE", ""))
         _set_env("SMB_USER", request.form.get("SMB_USER", ""))
         smb_pass_new = request.form.get("SMB_PASSWORD", "")
         if smb_pass_new != "":
             _set_env("SMB_PASSWORD", smb_pass_new)
-
-        # Drive
         _set_env("GDRIVE_ENABLED", "True" if request.form.get("GDRIVE_ENABLED") == "on" else "False")
         folder_id_input = request.form.get("GDRIVE_FOLDER_ID", "")
         _set_env("GDRIVE_FOLDER_ID", _extract_drive_folder_id(folder_id_input))
-
         os.makedirs(os.path.expanduser(_env("DB_BACKUP_DIR", _backup_dir())), exist_ok=True)
         _schedule_backup_job_from_env()
         flash("✅ Backup settings saved.", "success")
+        return redirect(url_for('settings.settings_page'))
+
+    # Save Branding
+    if request.method == 'POST' and 'branding_save' in request.form:
+        _set_env("BRAND_COMPANY_NAME", request.form.get("BRAND_COMPANY_NAME", "").strip())
+        _set_env("BRAND_DOC_TITLE_FORMAT", request.form.get("BRAND_DOC_TITLE_FORMAT", "{company_name} ({doc_type})").strip())
+        _set_env("BRAND_DOC_TYPE_UPPER", "True" if request.form.get("BRAND_DOC_TYPE_UPPER") == "on" else "False")
+
+        # uploads (keep existing if none chosen)
+        for var_key, field in _ALLOWED_BRAND_KEYS.items():
+            file_obj = request.files.get(field)
+            clear_flag = request.form.get(f"clear_{field}") == "on"
+            if clear_flag:
+                _delete_brand_file(var_key)
+                continue
+            if file_obj and file_obj.filename:
+                # delete old, save new
+                _delete_brand_file(var_key)
+                web_path = _save_brand_file(file_obj, var_key)
+                _set_env(var_key, web_path)
+
+        flash("✅ Branding saved.", "success")
         return redirect(url_for('settings.settings_page'))
 
     # View model
@@ -421,15 +477,34 @@ def settings_page():
         "cloud_status": _env("DB_BACKUP_LAST_CLOUD_STATUS", "—"),
     }
 
-    # This drives the dynamic "Data Upload" section so your old options stay
-    import_models = ["assets", "spares", "tonermodel", "tonercosting", "customer", "contract"]
+    # Branding view model
+    brand = {
+        "company_name": _env("BRAND_COMPANY_NAME", ""),
+        "doc_fmt": _env("BRAND_DOC_TITLE_FORMAT", "{company_name} ({doc_type})"),
+        "doc_upper": _env("BRAND_DOC_TYPE_UPPER", "True"),
+        "logo_light": _env("BRAND_LOGO_LIGHT", ""),
+        "logo_dark": _env("BRAND_LOGO_DARK", ""),
+        "logo_icon": _env("BRAND_LOGO_ICON", ""),
+        "watermark": _env("BRAND_WATERMARK", ""),
+        "stamp": _env("BRAND_STAMP", ""),
+    }
+    # server-side previews for common docs
+    previews = []
+    for doc in ["Delivery Note", "Collection Note", "Invoice"]:
+        previews.append({
+            "name": doc,
+            "title": _render_doc_title(brand["company_name"], doc, brand["doc_fmt"], brand["doc_upper"] == "True")
+        })
 
+    import_models = ["assets", "spares", "tonermodel", "tonercosting", "customer", "contract"]
     backup_files = _list_backups()
     return render_template("settings.html",
-                           smtp=smtp,
+                           smtp=dotenv_values(ENV_PATH),
                            backup=backup_cfg,
                            backup_files=backup_files,
-                           import_models=import_models)
+                           import_models=import_models,
+                           brand=brand,
+                           brand_previews=previews)
 
 @settings_bp.route('/settings/backup-now', methods=['POST'])
 def backup_now():
