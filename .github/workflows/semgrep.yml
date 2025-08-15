@@ -1,0 +1,30 @@
+name: Semgrep
+
+on:
+  push:
+    branches: [work]
+  pull_request:
+    branches: [work]
+  schedule:
+    - cron: '0 0 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+      - name: Run Semgrep scan
+        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d
+        with:
+          config: p/owasp-top-ten
+          generateSarif: true
+        env:
+          SEMGREP_DISABLE_TELEMETRY: 1
