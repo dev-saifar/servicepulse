@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bulk Gate Pass & Invoice</title>
+  <style>
+    @media print {
+      .print-btn { display: none; }
+      body { margin: 0; padding: 0; }
+      .double-a5 { display: flex; justify-content: space-between; padding: 8mm; page-break-after: always; }
+      .a5-container { width: 48%; padding: 8px; box-sizing: border-box; border: 1px solid #000; font-size: 10px; position: relative; min-height: 170mm; }
+      .invoice-section { page-break-before: always; }
+    }
+    body { font-family: 'Segoe UI', sans-serif; font-size: 10px; padding: 20px; }
+    .header { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 4px; }
+    .logo { height: 40px; }
+    .title { text-align: center; font-weight: bold; font-size: 12px; text-transform: uppercase; margin: 6px 0; }
+    h4 { font-size: 11px; margin-bottom: 4px; border-bottom: 1px solid #000; padding-bottom: 1px; }
+    table.details, .product-table { width: 100%; border-collapse: collapse; }
+    table.details td { padding: 3px 5px; vertical-align: top; }
+    .product-table th, .product-table td { border: 1px solid #000; padding: 4px; }
+    .product-table th { background-color: #f2f2f2; }
+    .label { font-weight: bold; width: 40%; white-space: nowrap; }
+    .signature-row { display: flex; justify-content: space-between; margin-top: 16px; }
+    .signature-box { width: 32%; text-align: center; font-size: 9px; border-top: 1px solid #000; padding-top: 3px; }
+    .footer { text-align: right; font-size: 9px; margin-top: 8px; color: #555; }
+    .invoice-section { font-size: 11px; padding: 40px; }
+    .subrow { background: #fafafa; font-size: 9px; }
+  </style>
+</head>
+<body>
+
+<div class="print-btn">
+  <button onclick="window.print()">🖨️ Print Gate Pass & Invoice</button>
+</div>
+
+{% set first = gate_passes[0] %}
+{% set doc_type = (first.type or '').lower() %}
+{% set is_delivery = doc_type == 'delivery' %}
+{% set heading = 'Delivery' if is_delivery else 'Collection' %}
+
+{# Detect if any row has accessories #}
+{% set ns = namespace(has_accessories=false) %}
+{% for it in gate_passes %}
+  {% if (it.accessories or '').strip() %}
+    {% set ns.has_accessories = true %}
+  {% endif %}
+{% endfor %}
+
+<!-- DOUBLE A5 GATE PASS COPIES -->
+<div class="double-a5">
+  {% for i in range(2) %}
+  {% set copy_label = "CUSTOMER COPY" if i == 0 else "OFFICE COPY" %}
+  <div class="a5-container">
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-30deg); font-size:36px; color:rgba(0,0,0,0.1); font-weight:bold;">
+      {{ copy_label }}
+    </div>
+
+    <div class="header">
+      <img src="{{ url_for('static', filename='logo2.png') }}" class="logo" alt="Logo">
+    </div>
+
+    <div class="title">{{ heading }} Gate Pass – {{ copy_label }}</div>
+
+    <h4>Customer Details</h4>
+    <table class="details">
+      <tr><td class="label">Customer Name:</td><td>{{ first.customer_name }}</td></tr>
+      <tr><td class="label">Contract Code:</td><td>{{ first.contract_code or '-' }}</td></tr>
+      <tr><td class="label">Department:</td><td>{{ first.department or '-' }}</td></tr>
+      <tr><td class="label">Contact Number:</td><td>{{ first.contact_number or '-' }}</td></tr>
+      <tr><td class="label">Service Location:</td><td>{{ first.service_location or '-' }}</td></tr>
+      <tr><td class="label">Region:</td><td>{{ first.region or '-' }}</td></tr>
+      <tr><td class="label">Date/Time:</td><td>{{ first.delivery_datetime or now.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+    </table>
+
+    <h4>Machine(s) Information</h4>
+    <table class="product-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Serial</th>
+          <th>Asset Code</th>
+          <th>Model</th>
+          <th>Part No</th>
+          <th>MyQ</th>
+          <th>Department</th>
+          <th>Mono</th>
+          <th>Color</th>
+          {% if ns.has_accessories %}<th>Accessories</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for gp in gate_passes %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ gp.serial_number }}</td>
+          <td>{{ gp.asset_code or '-' }}</td>
+          <td>{{ gp.asset_description or '-' }}</td>
+          <td>{{ gp.part_number or 'N/A' }}</td>
+          <td>{{ gp.myq if gp.myq is not none else '-' }}</td>
+          <td>{{ gp.department or '-' }}</td>
+          <td>{{ gp.mono_reading or '-' }}</td>
+          <td>{{ gp.color_reading or '-' }}</td>
+          {% if ns.has_accessories %}<td>{{ gp.accessories or '-' }}</td>{% endif %}
+        </tr>
+        {% if (gp.remarks or '').strip() %}
+        <tr class="subrow">
+          <td colspan="{{ 10 if ns.has_accessories else 9 }}">
+            <strong>Remarks:</strong> {{ gp.remarks }}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <br><br>
+    <div class="signature-row">
+      <div class="signature-box">{{ heading == 'Delivery' and 'Delivered By' or 'Collected By' }}</div>
+      <div class="signature-box">Received By (Client)</div>
+      <div class="signature-box">Security Sign</div>
+    </div>
+
+    <div class="footer">Printed on: {{ now.strftime('%Y-%m-%d %H:%M') }} &nbsp; | &nbsp; GP No: {{ gp_number }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- INVOICE REQUEST PAGE -->
+<div class="invoice-section">
+  <table>
+    <tr>
+      <td style="width: 70%;">
+        {% if billing_company == "MDS" %}
+          <h2 style="margin: 0; font-size: 16px;">MFI MANAGED DOCUMENT SOLUTIONS LTD</h2>
+        {% else %}
+          <h2 style="margin: 0; font-size: 16px;">MFI DOCUMENT SOLUTIONS LTD</h2>
+        {% endif %}
+        <div style="font-size: 10px; margin-top: 5px;">
+          Plot No. 43, Lumumba Avenue, Nakasero,<br>
+          Plot No. 1967/8, Kalema Drive, Makindye Division, Diplomat Zone, Kansanga-Muyenga,<br>
+          Kampala, Uganda.
+        </div>
+      </td>
+      <td style="text-align: right; vertical-align: top;">
+        <img src="{{ url_for('static', filename='logo2.png') }}" style="height: 60px;"><br>
+        <div style="font-size: 10px; margin-top: 4px;"><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <hr style="margin: 10px 0;">
+  <h2 style="text-align: center; margin: 0; text-transform: uppercase;">Invoice Request Form</h2>
+  <div style="text-align: center; font-weight: bold;">{{ heading|upper }} NOTE</div>
+  <br>
+
+  <table>
+    <tr>
+      <td><strong>Customer Name:</strong> {{ first.customer_name }}</td>
+      <td><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td>
+    </tr>
+    <tr>
+      <td><strong>Service Location:</strong> {{ first.service_location or '-' }}</td>
+      <td><strong>Region:</strong> {{ first.region or '-' }}</td>
+    </tr>
+    <tr>
+      <td><strong>Contact No:</strong> {{ first.contact_number or '-' }}</td>
+      <td><strong>Delivery Date:</strong> {{ first.delivery_datetime or '-' }}</td>
+    </tr>
+    <tr>
+      <td><strong>Requested By:</strong> {{ first.technician_name or '-' }}</td>
+      <td><strong>Technician Email:</strong> {{ first.technician_email or '-' }}</td>
+    </tr>
+    <tr>
+      <td><strong>LPO / Agreement No:</strong> {{ first.contract_code or '-' }}</td>
+      <td><strong>Segment Type:</strong> {{ billing_company }}</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>LPO Received:</strong> Leasing Contract</td>
+    </tr>
+  </table>
+
+  <br>
+  <strong>Product Details:</strong>
+  <table class="product-table">
+    <thead>
+      <tr>
+        <th>Sr.</th>
+        <th>Product Code</th>
+        <th>Product Description</th>
+        <th>Qty</th>
+        <th>Total Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for gp in gate_passes %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ gp.part_number or 'N/A' }}</td>
+        <td>
+          Machine Model: {{ gp.asset_description or '-' }}<br>
+          Serial Number: {{ gp.serial_number }}<br>
+          Machine Code: {{ gp.asset_code or '-' }}<br>
+          MyQ: {{ gp.myq if gp.myq is not none else '-' }}<br>
+          Start B/W Reading: {{ gp.mono_reading or 'N/A' }}<br>
+          Start Color Reading: {{ gp.color_reading or 'N/A' }}
+          {% if (gp.remarks or '').strip() %}<br><em>Remarks: {{ gp.remarks }}</em>{% endif %}
+        </td>
+        <td>1</td>
+        <td>N/A</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+   <br><br>
+  <table>
+    <tr><td><strong>Head of Department:                                               </strong></td><td style="text-align:right;"><strong>Date:</strong> {{ now.strftime('%d-%b-%Y') }}</td></tr>
+  </table>
+
+  <br><br>
+  <div style="border-top: 1px dashed #000; padding-top: 5px;">
+    <strong>(Billing Section)</strong><br><br><br><br>
+    <div>
+      <span style="display: inline-block; margin-right: 60px;">☐ Invoice Created</span>
+      <span style="display: inline-block; margin-right: 60px;">☐ Invoice No ______________</span>
+      <span>☐ Invoice Date ______________</span>
+    </div>
+    <br><br>
+    <div>
+      <span style="display: inline-block; margin-right: 60px;">Billing Head Name: ____________________</span>
+      <span>Signature: ____________________</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

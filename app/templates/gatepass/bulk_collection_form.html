@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h4><i class="fas fa-boxes"></i> Bulk Collection Gate Pass</h4>
+
+  <div class="mb-3">
+    <label>Customer Name</label>
+    <input type="text" id="customer_name" class="form-control" autocomplete="off" placeholder="Start typing...">
+
+  </div>
+
+  <form id="bulkCollectionForm" method="POST" action="{{ url_for('gate_pass.bulk_collection') }}">
+    <input type="hidden" name="customer_name" id="hidden_customer">
+
+    <table class="table table-bordered" id="assets_table" style="display:none;">
+      <thead class="table-light">
+        <tr>
+          <th>Select</th>
+          <th>Serial Number</th>
+          <th>Asset Code</th>
+          <th>Description</th>
+          <th>Location</th>
+          <th>Region</th>
+          <th>Technician</th>
+          <th>Mono Reading</th>
+          <th>Color Reading</th>
+          <th>Accessories</th>
+        </tr>
+      </thead>
+      <tbody id="assets_body">
+      </tbody>
+    </table>
+
+    <button type="submit" class="btn btn-success" id="submitBtn" style="display:none;">✅ Submit Collection</button>
+  </form>
+</div>
+
+<!-- jQuery & UI -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+<script>
+$(function () {
+  $("#customer_name").autocomplete({
+    source: function (req, res) {
+  $.get("{{ url_for('gate_pass.search_customers_bulk') }}", { term: req.term }, res);
+},
+
+    minLength: 2,
+    select: function (event, ui) {
+      $("#hidden_customer").val(ui.item.value);
+      fetchAssets(ui.item.value);
+    }
+  });
+});
+
+function fetchAssets(customer) {
+  $.get("{{ url_for('gate_pass.get_assets_by_customer') }}", { customer_name: customer }, function (assets) {
+    if (assets.length === 0) {
+      alert("No machines found.");
+      $("#assets_table, #submitBtn").hide();
+      return;
+    }
+
+    let rows = "";
+    assets.forEach((a, i) => {
+      rows += `
+        <tr>
+          <td><input type="checkbox" name="select_${i}"></td>
+          <td><input type="hidden" name="serial_number_${i}" value="${a.serial_number}">${a.serial_number}</td>
+          <td><input type="hidden" name="asset_code_${i}" value="${a.asset_code}">${a.asset_code}</td>
+          <td><input type="hidden" name="asset_description_${i}" value="${a.asset_description}">${a.asset_description}</td>
+          <td><input type="hidden" name="service_location_${i}" value="${a.service_location}">${a.service_location}</td>
+          <td><input type="hidden" name="region_${i}" value="${a.region}">${a.region}</td>
+          <td><input type="hidden" name="technician_name_${i}" value="${a.technician_name}">${a.technician_name}</td>
+          <td><input type="number" name="mono_reading_${i}" class="form-control" value="0"></td>
+          <td><input type="number" name="color_reading_${i}" class="form-control" value="0"></td>
+          <td><input type="text" name="accessories_${i}" class="form-control"></td>
+        </tr>`;
+    });
+
+    $("#assets_body").html(rows);
+    $("#assets_table, #submitBtn").show();
+  });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h4 class="mb-3">Decommission Machine - {{ asset.serial_number }}</h4>
+
+  <form action="{{ url_for('gate_pass.confirm_decommission') }}" method="POST">
+    <input type="hidden" name="serial_number" value="{{ asset.serial_number }}">
+
+    <div class="card mb-4">
+      <div class="card-header bg-danger text-white">Asset Details</div>
+      <div class="card-body row">
+        <div class="form-group col-md-6">
+          <label>Customer Name</label>
+          <input type="text" class="form-control" value="{{ asset.customer_name }}" readonly>
+        </div>
+        <div class="form-group col-md-3">
+          <label>Contract Code</label>
+          <input type="text" class="form-control" value="{{ asset.contract }}" readonly>
+        </div>
+        <div class="form-group col-md-3">
+          <label>Department</label>
+          <input type="text" class="form-control" value="{{ asset.department }}" readonly>
+        </div>
+
+        <div class="form-group col-md-3">
+          <label>Serial Number</label>
+          <input type="text" class="form-control" value="{{ asset.serial_number }}" readonly>
+        </div>
+        <div class="form-group col-md-3">
+          <label>Asset Code</label>
+          <input type="text" class="form-control" value="{{ asset.asset_code }}" readonly>
+        </div>
+        <div class="form-group col-md-6">
+          <label>Asset Description</label>
+          <input type="text" class="form-control" value="{{ asset.asset_Description }}" readonly>
+        </div>
+
+        <div class="form-group col-md-4">
+          <label>Technician</label>
+          <input type="text" class="form-control" value="{{ asset.technician_name }}" readonly>
+        </div>
+        <div class="form-group col-md-4">
+          <label>Location</label>
+          <input type="text" class="form-control" value="{{ asset.service_location }}" readonly>
+        </div>
+        <div class="form-group col-md-4">
+          <label>Region</label>
+          <input type="text" class="form-control" value="{{ asset.region }}" readonly>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">Decommission Details</div>
+      <div class="card-body row">
+        <div class="form-group col-md-4">
+          <label>Mono Reading</label>
+          <input type="number" step="1" name="mono_reading" class="form-control" required>
+        </div>
+        <div class="form-group col-md-4">
+          <label>Color Reading</label>
+          <input type="number" step="1" name="color_reading" class="form-control" required>
+        </div>
+        <div class="form-group col-md-12">
+          <label>Remarks</label>
+          <textarea class="form-control" name="remarks" rows="3" placeholder="Reason for decommissioning" required></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-right">
+      <button type="submit" class="btn btn-danger">Submit Decommission</button>
+      <a href="{{ url_for('gate_pass.workshop_assets') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

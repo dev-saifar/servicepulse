@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+  <h2>🚚 Bulk Delivery Gate Pass</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('gate_pass.bulk_delivery') }}" id="bulk-delivery-form">
+    <!-- Top: Customer & Contract (kept), Contact (kept), Service Location (REMOVED) -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-5">
+        <label for="customer_name" class="form-label">Customer Name</label>
+        <input type="text" class="form-control" id="customer_name" name="customer_name" autocomplete="off" required>
+      </div>
+      <div class="col-md-4">
+        <label for="contract_code" class="form-label">Contract Code</label>
+        <input type="text" class="form-control" id="contract_code" name="contract_code" readonly>
+      </div>
+      <div class="col-md-3">
+        <label for="contact_number" class="form-label">Contact Number</label>
+        <input type="text" class="form-control" id="contact_number" name="contact_number">
+      </div>
+    </div>
+
+    <h4 class="mt-4">📦 Machine Details</h4>
+    <table class="table table-bordered align-middle" id="machines-table">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 14%">Serial No</th>
+          <th style="width: 28%">Model (type to search)</th>
+          <th style="width: 10%">MyQ</th>
+          <th style="width: 14%">Department</th>
+          <th style="width: 10%">Mono</th>
+          <th style="width: 10%">Color</th>
+          <th style="width: 14%">Remarks</th>
+          <th style="width: 6%">Action</th>
+        </tr>
+      </thead>
+      <tbody id="machines-table-body">
+        <!-- Initial row -->
+        <tr>
+          <td><input type="text" class="form-control" name="serial_number[]" placeholder="e.g., X1234"></td>
+
+          <!-- Model + suggestions + hidden part_number[] -->
+          <td class="position-relative">
+            <input type="text" class="form-control asset-desc" name="asset_description[]" placeholder="Start typing model…">
+            <input type="hidden" name="part_number[]">
+            <ul class="list-group position-absolute w-100 mt-1 d-none suggestion-list"></ul>
+          </td>
+
+          <!-- MyQ YES/NO -->
+          <td>
+            <select class="form-select" name="myq[]">
+              <option value="">Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </td>
+
+          <td><input type="text" class="form-control" name="department[]" placeholder="Dept"></td>
+          <td><input type="number" class="form-control" name="mono_reading[]" min="0" placeholder="0"></td>
+          <td><input type="number" class="form-control" name="color_reading[]" min="0" placeholder="0"></td>
+          <td><input type="text" class="form-control" name="remarks[]" placeholder="Optional"></td>
+          <td><button type="button" class="btn btn-sm btn-danger remove-row">✖</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="button" class="btn btn-success mb-3" id="add-machine">➕ Add Machine</button>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Submit Bulk Delivery</button>
+      <a href="{{ url_for('gate_pass.task_list') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- jQuery & jQuery UI (if not already in base.html) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+(function () {
+  // ---------- Customer autocomplete + contract fetch ----------
+  $("#customer_name").autocomplete?.({}); // no-op if jQuery UI not loaded
+  $("#customer_name").on("input", function () {
+    const term = this.value.trim();
+    if (term.length < 2) return;
+
+    $.getJSON("{{ url_for('gate_pass.search_customers_bulk') }}", { term })
+      .done(items => {
+        // lightweight datalist-style suggestions
+        const listId = "customer_bulk_datalist";
+        let dl = document.getElementById(listId);
+        if (!dl) {
+          dl = document.createElement("datalist");
+          dl.id = listId;
+          document.body.appendChild(dl);
+        }
+        dl.innerHTML = (items || []).map(i => `<option value="${i.value}"></option>`).join("");
+        $("#customer_name").attr("list", listId);
+      });
+  });
+
+  $("#customer_name").on("change", function () {
+    const customer_name = this.value;
+    $.getJSON("{{ url_for('gate_pass.get_contract_by_customer_bulk') }}", { customer_name })
+      .done(data => { $("#contract_code").val(data.contract_code || ""); });
+  });
+
+  // ---------- Row add/remove ----------
+  $("#add-machine").on("click", function () {
+    const row = `
+      <tr>
+        <td><input type="text" class="form-control" name="serial_number[]" placeholder="e.g., X1234"></td>
+        <td class="position-relative">
+          <input type="text" class="form-control asset-desc" name="asset_description[]" placeholder="Start typing model…">
+          <input type="hidden" name="part_number[]">
+          <ul class="list-group position-absolute w-100 mt-1 d-none suggestion-list"></ul>
+        </td>
+        <td>
+          <select class="form-select" name="myq[]">
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </td>
+        <td><input type="text" class="form-control" name="department[]" placeholder="Dept"></td>
+        <td><input type="number" class="form-control" name="mono_reading[]" min="0" placeholder="0"></td>
+        <td><input type="number" class="form-control" name="color_reading[]" min="0" placeholder="0"></td>
+        <td><input type="text" class="form-control" name="remarks[]" placeholder="Optional"></td>
+        <td><button type="button" class="btn btn-sm btn-danger remove-row">✖</button></td>
+      </tr>`;
+    $("#machines-table-body").append(row);
+  });
+
+  $("#machines-table-body").on("click", ".remove-row", function () {
+    if ($("#machines-table-body tr").length > 1) {
+      $(this).closest("tr").remove();
+    } else {
+      alert("At least one machine row is required.");
+    }
+  });
+
+  // ---------- Per-row model auto-suggest (from description) ----------
+  // Uses the same endpoints/logic pattern as single delivery form (search + get part number). :contentReference[oaicite:3]{index=3}
+  const MIN_Q = 2;
+
+  $("#machines-table-body")
+    .on("input", ".asset-desc", function () {
+      const $input = $(this);
+      const q = $input.val().trim();
+      const $row = $input.closest("td");
+      const $list = $row.find(".suggestion-list");
+
+      if (q.length < MIN_Q) { $list.addClass("d-none").empty(); return; }
+
+      fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(descriptions => {
+          $list.empty();
+          if (!descriptions || descriptions.length === 0) {
+            $list.addClass("d-none");
+            return;
+          }
+          descriptions.forEach(desc => {
+            const li = document.createElement("li");
+            li.className = "list-group-item list-group-item-action";
+            li.style.cursor = "pointer";
+            li.textContent = desc;
+            li.onclick = () => selectModel($row, desc);
+            $list.append(li);
+          });
+          $list.removeClass("d-none");
+        })
+        .catch(() => { $list.addClass("d-none").empty(); });
+    })
+    .on("click", function (e) {
+      // close lists when clicking outside a suggestion list
+      if (!e.target.classList.contains("list-group-item")) {
+        $(".suggestion-list").addClass("d-none");
+      }
+    });
+
+  function selectModel($cell, modelText) {
+    // set model text
+    $cell.find("input.asset-desc").val(modelText);
+    // hide suggestions
+    $cell.find(".suggestion-list").addClass("d-none").empty();
+    // fetch part number into hidden input
+    fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(modelText)}`)
+      .then(res => res.json())
+      .then(data => {
+        $cell.find("input[type='hidden'][name='part_number[]']").val(data.part_no || "");
+      })
+      .catch(() => {
+        $cell.find("input[type='hidden'][name='part_number[]']").val("");
+      });
+  }
+
+  // ---------- Basic validation ----------
+  $("#bulk-delivery-form").on("submit", function (e) {
+    const anySerial = $("input[name='serial_number[]']").filter(function () { return $(this).val().trim(); }).length > 0;
+    if (!anySerial) {
+      e.preventDefault();
+      alert("Please add at least one machine with a serial number.");
+    }
+  });
+})();
+</script>
+{% endblock %}

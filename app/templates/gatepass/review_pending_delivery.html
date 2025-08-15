@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h4><i class="fas fa-edit"></i> Review & Finalize Delivery</h4>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <!-- Hidden: we’ll compute cust_code & billing from Contract on backend -->
+    <input type="hidden" name="serial_number" value="{{ delivery.serial_number }}">
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label>Serial Number</label>
+        <input type="text" class="form-control" value="{{ delivery.serial_number }}" readonly>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Location Type</label>
+        <select class="form-control" id="location_select" name="location" required>
+          <option value="">-- Select --</option>
+          <option value="kampala">Kampala</option>
+          <option value="upcountry">Upcountry</option>
+          <option value="used">Used</option>
+        </select>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Asset Code</label>
+        <input type="text" class="form-control" name="asset_code" id="asset_code" required readonly>
+      </div>
+
+      <div class="col-md-6 mb-3 position-relative">
+        <label>Asset Description / Model</label>
+        <input type="text" class="form-control" name="asset_description" id="asset_desc"
+               value="{{ delivery.asset_Description or '' }}" required autocomplete="off">
+        <ul id="asset_desc_suggestions" class="list-group position-absolute w-100" style="z-index:9999;"></ul>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Part No</label>
+        <input type="text" class="form-control" name="part_number" id="part_no"
+               value="{{ delivery.part_no or '' }}" readonly>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Technician</label>
+        <select name="technician_name" id="technician_select" class="form-control" required>
+          <option value="">-- Select --</option>
+          {% for tech in technicians %}
+            <option value="{{ tech.name }}" data-email="{{ tech.email }}"
+              {{ 'selected' if delivery.technician_name==tech.name else '' }}>
+              {{ tech.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Technician Email</label>
+        <input type="email" class="form-control" name="technician_email" id="tech_email"
+               value="{{ delivery.technician_email or '' }}" readonly>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Department</label>
+        <input type="text" class="form-control" name="department" value="{{ delivery.department or '' }}">
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Service Location</label>
+        <input type="text" class="form-control" value="{{ delivery.service_location or '' }}">
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Region</label>
+        <input type="text" class="form-control" value="{{ delivery.region or '' }}">
+      </div>
+
+
+      <div class="col-md-3 mb-3">
+        <label>PM Frequency</label>
+        <input type="text" class="form-control" name="pm_freq" value="{{ delivery.pm_freq or '60' }}">
+      </div>
+
+      <div class="col-md-3 mb-3">
+        <label>Asset Status</label>
+        <select name="asset_status" class="form-control">
+          <option value="Active" selected>Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Under Maintenance">Under Maintenance</option>
+        </select>
+      </div>
+
+      <div class="col-md-6 mb-3">
+        <label>Install Date</label>
+        <input type="date" class="form-control" name="install_date"
+               value="{{ (delivery.install_date or now.strftime('%Y-%m-%d')) }}">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-success">Finalize Delivery</button>
+    <a href="{{ url_for('gate_pass.pending_deliveries') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+
+<script>
+  // Technician → email
+  document.getElementById('technician_select').addEventListener('change', function () {
+    const email = this.options[this.selectedIndex].getAttribute('data-email') || '';
+    document.getElementById('tech_email').value = email;
+  });
+
+  // Location → asset code (server-side unique generator)
+  document.getElementById('location_select').addEventListener('change', function () {
+    const loc = this.value;
+    if (!loc) return;
+    fetch(`/assets_add/generate_asset_code?location=${encodeURIComponent(loc)}`)
+      .then(r => r.json())
+      .then(d => { document.getElementById('asset_code').value = d.asset_code || ''; });
+  });
+
+  // Model suggest (same as Asset Add)
+  const descInput = document.getElementById("asset_desc");
+  const list = document.getElementById("asset_desc_suggestions");
+  function hideList(){ list.innerHTML=""; list.style.display="none"; }
+  descInput.addEventListener("input", function () {
+    const q = this.value.trim();
+    if (q.length < 2) { hideList(); return; }
+    fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(q)}`)
+      .then(res => res.json())
+      .then(descriptions => {
+        list.innerHTML="";
+        if (!descriptions.length){ hideList(); return; }
+        descriptions.forEach(desc => {
+          const li = document.createElement("li");
+          li.className = "list-group-item list-group-item-action";
+          li.textContent = desc;
+          li.onclick = () => {
+            descInput.value = desc; hideList();
+            fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
+              .then(r => r.json()).then(data => {
+                document.getElementById("part_no").value = data.part_no || "";
+              });
+          };
+          list.appendChild(li);
+        });
+        list.style.display="block";
+      });
+  });
+  document.addEventListener("click", (e)=> {
+    if(!descInput.contains(e.target) && !list.contains(e.target)) hideList();
+  });
+</script>
+{% endblock %}
