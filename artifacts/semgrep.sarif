@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "toolExecutionNotifications": [
+            {
+              "descriptor": {
+                "id": "SemgrepError"
+              },
+              "level": "error",
+              "message": {
+                "text": "Failed to download config from https://semgrep.dev/c/auto: HTTPSConnectionPool(host='semgrep.dev', port=443): Max\nretries exceeded with url: /c/auto (Caused by ProxyError('Cannot connect to proxy.', OSError('Tunnel connection failed:\n403 Forbidden')))"
+              }
+            },
+            {
+              "descriptor": {
+                "id": "SemgrepError"
+              },
+              "level": "error",
+              "message": {
+                "text": "invalid configuration file found (1 configs were invalid)"
+              }
+            }
+          ]
+        }
+      ],
+      "results": [],
+      "tool": {
+        "driver": {
+          "name": "semgrep",
+          "rules": [],
+          "semanticVersion": "1.32.0"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
