@@ -1,360 +1,599 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="container mt-4">
 
-  <h2 class="mb-3">Settings</h2>
+{% block content %}
+<div class="container my-4 settings-page">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-1"><i class="fas fa-sliders-h me-2"></i>ServicePulse Settings</h3>
+      <div class="text-muted">Configure email, backups, branding, and data import.</div>
+    </div>
+  </div>
 
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="mt-2">
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      </div>
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='error' else category }} alert-dismissible fade show" role="alert">
+          {{ message|safe }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
     {% endif %}
   {% endwith %}
 
-  <!-- ================= BRANDING (Company name + logos) ================= -->
-  <h4>🏷️ Branding</h4>
-  <form method="POST" action="{{ url_for('settings.settings_page') }}" enctype="multipart/form-data" class="border p-3 mb-4">
-    <input type="hidden" name="branding_save" value="1">
+  <!-- Tabs -->
+  <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-backup" data-bs-toggle="tab" data-bs-target="#panel-backup" type="button" role="tab">
+        <i class="fas fa-database me-1"></i> Backup
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-smtp" data-bs-toggle="tab" data-bs-target="#panel-smtp" type="button" role="tab">
+        <i class="fas fa-envelope me-1"></i> SMTP
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-branding" data-bs-toggle="tab" data-bs-target="#panel-branding" type="button" role="tab">
+        <i class="fas fa-palette me-1"></i> Branding
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-import" data-bs-toggle="tab" data-bs-target="#panel-import" type="button" role="tab">
+        <i class="fas fa-file-import me-1"></i> Data Import
+      </button>
+    </li>
+  </ul>
 
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Company Name</label>
-        <input type="text" class="form-control" name="BRAND_COMPANY_NAME" value="{{ brand.company_name }}">
-        <div class="form-text">This text is used inside document titles/headers.</div>
-      </div>
+  <div class="tab-content pt-3">
 
-      <div class="col-md-6">
-        <label class="form-label">Document Title Format</label>
-        <input type="text" class="form-control" name="BRAND_DOC_TITLE_FORMAT" id="doc_fmt_input"
-               value="{{ brand.doc_fmt }}">
-        <div class="form-text">
-          Use placeholders: <code>{company_name}</code>, <code>{doc_type}</code>.<br>
-          Example: <code>{company_name} ({doc_type})</code> → “YourCo (DELIVERY NOTE)”.
-        </div>
-        <div class="form-check mt-2">
-          <input class="form-check-input" type="checkbox" name="BRAND_DOC_TYPE_UPPER" id="BRAND_DOC_TYPE_UPPER"
-                 {% if brand.doc_upper == 'True' %}checked{% endif %}>
-          <label class="form-check-label" for="BRAND_DOC_TYPE_UPPER">Uppercase doc type (DELIVERY NOTE)</label>
-        </div>
-      </div>
-    </div>
+    <!-- BACKUP TAB -->
+    <div class="tab-pane fade show active" id="panel-backup" role="tabpanel" aria-labelledby="tab-backup">
 
-    <div class="row g-3 mt-2">
-      <div class="col-md-4">
-        <label class="form-label">Logo (for light backgrounds)</label>
-        {% if brand.logo_light %}
-          <div class="mb-2"><img src="{{ brand.logo_light }}" style="max-height:60px"></div>
-        {% endif %}
-        <input type="file" class="form-control" name="logo_light" accept="image/*">
-        <div class="form-check mt-1">
-          <input class="form-check-input" type="checkbox" name="clear_logo_light" id="clear_logo_light">
-          <label class="form-check-label" for="clear_logo_light">Remove current</label>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label">Logo (white/for dark headers)</label>
-        {% if brand.logo_dark %}
-          <div class="mb-2"><img src="{{ brand.logo_dark }}" style="max-height:60px; background:#333; padding:6px; border-radius:6px"></div>
-        {% endif %}
-        <input type="file" class="form-control" name="logo_dark" accept="image/*">
-        <div class="form-check mt-1">
-          <input class="form-check-input" type="checkbox" name="clear_logo_dark" id="clear_logo_dark">
-          <label class="form-check-label" for="clear_logo_dark">Remove current</label>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label">Small Icon / Favicon</label>
-        {% if brand.logo_icon %}
-          <div class="mb-2"><img src="{{ brand.logo_icon }}" style="max-height:40px"></div>
-        {% endif %}
-        <input type="file" class="form-control" name="logo_icon" accept="image/*">
-        <div class="form-check mt-1">
-          <input class="form-check-input" type="checkbox" name="clear_logo_icon" id="clear_logo_icon">
-          <label class="form-check-label" for="clear_logo_icon">Remove current</label>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label">Watermark (for PDFs)</label>
-        {% if brand.watermark %}
-          <div class="mb-2"><img src="{{ brand.watermark }}" style="max-height:80px; opacity:0.7"></div>
-        {% endif %}
-        <input type="file" class="form-control" name="watermark" accept="image/*">
-        <div class="form-check mt-1">
-          <input class="form-check-input" type="checkbox" name="clear_watermark" id="clear_watermark">
-          <label class="form-check-label" for="clear_watermark">Remove current</label>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label">Company Stamp / Seal (optional)</label>
-        {% if brand.stamp %}
-          <div class="mb-2"><img src="{{ brand.stamp }}" style="max-height:80px"></div>
-        {% endif %}
-        <input type="file" class="form-control" name="stamp" accept="image/*">
-        <div class="form-check mt-1">
-          <input class="form-check-input" type="checkbox" name="clear_stamp" id="clear_stamp">
-          <label class="form-check-label" for="clear_stamp">Remove current</label>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-3">
-      <button class="btn btn-primary" type="submit">💾 Save Branding</button>
-    </div>
-
-    <!-- Live examples -->
-    <div class="mt-3">
-      <div class="small text-muted mb-1">Live preview:</div>
-      <ul id="doc_preview" class="list-unstyled">
-        {% for p in brand_previews %}
-          <li>• {{ p.title }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-  </form>
-
-  <!-- ================= SMTP SETTINGS ================= -->
-  <h4>📧 SMTP</h4>
-  <form method="POST" action="{{ url_for('settings.settings_page') }}" class="border p-3 mb-3">
-    <input type="hidden" name="smtp_save" value="1">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label">Server</label>
-        <input type="text" class="form-control" name="MAIL_SERVER" value="{{ smtp.MAIL_SERVER or '' }}">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Port</label>
-        <input type="text" class="form-control" name="MAIL_PORT" value="{{ smtp.MAIL_PORT or '587' }}">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Username</label>
-        <input type="text" class="form-control" name="MAIL_USERNAME" value="{{ smtp.MAIL_USERNAME or '' }}">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Password</label>
-        <input type="password" class="form-control" name="MAIL_PASSWORD" value="{{ smtp.MAIL_PASSWORD or '' }}">
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Default Sender</label>
-        <input type="text" class="form-control" name="MAIL_DEFAULT_SENDER" value="{{ smtp.MAIL_DEFAULT_SENDER or '' }}">
-      </div>
-      <div class="col-md-3 d-flex align-items-center">
-        <div class="form-check mt-2">
-          <input class="form-check-input" type="checkbox" name="MAIL_USE_TLS" id="MAIL_USE_TLS"
-                 {% if smtp.MAIL_USE_TLS == 'True' %}checked{% endif %}>
-          <label class="form-check-label" for="MAIL_USE_TLS">Use TLS</label>
-        </div>
-      </div>
-      <div class="col-md-3 d-flex align-items-end">
-        <button class="btn btn-primary w-100" type="submit">💾 Save SMTP</button>
-      </div>
-    </div>
-  </form>
-
-  <!-- Test Email -->
-  <form method="POST" action="{{ url_for('settings.test_email') }}" class="border p-3 mb-4">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Send test email to</label>
-        <input type="email" class="form-control" name="test_email" placeholder="user@example.com" required>
-      </div>
-      <div class="col-md-3 d-flex align-items-end">
-        <button class="btn btn-outline-primary w-100" type="submit">✉ Send Test</button>
-      </div>
-    </div>
-  </form>
-
-  <!-- ================= DATABASE BACKUP ================= -->
-  <h4>🗄️ Database Backup</h4>
-
-  <div class="alert alert-secondary py-2 mb-3">
-    <div><strong>Database file:</strong> {{ backup.db_path or '—' }}</div>
-    <div class="small text-muted">
-      If this shows <code>...\instance\techtrack.db</code>, backups will copy that exact file.
-    </div>
-  </div>
-
-  <form method="POST" action="{{ url_for('settings.settings_page') }}" class="border p-3 mb-3">
-    <input type="hidden" name="backup_save" value="1">
-    <div class="row g-3">
-      <div class="col-md-3 d-flex align-items-center">
-        <div class="form-check">
-          <input type="checkbox" name="DB_BACKUP_ENABLED" id="DB_BACKUP_ENABLED" class="form-check-input"
-                 {% if backup.enabled == 'True' %}checked{% endif %}>
-          <label class="form-check-label" for="DB_BACKUP_ENABLED">Enable Daily Backup</label>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label">Time (HH:MM)</label>
-        <input type="time" name="DB_BACKUP_TIME" class="form-control" value="{{ backup.time }}">
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label">Keep (days)</label>
-        <input type="number" min="1" name="DB_BACKUP_KEEP_DAYS" class="form-control" value="{{ backup.keep }}">
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label">Folder (server path)</label>
-        <div class="input-group">
-          <input type="text" name="DB_BACKUP_DIR" id="DB_BACKUP_DIR" class="form-control" value="{{ backup.dir }}">
-          <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Quick pick</button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><button class="dropdown-item" type="button" onclick="setBackupDir('{{ backup.quick_default|e }}')">Default (app/backups/db)</button></li>
-            <li><button class="dropdown-item" type="button" onclick="setBackupDir('{{ backup.quick_instance|e }}')">Instance (instance/backups/db)</button></li>
-          </ul>
-        </div>
-        <div class="form-text">
-          Use a UNC path for network (e.g., <code>\\\\SERVER\\share\\Biztra\\db</code>).
-        </div>
-      </div>
-    </div>
-
-    <!-- Network (SMB) -->
-    <div class="border rounded p-3 mt-3">
-      <div class="form-check mb-2">
-        <input class="form-check-input" type="checkbox" name="SMB_ENABLED" id="SMB_ENABLED"
-               {% if backup.smb_enabled == 'True' %}checked{% endif %}>
-        <label class="form-check-label" for="SMB_ENABLED">Use network share credentials (Windows)</label>
-      </div>
       <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Share (optional)</label>
-          <input type="text" class="form-control" name="SMB_SHARE" placeholder="\\\\SERVER\\share" value="{{ backup.smb_share or '' }}">
-          <div class="form-text">If empty, derived from the folder path above.</div>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">User</label>
-          <input type="text" class="form-control" name="SMB_USER" placeholder="DOMAIN\\user or user@domain" value="{{ backup.smb_user or '' }}">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-control" name="SMB_PASSWORD" placeholder="••••••••">
-          <div class="form-text">Leave blank to keep existing.</div>
-        </div>
-      </div>
-      <div class="small text-muted mt-2">
-        Tip: Running the app under an account that already has share access is simpler (you can keep this off).
-      </div>
-    </div>
+        <div class="col-12 col-xxl-7">
+          <div class="card shadow-sm">
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <strong><i class="fas fa-hard-drive me-2"></i>Local Backup</strong>
+              <span class="badge bg-{{ 'success' if backup.enabled=='True' else 'secondary' }}">{{ 'Enabled' if backup.enabled=='True' else 'Disabled' }}</span>
+            </div>
+            <div class="card-body">
+              <form method="POST" action="{{ url_for('settings.settings_page') }}">
+                <input type="hidden" name="backup_save" value="1">
 
-    <!-- Google Drive -->
-    <div class="border rounded p-3 mt-3">
-      <div class="form-check mb-2">
-        <input class="form-check-input" type="checkbox" name="GDRIVE_ENABLED" id="GDRIVE_ENABLED"
-               {% if backup.gdrive_enabled == 'True' %}checked{% endif %}>
-        <label class="form-check-label" for="GDRIVE_ENABLED">Also upload backups to Google Drive</label>
-      </div>
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Google Drive Folder ID (or URL)</label>
-          <input type="text" class="form-control" name="GDRIVE_FOLDER_ID" placeholder="ID or folder URL" value="{{ backup.gdrive_folder or '' }}">
-          <div class="form-text">Paste the full folder URL or just the ID — both work.</div>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Service Account JSON</label>
-          <div class="input-group">
-            <input type="text" class="form-control" readonly value="{{ backup.gdrive_key_path or '—' }}">
-            <span class="input-group-text">Libs:</span>
-            <span class="input-group-text {% if backup.gdrive_libs=='Yes' %}text-success{% else %}text-danger{% endif %}">{{ backup.gdrive_libs }}</span>
+                <div class="row g-3">
+                  <div class="col-12">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="DB_BACKUP_ENABLED" name="DB_BACKUP_ENABLED" {{ 'checked' if backup.enabled=='True' }}>
+                      <label class="form-check-label" for="DB_BACKUP_ENABLED">Run daily backup</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Backup time</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="far fa-clock"></i></span>
+                      <input type="time" class="form-control" name="DB_BACKUP_TIME" value="{{ backup.time }}" step="60">
+                    </div>
+                    <div class="form-text">Server local time.</div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Retention (days)</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-calendar-minus"></i></span>
+                      <input type="number" min="1" class="form-control" name="DB_BACKUP_KEEP_DAYS" value="{{ backup.keep }}">
+                    </div>
+                    <div class="form-text">Older files are pruned automatically.</div>
+                  </div>
+
+                  <div class="col-12">
+                    <label for="DB_BACKUP_DIR" class="form-label">Backup folder (server)</label>
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fas fa-folder"></i></span>
+                      <input type="text" class="form-control" id="DB_BACKUP_DIR" name="DB_BACKUP_DIR"
+                             value="{{ backup.dir }}" placeholder="{{ backup.quick_default|replace('\\','/') }}">
+                      <button type="button" class="btn btn-outline-secondary" id="btn-browse-server">
+                        <i class="fas fa-folder-open me-1"></i> Browse
+                      </button>
+                    </div>
+                    <div class="form-text">
+                      Use forward slashes on Windows (e.g. <code>D:/path/to/folder</code>). Quick set:
+                      <a href="#" id="setQuickDefault">App default</a> ·
+                      <a href="#" id="setQuickInstance">Instance path</a>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Collapsible Advanced: SMB -->
+                <div class="accordion" id="backupAccordion">
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingSMB">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSMB">
+                        <i class="fas fa-network-wired me-2"></i>Network Share (SMB)
+                      </button>
+                    </h2>
+                    <div id="collapseSMB" class="accordion-collapse collapse" data-bs-parent="#backupAccordion">
+                      <div class="accordion-body">
+                        <div class="form-check form-switch mb-2">
+                          <input class="form-check-input" type="checkbox" id="SMB_ENABLED" name="SMB_ENABLED" {{ 'checked' if backup.smb_enabled=='True' }}>
+                          <label class="form-check-label" for="SMB_ENABLED">Enable SMB for UNC paths</label>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">SMB share (e.g. <code>\\\\\\server\\share</code>)</label>
+                          <input type="text" class="form-control" name="SMB_SHARE" value="{{ backup.smb_share }}">
+                        </div>
+                        <div class="row g-2">
+                          <div class="col-md-6">
+                            <label class="form-label">SMB user</label>
+                            <input type="text" class="form-control" name="SMB_USER" value="{{ backup.smb_user }}">
+                          </div>
+                          <div class="col-md-6">
+                            <label class="form-label">SMB password</label>
+                            <input type="password" class="form-control" name="SMB_PASSWORD" value="">
+                          </div>
+                        </div>
+                        <div class="form-text mt-2">Only needed if your backup folder is a UNC path (e.g. <code>\\\\server\\share\\backups</code>).</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingGDrive">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGDrive">
+                        <i class="fab fa-google-drive me-2"></i>Google Drive (optional)
+                      </button>
+                    </h2>
+                    <div id="collapseGDrive" class="accordion-collapse collapse" data-bs-parent="#backupAccordion">
+                      <div class="accordion-body">
+                        <div class="form-check form-switch mb-2">
+                          <input class="form-check-input" type="checkbox" id="GDRIVE_ENABLED" name="GDRIVE_ENABLED" {{ 'checked' if backup.gdrive_enabled=='True' }}>
+                          <label class="form-check-label" for="GDRIVE_ENABLED">Upload each backup to Google Drive</label>
+                        </div>
+                        <div class="mb-2">
+                          <label class="form-label">Folder ID / URL</label>
+                          <input type="text" class="form-control" name="GDRIVE_FOLDER_ID" value="{{ backup.gdrive_folder }}" placeholder="Folder ID or full URL">
+                          <div class="form-text">Drive libs installed: <strong>{{ backup.gdrive_libs }}</strong></div>
+                        </div>
+                        <div class="border rounded p-2">
+                          <div class="fw-semibold mb-2">Service account key</div>
+                          <form method="POST" action="{{ url_for('settings.upload_gdrive_key') }}" enctype="multipart/form-data" class="d-flex gap-2">
+                            <input type="file" class="form-control" name="gdrive_key" accept=".json" required>
+                            <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-key me-1"></i> Upload JSON</button>
+                          </form>
+                          {% if backup.gdrive_key_path %}
+                            <div class="form-text mt-1">Current key: <code>{{ backup.gdrive_key_path }}</code></div>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                  <button class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Backup Settings</button>
+                </div>
+              </form>
+            </div>
           </div>
-          <div class="form-text">Upload a Google Cloud service account key JSON (Drive API enabled).</div>
+        </div>
+
+        <!-- Status / Actions -->
+        <div class="col-12 col-xxl-5">
+          <div class="card shadow-sm mb-3">
+            <div class="card-header"><strong><i class="fas fa-clipboard-check me-2"></i>Status</strong></div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <div class="small text-muted">Last backup</div>
+                  <div class="fs-6 fw-semibold">{{ backup.last }}</div>
+                  <div>Status:
+                    <span class="badge {{ 'bg-success' if backup.last_status.startswith('SUCCESS') else 'bg-danger' }}">{{ backup.last_status }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="small text-muted">Next run</div>
+                  <div class="fs-6 fw-semibold">{{ backup.next_run }}</div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="small text-muted">Cloud (Drive)</div>
+                  <div>Last: <strong>{{ backup.cloud_last }}</strong></div>
+                  <div>Status:
+                    <span class="badge {{ 'bg-success' if backup.cloud_status=='SUCCESS' else 'bg-secondary' }}">{{ backup.cloud_status }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="small text-muted">DB file (if SQLite)</div>
+                  <div class="text-truncate"><code>{{ backup.db_path }}</code></div>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 mt-3">
+                <form method="POST" action="{{ url_for('settings.backup_now') }}">
+                  <button class="btn btn-outline-primary"><i class="fas fa-play me-1"></i> Backup Now</button>
+                </form>
+                <form method="POST" action="{{ url_for('settings.backup_upload_last') }}">
+                  <button class="btn btn-outline-secondary"><i class="fab fa-google-drive me-1"></i> Upload Last to Drive</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Files -->
+          <div class="card shadow-sm">
+            <div class="card-header"><strong><i class="fas fa-folder-tree me-2"></i>Local Backups</strong></div>
+            <div class="card-body">
+              {% if backup_files %}
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>File</th>
+                        <th class="text-nowrap">Size</th>
+                        <th class="text-nowrap">Modified</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for f in backup_files %}
+                        <tr>
+                          <td class="text-truncate"><code>{{ f.name }}</code></td>
+                          <td class="text-nowrap">{{ (f.size/1024/1024)|round(2) }} MB</td>
+                          <td class="text-nowrap">{{ f.mtime.strftime('%Y-%m-%d %H:%M') if f.mtime else '' }}</td>
+                          <td class="text-end">
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('settings.backup_download', name=f.name) }}">
+                              <i class="fas fa-download me-1"></i> Download
+                            </a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="text-muted">No backups found yet.</div>
+              {% endif %}
+              <div class="mt-2 small text-muted">
+                Quick paths:
+                <code class="d-block">{{ backup.quick_default }}</code>
+                <code class="d-block">{{ backup.quick_instance }}</code>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="row mt-3 g-3">
-      <div class="col-md-3">
-        <button class="btn btn-primary w-100" type="submit">💾 Save Settings</button>
-      </div>
-      <div class="col-md-3">
-        <button class="btn btn-success w-100" type="submit"
-                formaction="{{ url_for('settings.backup_now') }}" formmethod="post" formnovalidate>▶ Run Backup Now</button>
-      </div>
-      <div class="col-md-6 text-end">
-        <div class="small">
-          <strong>Last:</strong> {{ backup.last }} |
-          <strong>Status:</strong> {{ backup.last_status }} |
-          <strong>Next Run:</strong> {{ backup.next_run }}<br>
-          <strong>Drive last:</strong> {{ backup.cloud_last }} |
-          <strong>Drive status:</strong> {{ backup.cloud_status }}
+    </div><!-- /BACKUP TAB -->
+
+    <!-- SMTP TAB -->
+    <div class="tab-pane fade" id="panel-smtp" role="tabpanel" aria-labelledby="tab-smtp">
+      <div class="row g-3">
+        <div class="col-12 col-xl-7">
+          <div class="card shadow-sm">
+            <div class="card-header"><strong><i class="fas fa-envelope-open-text me-2"></i>SMTP Settings</strong></div>
+            <div class="card-body">
+              <form method="POST" action="{{ url_for('settings.settings_page') }}">
+                <input type="hidden" name="smtp_save" value="1">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Mail server</label>
+                    <input type="text" name="MAIL_SERVER" class="form-control" value="{{ smtp.get('MAIL_SERVER','') }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Mail port</label>
+                    <input type="number" name="MAIL_PORT" class="form-control" value="{{ smtp.get('MAIL_PORT','587') }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="MAIL_USERNAME" class="form-control" value="{{ smtp.get('MAIL_USERNAME','') }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="MAIL_PASSWORD" class="form-control" value="{{ smtp.get('MAIL_PASSWORD','') }}">
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">Default sender (email)</label>
+                    <input type="email" name="MAIL_DEFAULT_SENDER" class="form-control" value="{{ smtp.get('MAIL_DEFAULT_SENDER','') }}">
+                  </div>
+                  <div class="col-md-4 d-flex align-items-center">
+                    <div class="form-check form-switch mt-4">
+                      <input class="form-check-input" type="checkbox" id="MAIL_USE_TLS" name="MAIL_USE_TLS" {{ 'checked' if smtp.get('MAIL_USE_TLS','False')=='True' }}>
+                      <label class="form-check-label" for="MAIL_USE_TLS">Use TLS</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                  <button class="btn btn-primary"><i class="fas fa-save me-1"></i> Save SMTP</button>
+                </div>
+              </form>
+
+              <hr>
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="text-muted small">Send a quick test email to verify your SMTP settings.</div>
+                <form method="POST" action="{{ url_for('settings.test_email') }}" class="d-flex gap-2">
+                  <input type="email" name="test_email" class="form-control" placeholder="test@example.com" required>
+                  <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-paper-plane me-1"></i> Test</button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-5">
+          <div class="card shadow-sm">
+            <div class="card-header"><strong><i class="fas fa-info-circle me-2"></i>Tips</strong></div>
+            <div class="card-body">
+              <ul class="small mb-0">
+                <li>Most providers require <strong>TLS</strong> and ports like <code>587</code> or <code>465</code>.</li>
+                <li>If you use an app password, paste it in the Password field.</li>
+                <li>Check your mail logs if the Test email fails.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </form>
+    </div><!-- /SMTP TAB -->
 
-  <!-- Upload GDrive Key -->
-  <form method="POST" action="{{ url_for('settings.upload_gdrive_key') }}" enctype="multipart/form-data" class="border p-3 mb-3">
-    <div class="row g-3">
-      <div class="col-md-8">
-        <label class="form-label">Upload Google Service Account JSON</label>
-        <input type="file" class="form-control" name="gdrive_key" accept=".json" required>
-      </div>
-      <div class="col-md-4 d-flex align-items-end">
-        <button class="btn btn-outline-secondary w-100" type="submit">⬆ Upload Key</button>
-      </div>
-    </div>
-  </form>
+    <!-- BRANDING TAB -->
+    <div class="tab-pane fade" id="panel-branding" role="tabpanel" aria-labelledby="tab-branding">
+      <div class="card shadow-sm">
+        <div class="card-header"><strong><i class="fas fa-paint-brush me-2"></i>Branding</strong></div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('settings.settings_page') }}" enctype="multipart/form-data">
+            <input type="hidden" name="branding_save" value="1">
 
-  <!-- Upload last backup to Drive -->
-  <form method="POST" action="{{ url_for('settings.backup_upload_last') }}" class="mb-4">
-    <button class="btn btn-outline-primary">☁ Upload Last Backup to Google Drive</button>
-  </form>
+            <div class="row g-3">
+              <div class="col-lg-6">
+                <label class="form-label">Company name</label>
+                <input type="text" class="form-control" name="BRAND_COMPANY_NAME" value="{{ brand.company_name }}">
+              </div>
+              <div class="col-lg-6">
+                <label class="form-label">Document title format</label>
+                <input type="text" class="form-control" name="BRAND_DOC_TITLE_FORMAT" value="{{ brand.doc_fmt }}">
+                <div class="form-text">Placeholders: <code>{company_name}</code>, <code>{doc_type}</code></div>
+              </div>
+              <div class="col-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="BRAND_DOC_TYPE_UPPER" name="BRAND_DOC_TYPE_UPPER" {{ 'checked' if brand.doc_upper=='True' }}>
+                  <label class="form-check-label" for="BRAND_DOC_TYPE_UPPER">Uppercase document type</label>
+                </div>
+              </div>
+            </div>
 
-  <!-- ================= DATA UPLOAD ================= -->
-  <h4>📥 Import Data</h4>
-  <div class="row g-3">
-    {% for model in import_models %}
-    <div class="col-md-6">
-      <form action="{{ url_for('settings.upload_excel', table=model) }}" method="POST" enctype="multipart/form-data" class="border p-3">
-        <div class="mb-2 fw-bold">{{ model|capitalize }}</div>
-        <input type="file" name="file" accept=".xlsx" class="form-control mb-2" required>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-primary" type="submit">Upload</button>
-          <a class="btn btn-outline-secondary" href="{{ url_for('settings.download_template', model=model) }}">Template</a>
+            <hr class="my-4">
+
+            {% set brand_fields = [
+              ('BRAND_LOGO_LIGHT','logo_light','Logo (Light BG)'),
+              ('BRAND_LOGO_DARK','logo_dark','Logo (Dark BG)'),
+              ('BRAND_LOGO_ICON','logo_icon','Icon'),
+              ('BRAND_WATERMARK','watermark','Watermark'),
+              ('BRAND_STAMP','stamp','Stamp / Seal')
+            ] %}
+            <div class="row g-3">
+              {% for var_key, field, label in brand_fields %}
+              <div class="col-12 col-md-6 col-xl-4">
+                <div class="border rounded p-3 h-100">
+                  <div class="fw-semibold mb-2">{{ label }}</div>
+                  {% set current_path = brand[field] %}
+                  {% if current_path %}
+                    <div class="mb-2">
+                      <img src="{{ current_path }}" alt="{{ label }}" class="img-fluid border rounded bg-white p-1" style="max-height:110px">
+                    </div>
+                  {% else %}
+                    <div class="text-muted small mb-2">No image uploaded.</div>
+                  {% endif %}
+                  <input class="form-control" type="file" name="{{ field }}" accept="image/*">
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="clear_{{ field }}" name="clear_{{ field }}">
+                    <label class="form-check-label small" for="clear_{{ field }}">Clear existing</label>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="mt-4">
+              <div class="small text-muted mb-2">Preview titles</div>
+              <div class="row g-2">
+                {% for p in brand_previews %}
+                  <div class="col-md-4">
+                    <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                      <span>{{ p.name }}</span>
+                      <span class="badge bg-light text-dark">{{ p.title }}</span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+              <button class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Branding</button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
-    {% endfor %}
+      </div>
+    </div><!-- /BRANDING TAB -->
+
+    <!-- DATA IMPORT TAB -->
+    <div class="tab-pane fade" id="panel-import" role="tabpanel" aria-labelledby="tab-import">
+      <div class="card shadow-sm">
+        <div class="card-header"><strong><i class="fas fa-file-arrow-up me-2"></i>Data Import</strong></div>
+        <div class="card-body">
+          <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="fas fa-circle-info me-2"></i>
+            Upload <code>.xlsx</code> files that match the template columns.
+          </div>
+
+          <div class="row g-3">
+            {% for m in import_models %}
+            <div class="col-12 col-sm-6 col-lg-4">
+              <div class="border rounded p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="fw-semibold text-uppercase">{{ m }}</div>
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('settings.download_template', model=m) }}">
+                    <i class="fas fa-download me-1"></i> Template
+                  </a>
+                </div>
+                <form class="mt-2" method="POST" action="{{ url_for('settings.upload_excel', table=m) }}" enctype="multipart/form-data">
+                  <div class="input-group">
+                    <input class="form-control" type="file" name="file" accept=".xlsx" required>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-upload me-1"></i> Upload</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /DATA IMPORT TAB -->
+
   </div>
-
 </div>
 
+<!-- Folder Picker Modal (Bootstrap) -->
+<div class="modal fade" id="dirPickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Pick a folder on the server</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <nav class="mb-2"><ol class="breadcrumb mb-0" id="dirBreadcrumb"></ol></nav>
+        <div class="list-group" id="dirList"></div>
+      </div>
+      <div class="modal-footer">
+        <small class="me-auto text-muted" id="dirCurrentPath"></small>
+        <button type="button" class="btn btn-primary" id="dirChooseBtn" disabled><i class="fas fa-check me-1"></i> Use this folder</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 <script>
-  function setBackupDir(val) { document.getElementById('DB_BACKUP_DIR').value = val; }
+(() => {
+  // Quick sets
+  const inputDir = document.getElementById('DB_BACKUP_DIR');
+  const qd = document.getElementById('setQuickDefault');
+  const qi = document.getElementById('setQuickInstance');
+  if (qd) qd.addEventListener('click', e => { e.preventDefault(); inputDir.value = "{{ backup.quick_default|replace('\\','/') }}"; });
+  if (qi) qi.addEventListener('click', e => { e.preventDefault(); inputDir.value = "{{ backup.quick_instance|replace('\\','/') }}"; });
 
-  // Live preview for document title format
-  const fmtInput = document.getElementById('doc_fmt_input');
-  const upperChk = document.getElementById('BRAND_DOC_TYPE_UPPER');
-  const previewList = document.getElementById('doc_preview');
-  const companyNameInput = document.querySelector('input[name="BRAND_COMPANY_NAME"]');
+  // Folder picker
+  const btnBrowse = document.getElementById('btn-browse-server');
+  const modalEl = document.getElementById('dirPickerModal');
+  const dirList = document.getElementById('dirList');
+  const dirBreadcrumb = document.getElementById('dirBreadcrumb');
+  const dirCurrentPath = document.getElementById('dirCurrentPath');
+  const chooseBtn = document.getElementById('dirChooseBtn');
+  let selectedPath = "";
 
-  function renderTitle(company, docType, fmt, upper) {
-    const dt = upper ? docType.toUpperCase() : docType;
-    return (fmt || '{company_name} ({doc_type})')
-      .replace('{company_name}', company || '')
-      .replace('{doc_type}', dt);
+  function api(path) {
+    try { if (path && /[\x00-\x1F]/.test(path)) path = ''; } catch (_) { path = ''; }
+    const url = '{{ url_for("settings.api_listdir") }}' + (path ? ('?path=' + encodeURIComponent(path)) : '');
+    return fetch(url).then(r => r.json());
   }
 
-  function updatePreview() {
-    const co = companyNameInput.value || '';
-    const fmt = fmtInput.value || '{company_name} ({doc_type})';
-    const upper = upperChk.checked;
-    const docs = ['Delivery Note','Collection Note','Invoice'];
-    previewList.innerHTML = docs.map(d => `<li>• ${renderTitle(co, d, fmt, upper)}</li>`).join('');
+  function makeCrumb(label, path, active) {
+    const li = document.createElement('li');
+    li.className = 'breadcrumb-item' + (active ? ' active' : '');
+    if (active || path === null) li.textContent = label;
+    else {
+      const a = document.createElement('a'); a.href = '#'; a.textContent = label;
+      a.onclick = ev => { ev.preventDefault(); load(path); };
+      li.appendChild(a);
+    }
+    return li;
   }
 
-  [fmtInput, upperChk, companyNameInput].forEach(el => el && el.addEventListener('input', updatePreview));
+  function render(data) {
+    dirCurrentPath.textContent = data.path || '(drives)';
+    dirBreadcrumb.innerHTML = '';
+
+    if (!data.path) {
+      dirBreadcrumb.appendChild(makeCrumb('This PC', null, true));
+    } else {
+      dirBreadcrumb.appendChild(makeCrumb('This PC', '', false));
+      const parts = data.path.replace(/\\/g,'/').split('/').filter(Boolean);
+      let acc = parts[0] && parts[0].includes(':') ? parts[0] + '/' : '';
+      if (acc) dirBreadcrumb.appendChild(makeCrumb(parts[0], acc, parts.length === 1));
+      for (let i = (acc ? 1 : 0); i < parts.length; i++) {
+        acc = acc ? (acc + parts[i] + '/') : ('/' + parts.slice(0, i+1).join('/'));
+        dirBreadcrumb.appendChild(makeCrumb(parts[i], acc.replace(/\/$/,''), i === parts.length - 1));
+      }
+    }
+
+    dirList.innerHTML = '';
+    if (data.type === 'root') {
+      data.entries.forEach(e => {
+        const a = document.createElement('a');
+        a.href = '#'; a.className = 'list-group-item list-group-item-action';
+        a.innerHTML = '<i class="fas fa-hdd me-2"></i>' + e.name;
+        a.onclick = ev => { ev.preventDefault(); load(e.path); };
+        dirList.appendChild(a);
+      });
+      chooseBtn.disabled = true; selectedPath = '';
+    } else if (data.type === 'dir') {
+      const up = document.createElement('a');
+      up.href = '#'; up.className = 'list-group-item list-group-item-action';
+      up.textContent = '⬆️  (parent folder)';
+      up.onclick = ev => {
+        ev.preventDefault();
+        const parent = data.path.replace(/\\/g,'/').replace(/\/$/,'').split('/').slice(0,-1).join('/') || '';
+        load(parent);
+      };
+      dirList.appendChild(up);
+
+      data.entries.forEach(e => {
+        const a = document.createElement('a');
+        a.href = '#'; a.className = 'list-group-item list-group-item-action';
+        a.innerHTML = '<i class="far fa-folder me-2"></i>' + e.name;
+        a.onclick = ev => { ev.preventDefault(); load(e.path); };
+        dirList.appendChild(a);
+      });
+
+      chooseBtn.disabled = false; selectedPath = data.path;
+    } else {
+      dirList.innerHTML = '<div class="text-danger">Error: ' + (data.error || 'Unknown') + '</div>';
+      chooseBtn.disabled = true; selectedPath = '';
+    }
+  }
+
+  function load(path) {
+    api(path).then(render).catch(() => api('').then(render));
+  }
+
+  if (btnBrowse) {
+    btnBrowse.addEventListener('click', () => {
+      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      bsModal.show(); load('');
+    });
+  }
+
+  if (chooseBtn) {
+    chooseBtn.addEventListener('click', () => {
+      if (selectedPath) inputDir.value = selectedPath.replace(/\\/g,'/');
+      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    });
+  }
+})();
 </script>
+
+<style>
+/* Subtle polish */
+.settings-page .nav-tabs .nav-link { font-weight: 600; }
+.settings-page .card-header { background: #f9fafb; }
+.settings-page .form-text a { text-decoration: none; }
+.settings-page .accordion-button:not(.collapsed) { background: #f1f5f9; }
+</style>
 {% endblock %}

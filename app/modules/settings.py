@@ -1,5 +1,5 @@
 # app/modules/settings.py
-from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file
+from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file, jsonify
 from werkzeug.utils import secure_filename
 from dotenv import set_key, dotenv_values
 from flask_mail import Message
@@ -14,6 +14,7 @@ import datetime
 import shutil
 import subprocess
 from urllib.parse import urlparse
+import string
 
 # ---- Google Drive (optional) ----
 try:
@@ -71,19 +72,62 @@ def _unc_share_root(path: str) -> str:
     if len(parts) >= 2:
         return f"\\\\{parts[0]}\\{parts[1]}"
     return ''
+import re  # ensure this import exists at top
+
+def _sanitize_backup_path(p: str, default_dir: str) -> str:
+    """
+    Sanitize a user/env-provided path for *saving* backups.
+    - Remove quotes and control chars (like the stray \x08 from '\b')
+    - Normalize to absolute
+    - Final output uses forward slashes (safe for Windows + avoids '\b' escape)
+    - Convert plain drive roots (e.g., 'D:/') to 'D:/db_backups'
+    """
+    # base cleanup
+    p = (p or "").strip().strip('\'"')
+    # remove ASCII control chars (0x00..0x1F)
+    p = "".join(ch for ch in p if ord(ch) >= 32)
+
+    # unify slashes early
+    p = p.replace("\\", "/")
+
+    # absolute + norm
+    if not os.path.isabs(p) and not p.startswith("//"):  # not absolute Windows or UNC
+        p = os.path.abspath(p)
+    else:
+        p = os.path.normpath(p)
+
+    # normalize again in case abspath returned backslashes
+    p = p.replace("\\", "/")
+
+    # drive-root -> add subfolder
+    if re.fullmatch(r"[A-Za-z]:/?", p):
+        p = p.rstrip("/").upper() + "/db_backups"
+
+    # UNC share root (//server/share) -> add subfolder
+    if p.startswith("//"):
+        parts = p.strip("/").split("/")
+        if len(parts) == 2:  # //server/share
+            p = p + "/db_backups"
+
+    return p
+
 
 def _backup_dir():
     """
-    Resolve backup dir (local or UNC). Creates the folder.
-    If UNC on Windows and SMB creds enabled, attempts a `net use` session.
+    Resolve backup dir (local or UNC). Creates the folder if needed.
+    Falls back to a safe default if anything goes wrong so Settings always loads.
     """
     default_dir = _default_backup_dir()
-    path = _env("DB_BACKUP_DIR", default_dir)
-    path = os.path.expanduser(path)
-    if not os.path.isabs(path):
-        path = os.path.abspath(path)
-    _maybe_connect_smb_for_path(path)
-    os.makedirs(path, exist_ok=True)
+    raw = _env("DB_BACKUP_DIR", default_dir)
+    path = _sanitize_backup_path(raw, default_dir)
+    try:
+        _maybe_connect_smb_for_path(path)
+        os.makedirs(path, exist_ok=True)
+    except Exception as e:
+        fallback = default_dir
+        os.makedirs(fallback, exist_ok=True)
+        current_app.logger.warning(f"Backup dir error ({e}), using fallback: {fallback}")
+        path = fallback
     return path
 
 def _resolve_sqlite_path_from_uri(uri: str) -> str:
@@ -363,6 +407,9 @@ def _list_backups():
     items = []
     try:
         for name in os.listdir(folder):
+            # Only include .backup files
+            if not name.lower().endswith('.db'):
+                continue
             p = os.path.join(folder, name)
             if os.path.isfile(p):
                 items.append({
@@ -374,6 +421,7 @@ def _list_backups():
     except Exception:
         pass
     return items
+
 
 def _next_run_text():
     if not _scheduler:
@@ -407,17 +455,27 @@ def settings_page():
         _set_env("DB_BACKUP_ENABLED", "True" if request.form.get("DB_BACKUP_ENABLED") == "on" else "False")
         _set_env("DB_BACKUP_TIME", request.form.get("DB_BACKUP_TIME", "02:00"))
         _set_env("DB_BACKUP_KEEP_DAYS", request.form.get("DB_BACKUP_KEEP_DAYS", "7"))
-        _set_env("DB_BACKUP_DIR", request.form.get("DB_BACKUP_DIR", _backup_dir()))
+
+        # Normalize and persist backup dir once (avoid re-reading malformed values)
+        # inside: if request.method == 'POST' and 'backup_save' in request.form:
+        raw_dir = request.form.get("DB_BACKUP_DIR", _backup_dir())
+        safe_dir = _sanitize_backup_path(raw_dir, _default_backup_dir())
+        _set_env("DB_BACKUP_DIR", safe_dir)  # already forward slashes now
+        os.makedirs(safe_dir, exist_ok=True)
+
+        # SMB / Network Share
         _set_env("SMB_ENABLED", "True" if request.form.get("SMB_ENABLED") == "on" else "False")
         _set_env("SMB_SHARE", request.form.get("SMB_SHARE", ""))
         _set_env("SMB_USER", request.form.get("SMB_USER", ""))
         smb_pass_new = request.form.get("SMB_PASSWORD", "")
         if smb_pass_new != "":
             _set_env("SMB_PASSWORD", smb_pass_new)
+
+        # Google Drive
         _set_env("GDRIVE_ENABLED", "True" if request.form.get("GDRIVE_ENABLED") == "on" else "False")
         folder_id_input = request.form.get("GDRIVE_FOLDER_ID", "")
         _set_env("GDRIVE_FOLDER_ID", _extract_drive_folder_id(folder_id_input))
-        os.makedirs(os.path.expanduser(_env("DB_BACKUP_DIR", _backup_dir())), exist_ok=True)
+
         _schedule_backup_job_from_env()
         flash("✅ Backup settings saved.", "success")
         return redirect(url_for('settings.settings_page'))
@@ -453,11 +511,15 @@ def settings_page():
         except Exception:
             db_file_resolved = "(could not resolve)"
 
+    # Normalize dir for display to avoid showing broken backslashes
+    dir_raw = _env("DB_BACKUP_DIR", _default_backup_dir())
+    dir_norm = _sanitize_backup_path(dir_raw, _default_backup_dir())
+
     backup_cfg = {
         "enabled": _env("DB_BACKUP_ENABLED", "False"),
         "time": _env("DB_BACKUP_TIME", "02:00"),
         "keep": _env("DB_BACKUP_KEEP_DAYS", "7"),
-        "dir": _env("DB_BACKUP_DIR", _backup_dir()),
+        "dir": dir_norm.replace("\\", "/"),
         "last": _env("DB_BACKUP_LAST", "—"),
         "last_status": _env("DB_BACKUP_LAST_STATUS", "—"),
         "next_run": _next_run_text() or "—",
@@ -623,3 +685,86 @@ def test_email():
         print("SMTP Test Error:", e)
         flash("❌ Failed to send test email. Check SMTP settings and logs.", "danger")
     return redirect(url_for('settings.settings_page'))
+
+# ===================== Folder Picker API =====================
+def _list_windows_drives():
+    drives = []
+    if sys.platform == 'win32':
+        for c in string.ascii_uppercase:
+            root = f"{c}:\\"
+            if os.path.exists(root):
+                drives.append(root)
+    return drives
+
+@settings_bp.get('/settings/api/listdir')
+@settings_bp.get('/settings/api/listdir')
+def api_listdir():
+    """
+    Server-side folder browser.
+    - If no 'path' provided: on Windows returns drives; on Linux returns '/'.
+    - Returns only directories under the requested path.
+    """
+    raw = request.args.get('path') or ''
+
+    # First view: list drives on Windows; otherwise list root
+    if sys.platform == 'win32' and not raw.strip():
+        return jsonify({
+            "path": "",
+            "type": "root",
+            "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()]
+        })
+
+    if not raw.strip() and sys.platform != 'win32':
+        raw = "/"
+
+    # Sanitize
+    start = _sanitize_browse_path(raw) if raw else ("/" if sys.platform != 'win32' else "")
+
+    # If still empty on Windows, show drives again
+    if sys.platform == 'win32' and not start:
+        return jsonify({
+            "path": "",
+            "type": "root",
+            "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()]
+        })
+
+    try:
+        path = start or current_app.root_path
+        entries = []
+        for name in sorted(os.listdir(path)):
+            full = os.path.join(path, name)
+            if os.path.isdir(full):
+                entries.append({"name": name, "path": full.replace("\\", "/")})
+        return jsonify({"path": path.replace("\\", "/"), "type": "dir", "entries": entries})
+    except Exception as e:
+        # Hard fallback: if bad path, show drives/root instead of erroring
+        if sys.platform == 'win32':
+            return jsonify({
+                "path": "",
+                "type": "root",
+                "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()],
+                "error": str(e)
+            }), 200
+        else:
+            try:
+                entries = [ {"name": n, "path": os.path.join("/", n)} for n in sorted(os.listdir("/")) if os.path.isdir(os.path.join("/", n)) ]
+            except Exception:
+                entries = []
+            return jsonify({"path": "/", "type": "dir", "entries": entries, "error": str(e)}), 200
+
+def _sanitize_browse_path(p: str) -> str:
+    """
+    Sanitize a path coming from the folder picker (no auto-append of 'db_backups').
+    Keeps drive roots like 'D:/' intact for navigation.
+    """
+    p = (p or "").strip().strip('\'"')
+    p = "".join(ch for ch in p if ord(ch) >= 32)
+    p = p.replace("\\", "/")
+    if not p:
+        return p
+    # absolute or UNC?
+    if not os.path.isabs(p) and not p.startswith("//"):
+        p = os.path.abspath(p)
+    else:
+        p = os.path.normpath(p)
+    return p.replace("\\", "/")
