@@ -120,14 +120,20 @@
 
         <hr>
 
-        <h3>🎁 Activate Trial (90 Days)</h3>
-        <form method="post">
-            <input type="hidden" name="trial" value="1">
-            <input type="text" name="client_name" placeholder="Client Name" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <textarea name="address" placeholder="Address" rows="2" required></textarea>
-            <button type="submit" class="btn-success">Activate Trial License</button>
-        </form>
+        {% if not trial_used and (not license or license.get('license_type') == 'trial') %}
+  <hr>
+  <h3>🎁 Activate Trial (90 Days)</h3>
+  <form method="post">
+    <input type="hidden" name="trial" value="1">
+    <input type="text" name="client_name" placeholder="Client Name" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <textarea name="address" placeholder="Address" rows="2" required></textarea>
+    <button type="submit" class="btn-success">Activate Trial License</button>
+  </form>
+{% else %}
+  <hr>
+  <div class="alert alert-warning">Trial activation is not available on this machine.</div>
+{% endif %}
 
         <div class="card">
             <h5>📥 Download License Info</h5>

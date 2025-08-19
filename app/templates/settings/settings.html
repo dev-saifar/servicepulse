@@ -6,7 +6,7 @@
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h3 class="mb-1"><i class="fas fa-sliders-h me-2"></i>ServicePulse Settings</h3>
-      <div class="text-muted">Configure email, backups, branding, and data import.</div>
+      <div class="text-muted">Configure email, backups, branding, data import, and log housekeeping.</div>
     </div>
   </div>
 
@@ -183,7 +183,7 @@
           </div>
         </div>
 
-        <!-- RIGHT: Status / Actions / Files -->
+        <!-- RIGHT: Status / Actions / Files & Logs housekeeping -->
         <div class="col-12 col-xxl-5">
           <div class="card shadow-sm mb-3">
             <div class="card-header"><strong><i class="fas fa-gauge me-2"></i>Environment</strong></div>
@@ -268,6 +268,65 @@
             </div>
           </div>
 
+          <!-- Log housekeeping -->
+          <div class="card shadow-sm mb-3">
+            <div class="card-header">
+              <strong><i class="fas fa-trash-can-clock me-2"></i>Log Housekeeping</strong>
+            </div>
+            <div class="card-body">
+              <form method="POST" action="{{ url_for('settings.settings_page') }}" class="row g-3">
+                <input type="hidden" name="log_save" value="1">
+
+                <div class="col-12">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="LOG_RETENTION_ENABLED"
+                           name="LOG_RETENTION_ENABLED" {{ 'checked' if log.enabled=='True' }}>
+                    <label class="form-check-label" for="LOG_RETENTION_ENABLED">Enable daily cleanup</label>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Keep logs for (days)</label>
+                  <input type="number" min="1" class="form-control" name="LOG_RETENTION_DAYS" value="{{ log.days }}">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label">Cleanup time</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="far fa-clock"></i></span>
+                    <input type="time" class="form-control" name="LOG_CLEAN_TIME" value="{{ log.time }}" step="60">
+                  </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-end gap-2">
+                  <button class="btn btn-primary"><i class="fas fa-save me-1"></i> Save</button>
+                </div>
+              </form>
+
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <form method="POST" action="{{ url_for('settings.log_clean_now') }}">
+                  <button class="btn btn-outline-danger action-once" type="submit"><i class="fas fa-broom me-1"></i> Run Cleanup Now</button>
+                </form>
+              </div>
+
+              <hr class="my-3">
+              <div class="row g-3 small">
+                <div class="col-sm-6">
+                  <div class="text-muted">Last run</div>
+                  <div class="fw-semibold">{{ log.last }}</div>
+                  <div>Status:
+                    <span class="badge {{ 'bg-success' if log.last_status.startswith('SUCCESS') else 'bg-secondary' }}">{{ log.last_status }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="text-muted">Next run</div>
+                  <div class="fw-semibold">{{ log.next_run }}</div>
+                </div>
+              </div>
+              <div class="form-text mt-2">This permanently deletes rows from the Log table older than the retention window.</div>
+            </div>
+          </div>
+
           <div class="card shadow-sm">
             <div class="card-header"><strong><i class="fas fa-folder-tree me-2"></i>Local Backups</strong></div>
             <div class="card-body">
@@ -315,7 +374,7 @@
     </div>
     <!-- /BACKUP TAB -->
 
-    <!-- SMTP TAB (unchanged) -->
+    <!-- SMTP TAB -->
     <div class="tab-pane fade" id="panel-smtp" role="tabpanel" aria-labelledby="tab-smtp">
       <div class="row g-3">
         <div class="col-12 col-xl-7">
@@ -386,7 +445,7 @@
     </div>
     <!-- /SMTP TAB -->
 
-    <!-- BRANDING TAB (unchanged essentials) -->
+    <!-- BRANDING TAB -->
     <div class="tab-pane fade" id="panel-branding" role="tabpanel" aria-labelledby="tab-branding">
       <div class="card shadow-sm">
         <div class="card-header"><strong><i class="fas fa-paint-brush me-2"></i>Branding</strong></div>
@@ -467,7 +526,7 @@
     </div>
     <!-- /BRANDING TAB -->
 
-    <!-- DATA IMPORT TAB (unchanged) -->
+    <!-- DATA IMPORT TAB -->
     <div class="tab-pane fade" id="panel-import" role="tabpanel" aria-labelledby="tab-import">
       <div class="card shadow-sm">
         <div class="card-header"><strong><i class="fas fa-file-arrow-up me-2"></i>Data Import</strong></div>
