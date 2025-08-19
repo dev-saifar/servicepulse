@@ -1,5 +1,5 @@
 # app/modules/settings.py
-from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file, jsonify
+from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file
 from werkzeug.utils import secure_filename
 from dotenv import set_key, dotenv_values
 from flask_mail import Message
@@ -16,7 +16,7 @@ import subprocess
 from urllib.parse import urlparse
 import string
 
-# ---- Google Drive (optional) ----
+# ---------- Optional Google Drive ----------
 try:
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
@@ -25,7 +25,7 @@ try:
 except Exception:
     _gdrive_available = False
 
-# ---- Scheduler (optional) ----
+# ---------- Optional APScheduler ----------
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -35,9 +35,45 @@ except Exception:
 
 settings_bp = Blueprint('settings', __name__, template_folder='../templates/settings')
 
-ENV_PATH = os.path.abspath('.env')
+# ===================== .env helpers =====================
+def _env_path():
+    """
+    Resolve the .env path relative to the app folder (not process CWD).
+    Prefer <project_root>/.env; create if missing.
+    """
+    app_root = current_app.root_path  # .../app
+    candidates = [
+        os.path.abspath(os.path.join(app_root, '..', '.env')),
+        os.path.abspath(os.path.join(app_root, '.env')),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    os.makedirs(os.path.dirname(candidates[0]), exist_ok=True)
+    open(candidates[0], 'a', encoding='utf-8').close()
+    return candidates[0]
 
-# uploads
+def _env(key, default=None):
+    return dotenv_values(_env_path()).get(key, default)
+
+def _set_env(key, value):
+    set_key(_env_path(), key, str(value))
+
+# ---- helper: show next scheduled run time (if scheduler is available)
+def _next_run_text():
+        """Return 'YYYY-MM-DD HH:MM' for the next scheduled backup, or None."""
+        if not _scheduler:
+            return None
+        try:
+            job = _scheduler.get_job("db_backup_job")
+            if job and job.next_run_time:
+                return job.next_run_time.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            pass
+        return None
+
+
+# ===================== Upload/Brand folders =====================
 UPLOAD_FOLDER = os.path.join('app', 'uploads', 'imports')
 KEYS_FOLDER = os.path.join('app', 'uploads', 'keys')
 BRAND_FOLDER = os.path.join('app', 'static', 'uploads', 'branding')
@@ -45,13 +81,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(KEYS_FOLDER, exist_ok=True)
 os.makedirs(BRAND_FOLDER, exist_ok=True)
 
-# ===================== Helpers =====================
-def _env(key, default=None):
-    return dotenv_values(ENV_PATH).get(key, default)
-
-def _set_env(key, value):
-    set_key(ENV_PATH, key, str(value))
-
+# ===================== General helpers =====================
 def _db_uri():
     return current_app.config.get('SQLALCHEMY_DATABASE_URI')
 
@@ -59,7 +89,8 @@ def _timestamp():
     return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 def _default_backup_dir():
-    return os.path.join(current_app.root_path, 'backups', 'db')
+    # Default: <project_root>/app/backups
+    return os.path.join(current_app.root_path, 'backups')
 
 def _is_unc(path: str) -> bool:
     return path.startswith('\\\\') or path.startswith('//')
@@ -72,51 +103,52 @@ def _unc_share_root(path: str) -> str:
     if len(parts) >= 2:
         return f"\\\\{parts[0]}\\{parts[1]}"
     return ''
-import re  # ensure this import exists at top
 
 def _sanitize_backup_path(p: str, default_dir: str) -> str:
     """
-    Sanitize a user/env-provided path for *saving* backups.
-    - Remove quotes and control chars (like the stray \x08 from '\b')
-    - Normalize to absolute
-    - Final output uses forward slashes (safe for Windows + avoids '\b' escape)
-    - Convert plain drive roots (e.g., 'D:/') to 'D:/db_backups'
+    Sanitize a user/env-provided path for saving backups.
+    - strip quotes/control chars
+    - normalize absolute
+    - force forward slashes
+    - drive roots / UNC roots get a '/db_backups' subfolder
     """
-    # base cleanup
     p = (p or "").strip().strip('\'"')
-    # remove ASCII control chars (0x00..0x1F)
     p = "".join(ch for ch in p if ord(ch) >= 32)
-
-    # unify slashes early
     p = p.replace("\\", "/")
 
-    # absolute + norm
-    if not os.path.isabs(p) and not p.startswith("//"):  # not absolute Windows or UNC
+    if not os.path.isabs(p) and not p.startswith("//"):
         p = os.path.abspath(p)
     else:
         p = os.path.normpath(p)
 
-    # normalize again in case abspath returned backslashes
     p = p.replace("\\", "/")
 
     # drive-root -> add subfolder
     if re.fullmatch(r"[A-Za-z]:/?", p):
         p = p.rstrip("/").upper() + "/db_backups"
 
-    # UNC share root (//server/share) -> add subfolder
+    # UNC share root -> add subfolder
     if p.startswith("//"):
         parts = p.strip("/").split("/")
-        if len(parts) == 2:  # //server/share
+        if len(parts) == 2:
             p = p + "/db_backups"
 
     return p
 
+def _sanitize_browse_path(p: str) -> str:
+    """Sanitize for browsing (no auto-append)."""
+    p = (p or "").strip().strip('\'"')
+    p = "".join(ch for ch in p if ord(ch) >= 32)
+    p = p.replace("\\", "/")
+    if not p:
+        return p
+    if not os.path.isabs(p) and not p.startswith("//"):
+        p = os.path.abspath(p)
+    else:
+        p = os.path.normpath(p)
+    return p.replace("\\", "/")
 
 def _backup_dir():
-    """
-    Resolve backup dir (local or UNC). Creates the folder if needed.
-    Falls back to a safe default if anything goes wrong so Settings always loads.
-    """
     default_dir = _default_backup_dir()
     raw = _env("DB_BACKUP_DIR", default_dir)
     path = _sanitize_backup_path(raw, default_dir)
@@ -130,11 +162,17 @@ def _backup_dir():
         path = fallback
     return path
 
+def _list_windows_drives():
+    drives = []
+    if sys.platform == 'win32':
+        for c in string.ascii_uppercase:
+            root = f"{c}:/"
+            if os.path.exists(root) or os.path.exists(root.replace('/', '\\')):
+                drives.append(root)
+    return drives
+
+# ===================== DB helpers =====================
 def _resolve_sqlite_path_from_uri(uri: str) -> str:
-    """
-    sqlite:///relative/or/absolute/path.db
-    Try app.root_path then app.instance_path (for instance/techtrack.db).
-    """
     rel = uri.split("sqlite:///", 1)[-1]
     candidates = []
     if os.path.isabs(rel):
@@ -151,11 +189,6 @@ def _resolve_sqlite_path_from_uri(uri: str) -> str:
     return os.path.abspath(candidates[0])
 
 def _maybe_connect_smb_for_path(path: str):
-    """
-    On Windows + UNC + SMB_ENABLED, run:
-      net use \\server\share <password> /user:<user>
-    so the process can write to the share.
-    """
     if sys.platform != 'win32':
         return
     if not _is_unc(path):
@@ -176,9 +209,6 @@ def _maybe_connect_smb_for_path(path: str):
         current_app.logger.info(f"SMB session error for {share}: {e}")
 
 def _extract_drive_folder_id(s: str) -> str:
-    """
-    Accept a raw ID or a full URL and return a folder ID.
-    """
     if not s:
         return ""
     s = s.strip()
@@ -199,13 +229,9 @@ _ALLOWED_BRAND_KEYS = {
     "BRAND_STAMP": "stamp",
 }
 def _brand_rel_path(filename: str) -> str:
-    # return web path under /static/uploads/branding/...
     return f"/static/uploads/branding/{filename}"
 
 def _save_brand_file(file_storage, var_key: str) -> str:
-    """
-    Save an uploaded branding file; returns web path (/static/...).
-    """
     if not file_storage or not file_storage.filename:
         return _env(var_key, "")
     fn = secure_filename(file_storage.filename)
@@ -219,7 +245,6 @@ def _delete_brand_file(var_key: str):
     path = _env(var_key, "")
     if not path:
         return
-    # ensure we only delete inside BRAND_FOLDER
     abs_path = os.path.abspath(os.path.join(current_app.root_path, path.lstrip('/')))
     if os.path.commonpath([abs_path, os.path.abspath(BRAND_FOLDER)]) != os.path.abspath(BRAND_FOLDER):
         return
@@ -270,7 +295,11 @@ def _maybe_start_scheduler():
         except Exception as e:
             current_app.logger.exception("Failed to start backup scheduler: %s", e)
 
-# ===================== Backup implementations =====================
+
+
+
+
+# ===================== Backups =====================
 def _prune_old_backups(folder, keep_days):
     try:
         keep_days = int(keep_days)
@@ -290,7 +319,7 @@ def _backup_sqlite(uri, dest_dir):
     if not os.path.exists(src):
         raise RuntimeError(f"SQLite file not found: {src}")
     _maybe_connect_smb_for_path(dest_dir)
-    out = os.path.join(dest_dir, f"sqlite_{_timestamp()}.db")
+    out = os.path.join(dest_dir, f"sqlite_{_timestamp()}.backup")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     shutil.copy2(src, out)
     return out
@@ -303,7 +332,7 @@ def _backup_postgres(uri, dest_dir):
     host = parsed.hostname or "localhost"
     port = str(parsed.port or 5432)
     _maybe_connect_smb_for_path(dest_dir)
-    out = os.path.join(dest_dir, f"pg_{dbname}_{_timestamp()}.dump")
+    out = os.path.join(dest_dir, f"pg_{dbname}_{_timestamp()}.backup")
     env = os.environ.copy()
     if password:
         env["PGPASSWORD"] = password
@@ -321,16 +350,15 @@ def _backup_mysql(uri, dest_dir):
     host = parsed.hostname or "localhost"
     port = str(parsed.port or 3306)
     _maybe_connect_smb_for_path(dest_dir)
-    out = os.path.join(dest_dir, f"mysql_{dbname}_{_timestamp()}.sql")
+    out = os.path.join(dest_dir, f"mysql_{dbname}_{_timestamp()}.backup")
     args = ["mysqldump", "-h", host, "-P", port, "-u", user, f"--password={password}", dbname]
     with open(out, "w", encoding="utf-8") as fh:
         proc = subprocess.run(args, stdout=fh, stderr=subprocess.PIPE, text=True)
     if proc.returncode != 0:
-        err = proc.stderr.decode() if isinstance(proc.stderr, bytes) else proc.stderr or "mysqldump failed"
+        err = proc.stderr if isinstance(proc.stderr, str) else (proc.stderr.decode() if proc.stderr else "mysqldump failed")
         raise RuntimeError(err)
     return out
 
-# ===================== Google Drive upload =====================
 def _gdrive_upload(file_path: str):
     if _env("GDRIVE_ENABLED", "False") != "True":
         return None
@@ -407,8 +435,7 @@ def _list_backups():
     items = []
     try:
         for name in os.listdir(folder):
-            # Only include .backup files
-            if not name.lower().endswith('.db'):
+            if not name.lower().endswith('.backup'):
                 continue
             p = os.path.join(folder, name)
             if os.path.isfile(p):
@@ -422,71 +449,95 @@ def _list_backups():
         pass
     return items
 
+def _bytes_fmt(n):
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if n < 1024 or unit == "TB":
+            return f"{n:.2f} {unit}" if unit != "B" else f"{int(n)} B"
+        n /= 1024.0
 
-def _next_run_text():
-    if not _scheduler:
-        return None
+def _dir_stats(dir_path: str, backup_files: list, keep_days: int):
+    exists = os.path.isdir(dir_path)
+    writable = os.access(dir_path, os.W_OK | os.X_OK) if exists else False
+    total = used = free = None
     try:
-        job = _scheduler.get_job("db_backup_job")
-        if job and job.next_run_time:
-            return job.next_run_time.strftime("%Y-%m-%d %H:%M")
+        usage = shutil.disk_usage(dir_path if exists else os.path.abspath(dir_path))
+        total, used, free = usage.total, usage.total - usage.free, usage.free
     except Exception:
         pass
-    return None
 
-# ===================== SETTINGS =====================
+    total_size = sum(f["size"] for f in backup_files)
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=int(keep_days or 7))
+    prune_count = sum(1 for f in backup_files if f["mtime"] < cutoff)
+    used_pct = int(used / total * 100) if (total and used is not None) else None
+    latest = backup_files[0] if backup_files else None
+
+    return {
+        "exists": exists,
+        "writable": writable,
+        "total": total,
+        "used": used,
+        "free": free,
+        "used_pct": used_pct,
+        "file_count": len(backup_files),
+        "total_size": total_size,
+        "prune_count": prune_count,
+        "latest": latest
+    }
+
+# ===================== Settings pages =====================
 @settings_bp.route('/settings', methods=['GET', 'POST'])
 def settings_page():
-    smtp = dotenv_values(ENV_PATH)
+    smtp = dotenv_values(_env_path())
 
-    # Save SMTP
-    if request.method == 'POST' and 'smtp_save' in request.form:
-        set_key(ENV_PATH, "MAIL_SERVER", request.form.get("MAIL_SERVER", ""))
-        set_key(ENV_PATH, "MAIL_PORT", request.form.get("MAIL_PORT", "587"))
-        set_key(ENV_PATH, "MAIL_USERNAME", request.form.get("MAIL_USERNAME", ""))
-        set_key(ENV_PATH, "MAIL_PASSWORD", request.form.get("MAIL_PASSWORD", ""))
-        set_key(ENV_PATH, "MAIL_DEFAULT_SENDER", request.form.get("MAIL_DEFAULT_SENDER", ""))
-        set_key(ENV_PATH, "MAIL_USE_TLS", "True" if request.form.get("MAIL_USE_TLS") else "False")
+    # ----- SAVE SMTP -----
+    if request.method == 'POST' and request.form.get('smtp_save'):
+        _set_env("MAIL_SERVER", request.form.get("MAIL_SERVER", ""))
+        _set_env("MAIL_PORT", request.form.get("MAIL_PORT", "587"))
+        _set_env("MAIL_USERNAME", request.form.get("MAIL_USERNAME", ""))
+        _set_env("MAIL_PASSWORD", request.form.get("MAIL_PASSWORD", ""))
+        _set_env("MAIL_DEFAULT_SENDER", request.form.get("MAIL_DEFAULT_SENDER", ""))
+        _set_env("MAIL_USE_TLS", "True" if request.form.get("MAIL_USE_TLS") else "False")
         flash("✅ SMTP settings updated!", "success")
         return redirect(url_for('settings.settings_page'))
 
-    # Save Backup + Network + Drive
-    if request.method == 'POST' and 'backup_save' in request.form:
-        _set_env("DB_BACKUP_ENABLED", "True" if request.form.get("DB_BACKUP_ENABLED") == "on" else "False")
-        _set_env("DB_BACKUP_TIME", request.form.get("DB_BACKUP_TIME", "02:00"))
-        _set_env("DB_BACKUP_KEEP_DAYS", request.form.get("DB_BACKUP_KEEP_DAYS", "7"))
+    # ----- SAVE BACKUP -----
+    if request.method == 'POST' and request.form.get('backup_save'):
+        enabled = 'DB_BACKUP_ENABLED' in request.form
+        time_str = (request.form.get('DB_BACKUP_TIME', '02:00') or '02:00')[:5]
+        keep_days = request.form.get('DB_BACKUP_KEEP_DAYS', '7') or '7'
 
-        # Normalize and persist backup dir once (avoid re-reading malformed values)
-        # inside: if request.method == 'POST' and 'backup_save' in request.form:
-        raw_dir = request.form.get("DB_BACKUP_DIR", _backup_dir())
+        raw_dir = (request.form.get('DB_BACKUP_DIR') or '').strip() or _default_backup_dir()
         safe_dir = _sanitize_backup_path(raw_dir, _default_backup_dir())
-        _set_env("DB_BACKUP_DIR", safe_dir)  # already forward slashes now
-        os.makedirs(safe_dir, exist_ok=True)
+        try:
+            os.makedirs(safe_dir, exist_ok=True)
+        except Exception as e:
+            flash(f"❌ Backup folder invalid: {safe_dir} ({e})", "danger")
+            return redirect(url_for('settings.settings_page', set_db_backup_dir=safe_dir))
 
-        # SMB / Network Share
-        _set_env("SMB_ENABLED", "True" if request.form.get("SMB_ENABLED") == "on" else "False")
+        _set_env("DB_BACKUP_ENABLED", "True" if enabled else "False")
+        _set_env("DB_BACKUP_TIME", time_str)
+        _set_env("DB_BACKUP_KEEP_DAYS", keep_days)
+        _set_env("DB_BACKUP_DIR", safe_dir)
+
+        _set_env("SMB_ENABLED", "True" if 'SMB_ENABLED' in request.form else "False")
         _set_env("SMB_SHARE", request.form.get("SMB_SHARE", ""))
         _set_env("SMB_USER", request.form.get("SMB_USER", ""))
-        smb_pass_new = request.form.get("SMB_PASSWORD", "")
-        if smb_pass_new != "":
-            _set_env("SMB_PASSWORD", smb_pass_new)
+        if request.form.get("SMB_PASSWORD", ""):
+            _set_env("SMB_PASSWORD", request.form.get("SMB_PASSWORD", ""))
 
-        # Google Drive
-        _set_env("GDRIVE_ENABLED", "True" if request.form.get("GDRIVE_ENABLED") == "on" else "False")
-        folder_id_input = request.form.get("GDRIVE_FOLDER_ID", "")
-        _set_env("GDRIVE_FOLDER_ID", _extract_drive_folder_id(folder_id_input))
+        _set_env("GDRIVE_ENABLED", "True" if 'GDRIVE_ENABLED' in request.form else "False")
+        _set_env("GDRIVE_FOLDER_ID", _extract_drive_folder_id(request.form.get("GDRIVE_FOLDER_ID", "")))
 
         _schedule_backup_job_from_env()
-        flash("✅ Backup settings saved.", "success")
+        flash(f"✅ Backup settings saved. Folder: {safe_dir}", "success")
         return redirect(url_for('settings.settings_page'))
 
-    # Save Branding
-    if request.method == 'POST' and 'branding_save' in request.form:
+    # ----- SAVE BRANDING -----
+    if request.method == 'POST' and request.form.get('branding_save'):
         _set_env("BRAND_COMPANY_NAME", request.form.get("BRAND_COMPANY_NAME", "").strip())
         _set_env("BRAND_DOC_TITLE_FORMAT", request.form.get("BRAND_DOC_TITLE_FORMAT", "{company_name} ({doc_type})").strip())
-        _set_env("BRAND_DOC_TYPE_UPPER", "True" if request.form.get("BRAND_DOC_TYPE_UPPER") == "on" else "False")
+        _set_env("BRAND_DOC_TYPE_UPPER", "True" if request.form.get("BRAND_DOC_TYPE_UPPER") else "False")
 
-        # uploads (keep existing if none chosen)
         for var_key, field in _ALLOWED_BRAND_KEYS.items():
             file_obj = request.files.get(field)
             clear_flag = request.form.get(f"clear_{field}") == "on"
@@ -494,7 +545,6 @@ def settings_page():
                 _delete_brand_file(var_key)
                 continue
             if file_obj and file_obj.filename:
-                # delete old, save new
                 _delete_brand_file(var_key)
                 web_path = _save_brand_file(file_obj, var_key)
                 _set_env(var_key, web_path)
@@ -502,7 +552,7 @@ def settings_page():
         flash("✅ Branding saved.", "success")
         return redirect(url_for('settings.settings_page'))
 
-    # View model
+    # ----- VIEW MODEL -----
     uri = _db_uri() or ""
     db_file_resolved = ""
     if uri.lower().startswith("sqlite"):
@@ -511,26 +561,33 @@ def settings_page():
         except Exception:
             db_file_resolved = "(could not resolve)"
 
-    # Normalize dir for display to avoid showing broken backslashes
-    dir_raw = _env("DB_BACKUP_DIR", _default_backup_dir())
-    dir_norm = _sanitize_backup_path(dir_raw, _default_backup_dir())
+    chosen_prefill = request.args.get('set_db_backup_dir', '').strip()
+    if chosen_prefill:
+        dir_norm = _sanitize_browse_path(chosen_prefill)
+    else:
+        dir_raw = _env("DB_BACKUP_DIR", _default_backup_dir())
+        dir_norm = _sanitize_backup_path(dir_raw, _default_backup_dir())
+
+    backup_files = _list_backups()
+    keep_days = _env("DB_BACKUP_KEEP_DAYS", "7")
+    stats = _dir_stats(dir_norm.replace("\\","/"), backup_files, keep_days)
 
     backup_cfg = {
         "enabled": _env("DB_BACKUP_ENABLED", "False"),
         "time": _env("DB_BACKUP_TIME", "02:00"),
-        "keep": _env("DB_BACKUP_KEEP_DAYS", "7"),
+        "keep": keep_days,
         "dir": dir_norm.replace("\\", "/"),
         "last": _env("DB_BACKUP_LAST", "—"),
         "last_status": _env("DB_BACKUP_LAST_STATUS", "—"),
         "next_run": _next_run_text() or "—",
         "db_path": db_file_resolved,
         "quick_default": _default_backup_dir(),
-        "quick_instance": os.path.join(getattr(current_app, "instance_path", current_app.root_path), "backups", "db"),
-        # Network (SMB)
+        "quick_instance": os.path.join(getattr(current_app, "instance_path", current_app.root_path), "backups"),
+
         "smb_enabled": _env("SMB_ENABLED", "False"),
         "smb_share": _env("SMB_SHARE", ""),
         "smb_user": _env("SMB_USER", ""),
-        # Google Drive
+
         "gdrive_enabled": _env("GDRIVE_ENABLED", "False"),
         "gdrive_folder": _env("GDRIVE_FOLDER_ID", ""),
         "gdrive_key_path": _env("GDRIVE_SA_JSON", ""),
@@ -539,7 +596,6 @@ def settings_page():
         "cloud_status": _env("DB_BACKUP_LAST_CLOUD_STATUS", "—"),
     }
 
-    # Branding view model
     brand = {
         "company_name": _env("BRAND_COMPANY_NAME", ""),
         "doc_fmt": _env("BRAND_DOC_TITLE_FORMAT", "{company_name} ({doc_type})"),
@@ -550,7 +606,6 @@ def settings_page():
         "watermark": _env("BRAND_WATERMARK", ""),
         "stamp": _env("BRAND_STAMP", ""),
     }
-    # server-side previews for common docs
     previews = []
     for doc in ["Delivery Note", "Collection Note", "Invoice"]:
         previews.append({
@@ -559,14 +614,18 @@ def settings_page():
         })
 
     import_models = ["assets", "spares", "tonermodel", "tonercosting", "customer", "contract"]
-    backup_files = _list_backups()
-    return render_template("settings.html",
-                           smtp=dotenv_values(ENV_PATH),
-                           backup=backup_cfg,
-                           backup_files=backup_files,
-                           import_models=import_models,
-                           brand=brand,
-                           brand_previews=previews)
+
+    return render_template(
+        "settings.html",
+        smtp=smtp,
+        backup=backup_cfg,
+        backup_files=backup_files,
+        backup_stats=stats,
+        import_models=import_models,
+        brand=brand,
+        brand_previews=previews,
+        _bytes_fmt=_bytes_fmt,        # expose formatter to Jinja
+    )
 
 @settings_bp.route('/settings/backup-now', methods=['POST'])
 def backup_now():
@@ -583,6 +642,47 @@ def backup_download(name):
         flash("❌ Invalid backup file.", "danger")
         return redirect(url_for('settings.settings_page'))
     return send_file(full, as_attachment=True)
+
+@settings_bp.post('/settings/backup-delete/<name>')
+def backup_delete(name):
+    folder = _backup_dir()
+    safe = secure_filename(name)
+    full = os.path.abspath(os.path.join(folder, safe))
+    try:
+        if full.startswith(os.path.abspath(folder)) and os.path.isfile(full):
+            os.remove(full)
+            flash(f"🗑️ Deleted {safe}", "success")
+        else:
+            flash("❌ Invalid backup file.", "danger")
+    except Exception as e:
+        flash(f"❌ Delete failed: {e}", "danger")
+    return redirect(url_for('settings.settings_page'))
+
+@settings_bp.post('/settings/backup-prune-old')
+def backup_prune_now():
+    folder = _backup_dir()
+    keep_days = int(_env("DB_BACKUP_KEEP_DAYS", "7") or 7)
+    before = len([f for f in os.listdir(folder) if f.lower().endswith('.backup')])
+    _prune_old_backups(folder, keep_days)
+    after = len([f for f in os.listdir(folder) if f.lower().endswith('.backup')])
+    removed = before - after if before >= after else 0
+    flash(f"🧹 Pruned {removed} old backups (older than {keep_days} days).", "success")
+    return redirect(url_for('settings.settings_page'))
+
+@settings_bp.get('/settings/backup-test')
+def backup_test_dir():
+    path = request.args.get('path', '').strip() or _backup_dir()
+    path = _sanitize_browse_path(path)
+    try:
+        os.makedirs(path, exist_ok=True)
+        probe = os.path.join(path, f".__testwrite__{_timestamp()}.tmp")
+        with open(probe, "w", encoding="utf-8") as fh:
+            fh.write("ok")
+        os.remove(probe)
+        flash(f"✅ Write test passed for: {path}", "success")
+    except Exception as e:
+        flash(f"❌ Write test failed for {path}: {e}", "danger")
+    return redirect(url_for('settings.settings_page', set_db_backup_dir=path))
 
 @settings_bp.route('/settings/upload-gdrive-key', methods=['POST'])
 def upload_gdrive_key():
@@ -686,85 +786,49 @@ def test_email():
         flash("❌ Failed to send test email. Check SMTP settings and logs.", "danger")
     return redirect(url_for('settings.settings_page'))
 
-# ===================== Folder Picker API =====================
-def _list_windows_drives():
-    drives = []
-    if sys.platform == 'win32':
-        for c in string.ascii_uppercase:
-            root = f"{c}:\\"
-            if os.path.exists(root):
-                drives.append(root)
-    return drives
-
-@settings_bp.get('/settings/api/listdir')
-@settings_bp.get('/settings/api/listdir')
-def api_listdir():
+# ===================== Simple folder browser (no modal) =====================
+@settings_bp.get('/settings/browse')
+def browse_dir():
     """
-    Server-side folder browser.
-    - If no 'path' provided: on Windows returns drives; on Linux returns '/'.
-    - Returns only directories under the requested path.
+    Simple server-side folder browser page.
+    Windows: drives list. Linux: '/'.
+    Click into folders; 'Select this folder' returns to Settings with path pre-filled.
     """
-    raw = request.args.get('path') or ''
+    raw = request.args.get('path', '').strip()
 
-    # First view: list drives on Windows; otherwise list root
-    if sys.platform == 'win32' and not raw.strip():
-        return jsonify({
-            "path": "",
-            "type": "root",
-            "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()]
-        })
+    if sys.platform == 'win32' and not raw:
+        drives = _list_windows_drives()
+        entries = [{"name": d, "path": d.replace("\\", "/")} for d in drives]
+        return render_template('browse.html', path='', parent='', entries=entries, is_root=True)
 
-    if not raw.strip() and sys.platform != 'win32':
-        raw = "/"
+    if not raw and sys.platform != 'win32':
+        raw = '/'
 
-    # Sanitize
-    start = _sanitize_browse_path(raw) if raw else ("/" if sys.platform != 'win32' else "")
+    path = _sanitize_browse_path(raw) if raw else ("/" if sys.platform != 'win32' else "")
+    if sys.platform == 'win32' and not path:
+        drives = _list_windows_drives()
+        entries = [{"name": d, "path": d.replace("\\", "/")} for d in drives]
+        return render_template('browse.html', path='', parent='', entries=entries, is_root=True)
 
-    # If still empty on Windows, show drives again
-    if sys.platform == 'win32' and not start:
-        return jsonify({
-            "path": "",
-            "type": "root",
-            "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()]
-        })
-
+    entries = []
+    parent = ''
     try:
-        path = start or current_app.root_path
-        entries = []
         for name in sorted(os.listdir(path)):
             full = os.path.join(path, name)
             if os.path.isdir(full):
                 entries.append({"name": name, "path": full.replace("\\", "/")})
-        return jsonify({"path": path.replace("\\", "/"), "type": "dir", "entries": entries})
-    except Exception as e:
-        # Hard fallback: if bad path, show drives/root instead of erroring
-        if sys.platform == 'win32':
-            return jsonify({
-                "path": "",
-                "type": "root",
-                "entries": [{"name": d, "path": d.replace("\\", "/")} for d in _list_windows_drives()],
-                "error": str(e)
-            }), 200
-        else:
-            try:
-                entries = [ {"name": n, "path": os.path.join("/", n)} for n in sorted(os.listdir("/")) if os.path.isdir(os.path.join("/", n)) ]
-            except Exception:
-                entries = []
-            return jsonify({"path": "/", "type": "dir", "entries": entries, "error": str(e)}), 200
 
-def _sanitize_browse_path(p: str) -> str:
-    """
-    Sanitize a path coming from the folder picker (no auto-append of 'db_backups').
-    Keeps drive roots like 'D:/' intact for navigation.
-    """
-    p = (p or "").strip().strip('\'"')
-    p = "".join(ch for ch in p if ord(ch) >= 32)
-    p = p.replace("\\", "/")
-    if not p:
-        return p
-    # absolute or UNC?
-    if not os.path.isabs(p) and not p.startswith("//"):
-        p = os.path.abspath(p)
-    else:
-        p = os.path.normpath(p)
-    return p.replace("\\", "/")
+        norm = path.replace("\\", "/").rstrip("/")
+        parts = norm.split("/")
+        if sys.platform == 'win32':
+            if (len(parts) == 1 and len(parts[0]) == 2 and parts[0][1] == ':'):
+                parent = ''
+            else:
+                parent = "/".join(parts[:-1]) if len(parts) > 1 else ''
+        else:
+            parent = "/".join(parts[:-1]) or "/"
+    except Exception:
+        entries = []
+        parent = ''
+
+    return render_template('browse.html', path=path, parent=parent, entries=entries, is_root=False)
