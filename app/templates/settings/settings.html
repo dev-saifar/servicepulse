@@ -3,7 +3,6 @@
 {% block content %}
 <div class="container my-4 settings-page">
 
-  <!-- Header -->
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <h3 class="mb-1"><i class="fas fa-sliders-h me-2"></i>ServicePulse Settings</h3>
@@ -11,7 +10,6 @@
     </div>
   </div>
 
-  <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -23,7 +21,6 @@
     {% endif %}
   {% endwith %}
 
-  <!-- Tabs -->
   <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="tab-backup" data-bs-toggle="tab" data-bs-target="#panel-backup" type="button" role="tab">
@@ -48,11 +45,11 @@
   </ul>
 
   <div class="tab-content pt-3">
-
     <!-- BACKUP TAB -->
     <div class="tab-pane fade show active" id="panel-backup" role="tabpanel" aria-labelledby="tab-backup">
-
       <div class="row g-3">
+
+        <!-- LEFT: Configure -->
         <div class="col-12 col-xxl-7">
           <div class="card shadow-sm">
             <div class="card-header d-flex align-items-center justify-content-between">
@@ -60,7 +57,7 @@
               <span class="badge bg-{{ 'success' if backup.enabled=='True' else 'secondary' }}">{{ 'Enabled' if backup.enabled=='True' else 'Disabled' }}</span>
             </div>
             <div class="card-body">
-              <form method="POST" action="{{ url_for('settings.settings_page') }}">
+              <form id="backupForm" method="POST" action="{{ url_for('settings.settings_page') }}">
                 <input type="hidden" name="backup_save" value="1">
 
                 <div class="row g-3">
@@ -95,9 +92,9 @@
                       <span class="input-group-text"><i class="fas fa-folder"></i></span>
                       <input type="text" class="form-control" id="DB_BACKUP_DIR" name="DB_BACKUP_DIR"
                              value="{{ backup.dir }}" placeholder="{{ backup.quick_default|replace('\\','/') }}">
-                      <button type="button" class="btn btn-outline-secondary" id="btn-browse-server">
-                        <i class="fas fa-folder-open me-1"></i> Browse
-                      </button>
+                      <a class="btn btn-outline-secondary" href="{{ url_for('settings.browse_dir', path=backup.dir) }}">Browse (server)</a>
+                      <button type="button" class="btn btn-outline-secondary" id="btnCopyPath" title="Copy path"><i class="far fa-copy"></i></button>
+                      <a class="btn btn-outline-secondary" href="{{ url_for('settings.backup_test_dir', path=backup.dir) }}" title="Test write"><i class="fas fa-wand-magic-sparkles"></i></a>
                     </div>
                     <div class="form-text">
                       Use forward slashes on Windows (e.g. <code>D:/path/to/folder</code>). Quick set:
@@ -109,7 +106,6 @@
 
                 <hr class="my-4">
 
-                <!-- Collapsible Advanced: SMB -->
                 <div class="accordion" id="backupAccordion">
                   <div class="accordion-item">
                     <h2 class="accordion-header" id="headingSMB">
@@ -124,7 +120,7 @@
                           <label class="form-check-label" for="SMB_ENABLED">Enable SMB for UNC paths</label>
                         </div>
                         <div class="mb-2">
-                          <label class="form-label">SMB share (e.g. <code>\\\\\\server\\share</code>)</label>
+                          <label class="form-label">SMB share (e.g. <code>\\\\server\\share</code>)</label>
                           <input type="text" class="form-control" name="SMB_SHARE" value="{{ backup.smb_share }}">
                         </div>
                         <div class="row g-2">
@@ -159,31 +155,75 @@
                           <input type="text" class="form-control" name="GDRIVE_FOLDER_ID" value="{{ backup.gdrive_folder }}" placeholder="Folder ID or full URL">
                           <div class="form-text">Drive libs installed: <strong>{{ backup.gdrive_libs }}</strong></div>
                         </div>
-                        <div class="border rounded p-2">
-                          <div class="fw-semibold mb-2">Service account key</div>
-                          <form method="POST" action="{{ url_for('settings.upload_gdrive_key') }}" enctype="multipart/form-data" class="d-flex gap-2">
-                            <input type="file" class="form-control" name="gdrive_key" accept=".json" required>
-                            <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-key me-1"></i> Upload JSON</button>
-                          </form>
-                          {% if backup.gdrive_key_path %}
-                            <div class="form-text mt-1">Current key: <code>{{ backup.gdrive_key_path }}</code></div>
-                          {% endif %}
-                        </div>
+                        <div class="alert alert-secondary mb-0">Upload your service account JSON in the separate panel below.</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div class="d-flex justify-content-end mt-4">
-                  <button class="btn btn-primary"><i class="fas fa-save me-1"></i> Save Backup Settings</button>
+                  <button type="submit" class="btn btn-primary" id="btnSaveBackup"><i class="fas fa-save me-1"></i> Save Backup Settings</button>
                 </div>
               </form>
             </div>
           </div>
+
+          <!-- Separate (not nested) Drive key upload -->
+          <div class="card shadow-sm mt-3">
+            <div class="card-header"><strong><i class="fas fa-key me-2"></i>Google Drive Service Account Key</strong></div>
+            <div class="card-body">
+              <form method="POST" action="{{ url_for('settings.upload_gdrive_key') }}" enctype="multipart/form-data" class="d-flex gap-2">
+                <input type="file" class="form-control" name="gdrive_key" accept=".json" required>
+                <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-upload me-1"></i> Upload JSON</button>
+              </form>
+              {% if backup.gdrive_key_path %}
+                <div class="form-text mt-2">Current key: <code>{{ backup.gdrive_key_path }}</code></div>
+              {% endif %}
+            </div>
+          </div>
         </div>
 
-        <!-- Status / Actions -->
+        <!-- RIGHT: Status / Actions / Files -->
         <div class="col-12 col-xxl-5">
+          <div class="card shadow-sm mb-3">
+            <div class="card-header"><strong><i class="fas fa-gauge me-2"></i>Environment</strong></div>
+            <div class="card-body">
+              <div class="small text-muted mb-1">Folder</div>
+              <div class="d-flex align-items-center gap-2">
+                <code class="text-truncate" style="max-width: 100%;">{{ backup.dir }}</code>
+              </div>
+
+              <div class="row g-2 mt-2">
+                <div class="col-6">
+                  <div class="small text-muted">Writable</div>
+                  <span class="badge {{ 'bg-success' if backup_stats.writable else 'bg-danger' }}">{{ 'Yes' if backup_stats.writable else 'No' }}</span>
+                </div>
+                <div class="col-6">
+                  <div class="small text-muted">Exists</div>
+                  <span class="badge {{ 'bg-success' if backup_stats.exists else 'bg-danger' }}">{{ 'Yes' if backup_stats.exists else 'No' }}</span>
+                </div>
+              </div>
+
+              {% if backup_stats.total %}
+              <div class="mt-3">
+                <div class="small text-muted mb-1">Disk usage</div>
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: {{ backup_stats.used_pct }}%;" aria-valuenow="{{ backup_stats.used_pct }}" aria-valuemin="0" aria-valuemax="100">{{ backup_stats.used_pct }}%</div>
+                </div>
+                <div class="small text-muted mt-1">
+                  Used: {{ _bytes_fmt(backup_stats.used or 0) }} / Total: {{ _bytes_fmt(backup_stats.total or 0) }} · Free: {{ _bytes_fmt(backup_stats.free or 0) }}
+                </div>
+              </div>
+              {% endif %}
+
+              <div class="mt-3 d-flex flex-wrap gap-3 small">
+                <div>Backups: <strong>{{ backup_stats.file_count }}</strong></div>
+                <div>Total size: <strong>{{ _bytes_fmt(backup_stats.total_size) }}</strong></div>
+                <div>Prune candidates: <strong>{{ backup_stats.prune_count }}</strong></div>
+              </div>
+            </div>
+          </div>
+
           <div class="card shadow-sm mb-3">
             <div class="card-header"><strong><i class="fas fa-clipboard-check me-2"></i>Status</strong></div>
             <div class="card-body">
@@ -202,7 +242,7 @@
                 <div class="col-sm-6">
                   <div class="small text-muted">Cloud (Drive)</div>
                   <div>Last: <strong>{{ backup.cloud_last }}</strong></div>
-                  <div>Status:
+                  <div class="text-wrap">Status:
                     <span class="badge {{ 'bg-success' if backup.cloud_status=='SUCCESS' else 'bg-secondary' }}">{{ backup.cloud_status }}</span>
                   </div>
                 </div>
@@ -212,18 +252,22 @@
                 </div>
               </div>
 
-              <div class="d-flex gap-2 mt-3">
+              <div class="d-flex flex-wrap gap-2 mt-3">
                 <form method="POST" action="{{ url_for('settings.backup_now') }}">
-                  <button class="btn btn-outline-primary"><i class="fas fa-play me-1"></i> Backup Now</button>
+                  <button class="btn btn-outline-primary action-once"><i class="fas fa-play me-1"></i> Backup Now</button>
                 </form>
                 <form method="POST" action="{{ url_for('settings.backup_upload_last') }}">
-                  <button class="btn btn-outline-secondary"><i class="fab fa-google-drive me-1"></i> Upload Last to Drive</button>
+                  <button class="btn btn-outline-secondary action-once" {{ 'disabled' if backup.gdrive_enabled!='True' }} title="{{ 'Enable Google Drive above' if backup.gdrive_enabled!='True' else '' }}">
+                    <i class="fab fa-google-drive me-1"></i> Upload Last to Drive
+                  </button>
+                </form>
+                <form method="POST" action="{{ url_for('settings.backup_prune_now') }}">
+                  <button class="btn btn-outline-danger action-once"><i class="fas fa-broom me-1"></i> Prune Old Now</button>
                 </form>
               </div>
             </div>
           </div>
 
-          <!-- Files -->
           <div class="card shadow-sm">
             <div class="card-header"><strong><i class="fas fa-folder-tree me-2"></i>Local Backups</strong></div>
             <div class="card-body">
@@ -235,19 +279,20 @@
                         <th>File</th>
                         <th class="text-nowrap">Size</th>
                         <th class="text-nowrap">Modified</th>
-                        <th></th>
+                        <th class="text-end">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {% for f in backup_files %}
                         <tr>
                           <td class="text-truncate"><code>{{ f.name }}</code></td>
-                          <td class="text-nowrap">{{ (f.size/1024/1024)|round(2) }} MB</td>
+                          <td class="text-nowrap">{{ _bytes_fmt(f.size) }}</td>
                           <td class="text-nowrap">{{ f.mtime.strftime('%Y-%m-%d %H:%M') if f.mtime else '' }}</td>
-                          <td class="text-end">
-                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('settings.backup_download', name=f.name) }}">
-                              <i class="fas fa-download me-1"></i> Download
-                            </a>
+                          <td class="text-end d-flex justify-content-end gap-2">
+                            <a class="btn btn-sm btn-outline-success" href="{{ url_for('settings.backup_download', name=f.name) }}"><i class="fas fa-download"></i></a>
+                            <form method="POST" action="{{ url_for('settings.backup_delete', name=f.name) }}" onsubmit="return confirm('Delete {{ f.name }}?');">
+                              <button class="btn btn-sm btn-outline-danger action-once"><i class="fas fa-trash"></i></button>
+                            </form>
                           </td>
                         </tr>
                       {% endfor %}
@@ -255,7 +300,7 @@
                   </table>
                 </div>
               {% else %}
-                <div class="text-muted">No backups found yet.</div>
+                <div class="text-muted">No .backup files found yet.</div>
               {% endif %}
               <div class="mt-2 small text-muted">
                 Quick paths:
@@ -265,11 +310,12 @@
             </div>
           </div>
         </div>
+
       </div>
+    </div>
+    <!-- /BACKUP TAB -->
 
-    </div><!-- /BACKUP TAB -->
-
-    <!-- SMTP TAB -->
+    <!-- SMTP TAB (unchanged) -->
     <div class="tab-pane fade" id="panel-smtp" role="tabpanel" aria-labelledby="tab-smtp">
       <div class="row g-3">
         <div class="col-12 col-xl-7">
@@ -337,9 +383,10 @@
           </div>
         </div>
       </div>
-    </div><!-- /SMTP TAB -->
+    </div>
+    <!-- /SMTP TAB -->
 
-    <!-- BRANDING TAB -->
+    <!-- BRANDING TAB (unchanged essentials) -->
     <div class="tab-pane fade" id="panel-branding" role="tabpanel" aria-labelledby="tab-branding">
       <div class="card shadow-sm">
         <div class="card-header"><strong><i class="fas fa-paint-brush me-2"></i>Branding</strong></div>
@@ -417,9 +464,10 @@
           </form>
         </div>
       </div>
-    </div><!-- /BRANDING TAB -->
+    </div>
+    <!-- /BRANDING TAB -->
 
-    <!-- DATA IMPORT TAB -->
+    <!-- DATA IMPORT TAB (unchanged) -->
     <div class="tab-pane fade" id="panel-import" role="tabpanel" aria-labelledby="tab-import">
       <div class="card shadow-sm">
         <div class="card-header"><strong><i class="fas fa-file-arrow-up me-2"></i>Data Import</strong></div>
@@ -452,28 +500,8 @@
 
         </div>
       </div>
-    </div><!-- /DATA IMPORT TAB -->
-
-  </div>
-</div>
-
-<!-- Folder Picker Modal (Bootstrap) -->
-<div class="modal fade" id="dirPickerModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>Pick a folder on the server</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <nav class="mb-2"><ol class="breadcrumb mb-0" id="dirBreadcrumb"></ol></nav>
-        <div class="list-group" id="dirList"></div>
-      </div>
-      <div class="modal-footer">
-        <small class="me-auto text-muted" id="dirCurrentPath"></small>
-        <button type="button" class="btn btn-primary" id="dirChooseBtn" disabled><i class="fas fa-check me-1"></i> Use this folder</button>
-      </div>
     </div>
+    <!-- /DATA IMPORT TAB -->
   </div>
 </div>
 {% endblock %}
@@ -482,118 +510,38 @@
 {{ super() }}
 <script>
 (() => {
-  // Quick sets
   const inputDir = document.getElementById('DB_BACKUP_DIR');
   const qd = document.getElementById('setQuickDefault');
   const qi = document.getElementById('setQuickInstance');
   if (qd) qd.addEventListener('click', e => { e.preventDefault(); inputDir.value = "{{ backup.quick_default|replace('\\','/') }}"; });
   if (qi) qi.addEventListener('click', e => { e.preventDefault(); inputDir.value = "{{ backup.quick_instance|replace('\\','/') }}"; });
 
-  // Folder picker
-  const btnBrowse = document.getElementById('btn-browse-server');
-  const modalEl = document.getElementById('dirPickerModal');
-  const dirList = document.getElementById('dirList');
-  const dirBreadcrumb = document.getElementById('dirBreadcrumb');
-  const dirCurrentPath = document.getElementById('dirCurrentPath');
-  const chooseBtn = document.getElementById('dirChooseBtn');
-  let selectedPath = "";
-
-  function api(path) {
-    try { if (path && /[\x00-\x1F]/.test(path)) path = ''; } catch (_) { path = ''; }
-    const url = '{{ url_for("settings.api_listdir") }}' + (path ? ('?path=' + encodeURIComponent(path)) : '');
-    return fetch(url).then(r => r.json());
-  }
-
-  function makeCrumb(label, path, active) {
-    const li = document.createElement('li');
-    li.className = 'breadcrumb-item' + (active ? ' active' : '');
-    if (active || path === null) li.textContent = label;
-    else {
-      const a = document.createElement('a'); a.href = '#'; a.textContent = label;
-      a.onclick = ev => { ev.preventDefault(); load(path); };
-      li.appendChild(a);
-    }
-    return li;
-  }
-
-  function render(data) {
-    dirCurrentPath.textContent = data.path || '(drives)';
-    dirBreadcrumb.innerHTML = '';
-
-    if (!data.path) {
-      dirBreadcrumb.appendChild(makeCrumb('This PC', null, true));
-    } else {
-      dirBreadcrumb.appendChild(makeCrumb('This PC', '', false));
-      const parts = data.path.replace(/\\/g,'/').split('/').filter(Boolean);
-      let acc = parts[0] && parts[0].includes(':') ? parts[0] + '/' : '';
-      if (acc) dirBreadcrumb.appendChild(makeCrumb(parts[0], acc, parts.length === 1));
-      for (let i = (acc ? 1 : 0); i < parts.length; i++) {
-        acc = acc ? (acc + parts[i] + '/') : ('/' + parts.slice(0, i+1).join('/'));
-        dirBreadcrumb.appendChild(makeCrumb(parts[i], acc.replace(/\/$/,''), i === parts.length - 1));
-      }
-    }
-
-    dirList.innerHTML = '';
-    if (data.type === 'root') {
-      data.entries.forEach(e => {
-        const a = document.createElement('a');
-        a.href = '#'; a.className = 'list-group-item list-group-item-action';
-        a.innerHTML = '<i class="fas fa-hdd me-2"></i>' + e.name;
-        a.onclick = ev => { ev.preventDefault(); load(e.path); };
-        dirList.appendChild(a);
-      });
-      chooseBtn.disabled = true; selectedPath = '';
-    } else if (data.type === 'dir') {
-      const up = document.createElement('a');
-      up.href = '#'; up.className = 'list-group-item list-group-item-action';
-      up.textContent = '⬆️  (parent folder)';
-      up.onclick = ev => {
-        ev.preventDefault();
-        const parent = data.path.replace(/\\/g,'/').replace(/\/$/,'').split('/').slice(0,-1).join('/') || '';
-        load(parent);
-      };
-      dirList.appendChild(up);
-
-      data.entries.forEach(e => {
-        const a = document.createElement('a');
-        a.href = '#'; a.className = 'list-group-item list-group-item-action';
-        a.innerHTML = '<i class="far fa-folder me-2"></i>' + e.name;
-        a.onclick = ev => { ev.preventDefault(); load(e.path); };
-        dirList.appendChild(a);
-      });
-
-      chooseBtn.disabled = false; selectedPath = data.path;
-    } else {
-      dirList.innerHTML = '<div class="text-danger">Error: ' + (data.error || 'Unknown') + '</div>';
-      chooseBtn.disabled = true; selectedPath = '';
-    }
-  }
-
-  function load(path) {
-    api(path).then(render).catch(() => api('').then(render));
-  }
-
-  if (btnBrowse) {
-    btnBrowse.addEventListener('click', () => {
-      const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      bsModal.show(); load('');
+  // Copy path
+  const btnCopy = document.getElementById('btnCopyPath');
+  if (btnCopy) btnCopy.addEventListener('click', () => {
+    navigator.clipboard.writeText(inputDir.value || '').then(() => {
+      btnCopy.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => btnCopy.innerHTML = '<i class="far fa-copy"></i>', 900);
     });
-  }
+  });
 
-  if (chooseBtn) {
-    chooseBtn.addEventListener('click', () => {
-      if (selectedPath) inputDir.value = selectedPath.replace(/\\/g,'/');
-      bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+  // Prevent double submits on action buttons
+  document.querySelectorAll('.action-once').forEach(btn => {
+    btn.addEventListener('click', function () {
+      setTimeout(() => { this.setAttribute('disabled', 'disabled'); }, 0);
     });
-  }
+  });
+
+  const btnSave = document.getElementById('btnSaveBackup');
+  if (btnSave) btnSave.addEventListener('click', function(){ setTimeout(() => this.setAttribute('disabled','disabled'), 0); });
 })();
 </script>
 
 <style>
-/* Subtle polish */
 .settings-page .nav-tabs .nav-link { font-weight: 600; }
 .settings-page .card-header { background: #f9fafb; }
 .settings-page .form-text a { text-decoration: none; }
 .settings-page .accordion-button:not(.collapsed) { background: #f1f5f9; }
+.text-wrap { word-break: break-word; }
 </style>
 {% endblock %}
