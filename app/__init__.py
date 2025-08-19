@@ -176,25 +176,35 @@ def create_app():
     app.register_blueprint(license_bp)
     from app.modules.license_status import license_status_bp
     app.register_blueprint(license_status_bp)
-    from flask import request
 
-    valid, reason = is_license_valid()
+    from flask import request, redirect, url_for
+    from app.modules.license_utils import is_license_valid
 
-    if not valid:
-        print("❌ License check failed:", reason)
+    # Always enforce, but allow some endpoints without a license
+    ALLOWED_ENDPOINTS = {
+        'license.license_page',  # activation page
+        'license_status.license_info',  # your license info page
+        'about.about',  # you allowed this before
+        'about.download_license_info',  # helper for generating info
+        'auth.login',  # allow login
+        'auth.logout',  # allow logout
+        'static',  # static files
+    }
 
-        @app.before_request
-        def enforce_license_check():
-            allowed_endpoints = [
-                'license.license_page',
-                'about.about',
-                'about.download_license_info',
-                'static'
-            ]
+    @app.before_request
+    def enforce_license_check():
+        # Skip if endpoint unknown (e.g., 404) or part of the allowed list
+        endpoint = (request.endpoint or '')
+        if not endpoint or endpoint in ALLOWED_ENDPOINTS or endpoint.startswith('static'):
+            return None
 
-            if not request.endpoint or request.endpoint not in allowed_endpoints:
-                print(f"🔒 Blocking access to {request.endpoint} due to invalid license.")
-                return redirect(url_for("license.license_page"))
+        # Re-check license EACH request (no restart needed)
+        ok, _ = is_license_valid()
+        if ok:
+            return None
+
+        # Block and send user to activation page
+        # preserve "next" so we can bounce back on success
+        return redirect(url_for('license.license_page', next=request.url))
 
     return app
-

@@ -1,10 +1,12 @@
 # app/modules/settings.py
-from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file
+from flask import Blueprint, render_template, request, redirect, flash, url_for, current_app, send_file, abort
 from werkzeug.utils import secure_filename
 from dotenv import set_key, dotenv_values
 from flask_mail import Message
 from app.extensions import db, mail
 from app.models import Assets, spares, TonerModel, TonerCosting, Customer, Contract
+from functools import wraps
+from flask_login import current_user
 import os
 import sys
 import re
@@ -35,12 +37,45 @@ except Exception:
 
 settings_bp = Blueprint('settings', __name__, template_folder='../templates/settings')
 
+# ===================== Auth / Admin guard =====================
+def _login_url():
+    try:
+        return url_for('auth.login', next=request.url)
+    except Exception:
+        try:
+            return url_for('login', next=request.url)
+        except Exception:
+            return '/login?next=' + request.url
+
+def _is_admin(user) -> bool:
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_admin", False):
+        return True
+    role_attr = str(getattr(user, "role", "")).lower()
+    if role_attr == "admin":
+        return True
+    roles = getattr(user, "roles", [])
+    try:
+        lowered = [r.name.lower() if hasattr(r, "name") else str(r).lower() for r in roles]
+    except Exception:
+        lowered = [str(roles).lower()]
+    return "admin" in lowered
+
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not getattr(current_user, "is_authenticated", False):
+            flash("Please log in to access Settings.", "danger")
+            return redirect(_login_url())
+        if not _is_admin(current_user):
+            abort(403)
+        return fn(*args, **kwargs)
+    return wrapper
+
 # ===================== .env helpers =====================
 def _env_path():
-    """
-    Resolve the .env path relative to the app folder (not process CWD).
-    Prefer <project_root>/.env; create if missing.
-    """
+    """Resolve the .env path relative to the app folder (not process CWD)."""
     app_root = current_app.root_path  # .../app
     candidates = [
         os.path.abspath(os.path.join(app_root, '..', '.env')),
@@ -59,19 +94,30 @@ def _env(key, default=None):
 def _set_env(key, value):
     set_key(_env_path(), key, str(value))
 
-# ---- helper: show next scheduled run time (if scheduler is available)
+# ---- helper: show next scheduled backup time
 def _next_run_text():
-        """Return 'YYYY-MM-DD HH:MM' for the next scheduled backup, or None."""
-        if not _scheduler:
-            return None
-        try:
-            job = _scheduler.get_job("db_backup_job")
-            if job and job.next_run_time:
-                return job.next_run_time.strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            pass
+    """Return 'YYYY-MM-DD HH:MM' for the next scheduled backup, or None."""
+    if not _scheduler:
         return None
+    try:
+        job = _scheduler.get_job("db_backup_job")
+        if job and job.next_run_time:
+            return job.next_run_time.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        pass
+    return None
 
+# ---- helper: show next scheduled log cleanup time
+def _next_log_run_text():
+    if not _scheduler:
+        return None
+    try:
+        job = _scheduler.get_job("log_cleanup_job")
+        if job and job.next_run_time:
+            return job.next_run_time.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        pass
+    return None
 
 # ===================== Upload/Brand folders =====================
 UPLOAD_FOLDER = os.path.join('app', 'uploads', 'imports')
@@ -123,11 +169,9 @@ def _sanitize_backup_path(p: str, default_dir: str) -> str:
 
     p = p.replace("\\", "/")
 
-    # drive-root -> add subfolder
     if re.fullmatch(r"[A-Za-z]:/?", p):
         p = p.rstrip("/").upper() + "/db_backups"
 
-    # UNC share root -> add subfolder
     if p.startswith("//"):
         parts = p.strip("/").split("/")
         if len(parts) == 2:
@@ -282,6 +326,30 @@ def _schedule_backup_job_from_env():
     trigger = CronTrigger(hour=hour, minute=minute)
     _scheduler.add_job(_run_scheduled_backup, trigger, id=job_id, replace_existing=True)
 
+# ---- LOG CLEANUP scheduling
+def _schedule_log_cleanup_job_from_env():
+    if not _scheduler:
+        return
+    job_id = "log_cleanup_job"
+    try:
+        job = _scheduler.get_job(job_id)
+        if job:
+            _scheduler.remove_job(job_id)
+    except Exception:
+        pass
+
+    enabled = _env("LOG_RETENTION_ENABLED", "False") == "True"
+    if not enabled:
+        return
+
+    time_str = _env("LOG_CLEAN_TIME", "03:10")
+    try:
+        hour, minute = [int(x) for x in time_str.split(":")]
+    except Exception:
+        hour, minute = 3, 10
+    trigger = CronTrigger(hour=hour, minute=minute)
+    _scheduler.add_job(_run_log_cleanup, trigger, id=job_id, replace_existing=True)
+
 @settings_bp.before_app_request
 def _maybe_start_scheduler():
     if not _scheduler:
@@ -291,13 +359,10 @@ def _maybe_start_scheduler():
             if not _scheduler.running:
                 _scheduler.start()
             _schedule_backup_job_from_env()
+            _schedule_log_cleanup_job_from_env()
             current_app.config["BACKUP_SCHEDULER_INITIALIZED"] = True
         except Exception as e:
-            current_app.logger.exception("Failed to start backup scheduler: %s", e)
-
-
-
-
+            current_app.logger.exception("Failed to start scheduler: %s", e)
 
 # ===================== Backups =====================
 def _prune_old_backups(folder, keep_days):
@@ -484,8 +549,32 @@ def _dir_stats(dir_path: str, backup_files: list, keep_days: int):
         "latest": latest
     }
 
+# ===================== LOG CLEANUP =====================
+def _cleanup_old_logs(retention_days: int) -> int:
+    """Delete Log rows older than N days. Returns deleted row count."""
+    from app.modules.db_logger import Log  # avoid circular import
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=int(retention_days or 30))
+    try:
+        deleted = Log.query.filter(Log.timestamp < cutoff).delete(synchronize_session=False)
+        db.session.commit()
+        return int(deleted or 0)
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def _run_log_cleanup():
+    days = int(_env("LOG_RETENTION_DAYS", "30") or 30)
+    try:
+        deleted = _cleanup_old_logs(days)
+        _set_env("LOG_CLEAN_LAST", datetime.datetime.now().isoformat(timespec="seconds"))
+        _set_env("LOG_CLEAN_LAST_STATUS", f"SUCCESS: deleted {deleted}")
+    except Exception as e:
+        _set_env("LOG_CLEAN_LAST", datetime.datetime.now().isoformat(timespec="seconds"))
+        _set_env("LOG_CLEAN_LAST_STATUS", f"FAIL: {e}")
+
 # ===================== Settings pages =====================
 @settings_bp.route('/settings', methods=['GET', 'POST'])
+@admin_required
 def settings_page():
     smtp = dotenv_values(_env_path())
 
@@ -552,6 +641,20 @@ def settings_page():
         flash("✅ Branding saved.", "success")
         return redirect(url_for('settings.settings_page'))
 
+    # ----- SAVE LOG HOUSEKEEPING -----
+    if request.method == 'POST' and request.form.get('log_save'):
+        enabled = 'LOG_RETENTION_ENABLED' in request.form
+        days = request.form.get('LOG_RETENTION_DAYS', '30') or '30'
+        time_str = (request.form.get('LOG_CLEAN_TIME', '03:10') or '03:10')[:5]
+
+        _set_env("LOG_RETENTION_ENABLED", "True" if enabled else "False")
+        _set_env("LOG_RETENTION_DAYS", days)
+        _set_env("LOG_CLEAN_TIME", time_str)
+
+        _schedule_log_cleanup_job_from_env()
+        flash(f"✅ Log housekeeping saved (keep {days} days).", "success")
+        return redirect(url_for('settings.settings_page'))
+
     # ----- VIEW MODEL -----
     uri = _db_uri() or ""
     db_file_resolved = ""
@@ -596,6 +699,15 @@ def settings_page():
         "cloud_status": _env("DB_BACKUP_LAST_CLOUD_STATUS", "—"),
     }
 
+    log_cfg = {
+        "enabled": _env("LOG_RETENTION_ENABLED", "False"),
+        "days": _env("LOG_RETENTION_DAYS", "30"),
+        "time": _env("LOG_CLEAN_TIME", "03:10"),
+        "last": _env("LOG_CLEAN_LAST", "—"),
+        "last_status": _env("LOG_CLEAN_LAST_STATUS", "—"),
+        "next_run": _next_log_run_text() or "—",
+    }
+
     brand = {
         "company_name": _env("BRAND_COMPANY_NAME", ""),
         "doc_fmt": _env("BRAND_DOC_TITLE_FORMAT", "{company_name} ({doc_type})"),
@@ -621,19 +733,23 @@ def settings_page():
         backup=backup_cfg,
         backup_files=backup_files,
         backup_stats=stats,
+        log=log_cfg,
         import_models=import_models,
         brand=brand,
         brand_previews=previews,
-        _bytes_fmt=_bytes_fmt,        # expose formatter to Jinja
+        _bytes_fmt=_bytes_fmt,
     )
 
+# ----- Actions (admin only) -----
 @settings_bp.route('/settings/backup-now', methods=['POST'])
+@admin_required
 def backup_now():
     ok, path, msg = backup_database()
     flash(("✅ " if ok else "❌ ") + msg, "success" if ok else "danger")
     return redirect(url_for('settings.settings_page'))
 
 @settings_bp.route('/settings/backup-download/<name>', methods=['GET'])
+@admin_required
 def backup_download(name):
     folder = _backup_dir()
     safe = secure_filename(name)
@@ -644,6 +760,7 @@ def backup_download(name):
     return send_file(full, as_attachment=True)
 
 @settings_bp.post('/settings/backup-delete/<name>')
+@admin_required
 def backup_delete(name):
     folder = _backup_dir()
     safe = secure_filename(name)
@@ -659,6 +776,7 @@ def backup_delete(name):
     return redirect(url_for('settings.settings_page'))
 
 @settings_bp.post('/settings/backup-prune-old')
+@admin_required
 def backup_prune_now():
     folder = _backup_dir()
     keep_days = int(_env("DB_BACKUP_KEEP_DAYS", "7") or 7)
@@ -670,6 +788,7 @@ def backup_prune_now():
     return redirect(url_for('settings.settings_page'))
 
 @settings_bp.get('/settings/backup-test')
+@admin_required
 def backup_test_dir():
     path = request.args.get('path', '').strip() or _backup_dir()
     path = _sanitize_browse_path(path)
@@ -685,6 +804,7 @@ def backup_test_dir():
     return redirect(url_for('settings.settings_page', set_db_backup_dir=path))
 
 @settings_bp.route('/settings/upload-gdrive-key', methods=['POST'])
+@admin_required
 def upload_gdrive_key():
     f = request.files.get('gdrive_key')
     if not f or not f.filename.endswith('.json'):
@@ -697,6 +817,7 @@ def upload_gdrive_key():
     return redirect(url_for('settings.settings_page'))
 
 @settings_bp.route('/settings/backup-upload-last', methods=['POST'])
+@admin_required
 def backup_upload_last():
     if _env("GDRIVE_ENABLED", "False") != "True":
         flash("❌ Enable Google Drive in Settings first.", "danger")
@@ -718,8 +839,24 @@ def backup_upload_last():
         flash(f"❌ Drive upload failed: {e}", "danger")
     return redirect(url_for('settings.settings_page'))
 
+@settings_bp.post('/settings/log-clean-now')
+@admin_required
+def log_clean_now():
+    days = int(_env("LOG_RETENTION_DAYS", "30") or 30)
+    try:
+        deleted = _cleanup_old_logs(days)
+        _set_env("LOG_CLEAN_LAST", datetime.datetime.now().isoformat(timespec="seconds"))
+        _set_env("LOG_CLEAN_LAST_STATUS", f"SUCCESS: deleted {deleted}")
+        flash(f"🧹 Deleted {deleted} log rows older than {days} days.", "success")
+    except Exception as e:
+        _set_env("LOG_CLEAN_LAST", datetime.datetime.now().isoformat(timespec="seconds"))
+        _set_env("LOG_CLEAN_LAST_STATUS", f"FAIL: {e}")
+        flash(f"❌ Log cleanup failed: {e}", "danger")
+    return redirect(url_for('settings.settings_page'))
+
 # ===================== Data Import / Templates / SMTP test =====================
 @settings_bp.route('/settings/upload/<table>', methods=['POST'])
+@admin_required
 def upload_excel(table):
     file = request.files.get('file')
     if not file or not file.filename.endswith('.xlsx'):
@@ -748,6 +885,7 @@ def upload_excel(table):
     return redirect(url_for('settings.settings_page'))
 
 @settings_bp.route('/settings/download-template/<model>', methods=['GET'])
+@admin_required
 def download_template(model):
     templates = {
         'assets': ['account_code','customer_name','serial_number','service_location','region','technician_name','technician_email','contract','asset_Description','contract_expiry_date','last_pm_date','pm_freq','install_date','asset_code','asset_status','part_no','department'],
@@ -768,6 +906,7 @@ def download_template(model):
     return send_file(output, download_name=f"{model}_template.xlsx", as_attachment=True)
 
 @settings_bp.route('/test-email', methods=['POST'])
+@admin_required
 def test_email():
     test_email_address = request.form.get('test_email')
     if not test_email_address:
@@ -788,6 +927,7 @@ def test_email():
 
 # ===================== Simple folder browser (no modal) =====================
 @settings_bp.get('/settings/browse')
+@admin_required
 def browse_dir():
     """
     Simple server-side folder browser page.
