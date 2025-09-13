@@ -418,7 +418,10 @@
 
               <hr>
               <div class="d-flex align-items-center justify-content-between">
-                <div class="text-muted small">Send a quick test email to verify your SMTP settings.</div>
+                <div class="text-muted small">
+                  Send a quick test email to verify your SMTP settings.
+                  <div class="mt-1">Tip: SSL is applied automatically when you use port <code>465</code>; TLS is typical on <code>587</code>.</div>
+                </div>
                 <form method="POST" action="{{ url_for('settings.test_email') }}" class="d-flex gap-2">
                   <input type="email" name="test_email" class="form-control" placeholder="test@example.com" required>
                   <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-paper-plane me-1"></i> Test</button>
@@ -434,8 +437,8 @@
             <div class="card-header"><strong><i class="fas fa-info-circle me-2"></i>Tips</strong></div>
             <div class="card-body">
               <ul class="small mb-0">
-                <li>Most providers require <strong>TLS</strong> and ports like <code>587</code> or <code>465</code>.</li>
-                <li>If you use an app password, paste it in the Password field.</li>
+                <li>Most providers require <strong>TLS</strong> on port <code>587</code> or <strong>SSL</strong> on port <code>465</code>.</li>
+                <li>If you use a Gmail App Password, paste it exactly (spaces are ignored automatically in code).</li>
                 <li>Check your mail logs if the Test email fails.</li>
               </ul>
             </div>

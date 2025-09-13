@@ -7,16 +7,14 @@ from app.extensions import db, mail
 from app.models import Assets, spares, TonerModel, TonerCosting, Customer, Contract
 from functools import wraps
 from flask_login import current_user
-import os
-import sys
-import re
-import pandas as pd
+import os, sys, re, pandas as pd
 from io import BytesIO
-import datetime
-import shutil
-import subprocess
+import datetime, shutil, subprocess
 from urllib.parse import urlparse
 import string
+
+# 🔹 new: import the reloader helper
+from app import apply_smtp_from_env
 
 # ---------- Optional Google Drive ----------
 try:
@@ -75,7 +73,6 @@ def admin_required(fn):
 
 # ===================== .env helpers =====================
 def _env_path():
-    """Resolve the .env path relative to the app folder (not process CWD)."""
     app_root = current_app.root_path  # .../app
     candidates = [
         os.path.abspath(os.path.join(app_root, '..', '.env')),
@@ -94,9 +91,8 @@ def _env(key, default=None):
 def _set_env(key, value):
     set_key(_env_path(), key, str(value))
 
-# ---- helper: show next scheduled backup time
+# ---- helper: show next scheduled times
 def _next_run_text():
-    """Return 'YYYY-MM-DD HH:MM' for the next scheduled backup, or None."""
     if not _scheduler:
         return None
     try:
@@ -107,7 +103,6 @@ def _next_run_text():
         pass
     return None
 
-# ---- helper: show next scheduled log cleanup time
 def _next_log_run_text():
     if not _scheduler:
         return None
@@ -135,7 +130,6 @@ def _timestamp():
     return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
 def _default_backup_dir():
-    # Default: <project_root>/app/backups
     return os.path.join(current_app.root_path, 'backups')
 
 def _is_unc(path: str) -> bool:
@@ -151,13 +145,6 @@ def _unc_share_root(path: str) -> str:
     return ''
 
 def _sanitize_backup_path(p: str, default_dir: str) -> str:
-    """
-    Sanitize a user/env-provided path for saving backups.
-    - strip quotes/control chars
-    - normalize absolute
-    - force forward slashes
-    - drive roots / UNC roots get a '/db_backups' subfolder
-    """
     p = (p or "").strip().strip('\'"')
     p = "".join(ch for ch in p if ord(ch) >= 32)
     p = p.replace("\\", "/")
@@ -180,7 +167,6 @@ def _sanitize_backup_path(p: str, default_dir: str) -> str:
     return p
 
 def _sanitize_browse_path(p: str) -> str:
-    """Sanitize for browsing (no auto-append)."""
     p = (p or "").strip().strip('\'"')
     p = "".join(ch for ch in p if ord(ch) >= 32)
     p = p.replace("\\", "/")
@@ -326,7 +312,6 @@ def _schedule_backup_job_from_env():
     trigger = CronTrigger(hour=hour, minute=minute)
     _scheduler.add_job(_run_scheduled_backup, trigger, id=job_id, replace_existing=True)
 
-# ---- LOG CLEANUP scheduling
 def _schedule_log_cleanup_job_from_env():
     if not _scheduler:
         return
@@ -337,11 +322,9 @@ def _schedule_log_cleanup_job_from_env():
             _scheduler.remove_job(job_id)
     except Exception:
         pass
-
     enabled = _env("LOG_RETENTION_ENABLED", "False") == "True"
     if not enabled:
         return
-
     time_str = _env("LOG_CLEAN_TIME", "03:10")
     try:
         hour, minute = [int(x) for x in time_str.split(":")]
@@ -454,7 +437,6 @@ def _gdrive_upload(file_path: str):
     return resp
 
 def backup_database():
-    """Run a backup; returns (ok: bool, path: str|None, message: str)"""
     dest_dir = _backup_dir()
     uri = _db_uri() or ""
     try:
@@ -551,7 +533,6 @@ def _dir_stats(dir_path: str, backup_files: list, keep_days: int):
 
 # ===================== LOG CLEANUP =====================
 def _cleanup_old_logs(retention_days: int) -> int:
-    """Delete Log rows older than N days. Returns deleted row count."""
     from app.modules.db_logger import Log  # avoid circular import
     cutoff = datetime.datetime.now() - datetime.timedelta(days=int(retention_days or 30))
     try:
@@ -580,13 +561,28 @@ def settings_page():
 
     # ----- SAVE SMTP -----
     if request.method == 'POST' and request.form.get('smtp_save'):
-        _set_env("MAIL_SERVER", request.form.get("MAIL_SERVER", ""))
-        _set_env("MAIL_PORT", request.form.get("MAIL_PORT", "587"))
-        _set_env("MAIL_USERNAME", request.form.get("MAIL_USERNAME", ""))
-        _set_env("MAIL_PASSWORD", request.form.get("MAIL_PASSWORD", ""))
-        _set_env("MAIL_DEFAULT_SENDER", request.form.get("MAIL_DEFAULT_SENDER", ""))
-        _set_env("MAIL_USE_TLS", "True" if request.form.get("MAIL_USE_TLS") else "False")
-        flash("✅ SMTP settings updated!", "success")
+        server = request.form.get("MAIL_SERVER", "").strip()
+        port = (request.form.get("MAIL_PORT", "587") or "587").strip()
+        username = request.form.get("MAIL_USERNAME", "").strip()
+        # Trim spaces in app passwords
+        password = (request.form.get("MAIL_PASSWORD", "") or "").strip().replace(" ", "")
+        default_sender = request.form.get("MAIL_DEFAULT_SENDER", "").strip()
+        use_tls_flag = bool(request.form.get("MAIL_USE_TLS"))
+
+        _set_env("MAIL_SERVER", server)
+        _set_env("MAIL_PORT", port)
+        _set_env("MAIL_USERNAME", username)
+        _set_env("MAIL_PASSWORD", password)
+        _set_env("MAIL_DEFAULT_SENDER", default_sender)
+
+        # Auto SSL for port 465; disable TLS in that case
+        _set_env("MAIL_USE_SSL", "True" if port == "465" else "False")
+        _set_env("MAIL_USE_TLS", "False" if port == "465" else ("True" if use_tls_flag else "False"))
+
+        # 🔄 Immediately re-apply to running app (no restart needed)
+        apply_smtp_from_env(current_app)
+
+        flash("✅ SMTP settings updated & reloaded.", "success")
         return redirect(url_for('settings.settings_page'))
 
     # ----- SAVE BACKUP -----
@@ -912,6 +908,10 @@ def test_email():
     if not test_email_address:
         flash("❌ No email provided for test!", "danger")
         return redirect(url_for('settings.settings_page'))
+
+    # 🔄 Ensure the latest .env values are applied right now
+    apply_smtp_from_env(current_app)
+
     try:
         msg = Message(
             subject="✅ SMTP Test Email",
@@ -929,11 +929,6 @@ def test_email():
 @settings_bp.get('/settings/browse')
 @admin_required
 def browse_dir():
-    """
-    Simple server-side folder browser page.
-    Windows: drives list. Linux: '/'.
-    Click into folders; 'Select this folder' returns to Settings with path pre-filled.
-    """
     raw = request.args.get('path', '').strip()
 
     if sys.platform == 'win32' and not raw:
@@ -960,15 +955,10 @@ def browse_dir():
 
         norm = path.replace("\\", "/").rstrip("/")
         parts = norm.split("/")
-        if sys.platform == 'win32':
-            if (len(parts) == 1 and len(parts[0]) == 2 and parts[0][1] == ':'):
-                parent = ''
-            else:
-                parent = "/".join(parts[:-1]) if len(parts) > 1 else ''
-        else:
-            parent = "/".join(parts[:-1]) or "/"
+        if len(parts) > 1:
+            parent = "/".join(parts[:-1])
     except Exception:
-        entries = []
-        parent = ''
+        flash("❌ Unable to browse that path.", "danger")
+        return redirect(url_for('settings.settings_page', set_db_backup_dir=path))
 
     return render_template('browse.html', path=path, parent=parent, entries=entries, is_root=False)
