@@ -120,18 +120,17 @@
   </div>
 </div>
 
-{% set show_yield_warning = false %}
+{# ---- Low-yield check: CURRENT requests only; threshold 75% ---- #}
+{% set ns = namespace(warn=false) %}
 {% for r in requests %}
-  {% if r.toner_life and r.previous_reading is not none %}
-    {% set yield_val = (r.meter_reading or 0) - (r.previous_reading or 0) %}
-    {% if yield_val / r.toner_life < 0.6 %}
-      {% set show_yield_warning = true %}
-    {% endif %}
+  {% set life = (r.toner_life or 0) | int %}
+  {% set prev = (r.previous_reading or 0) | int %}
+  {% set curr = (r.meter_reading or 0) | int %}
+  {% set yield_val = curr - prev %}
+  {% if life > 0 and (yield_val / life) < 0.75 %}
+    {% set ns.warn = true %}
   {% endif %}
 {% endfor %}
-{% if show_yield_warning %}
-  <div class="note-warning">⚠️ Yield Low – Secondary Approval Required</div>
-{% endif %}
 
 <div class="section-title">Approvals</div>
 <table width="100%">
@@ -143,6 +142,15 @@
     <td>Signature: ..................................</td>
     <td>Signature: ..................................</td>
   </tr>
+  {% if ns.warn %}
+  <tr>
+    <td colspan="2">
+      <div class="note-warning" style="margin-top:8px;">
+        ⚠️ VERY LOW YIELD(LESS THAN 75%) SECOND LEVAL APPROVAL REQUIRED
+      </div>
+    </td>
+  </tr>
+  {% endif %}
 </table>
 
 <div class="section-title">Toner Request Details</div>
@@ -163,18 +171,20 @@
   </thead>
   <tbody>
     {% for r in requests %}
-      {% set prev = r.previous_reading or 0 %}
-      {% set yield_val = (r.meter_reading or 0) - prev %}
+      {% set life = (r.toner_life or 0) | int %}
+      {% set prev = (r.previous_reading or 0) | int %}
+      {% set curr = (r.meter_reading or 0) | int %}
+      {% set yield_val = curr - prev %}
       <tr>
         <td>{{ r.toner_type }}</td>
         <td>{{ r.toner_model }}</td>
-        <td>{{ r.toner_life }}</td>
+        <td>{{ life }}</td>
         <td>{{ r.issued_qty }}</td>
         <td>{{ prev }}</td>
-        <td>{{ r.meter_reading or 'N/A' }}</td>
+        <td>{{ curr if curr else 'N/A' }}</td>
         <td>{{ yield_val }}</td>
         <td>
-          {% if r.toner_life and yield_val / r.toner_life < 0.6 %}
+          {% if life > 0 and (yield_val / life) < 0.99 %}
             LOW
           {% else %}
             OK
@@ -208,37 +218,39 @@
     <th>FOC</th>
   </tr>
 </thead>
-
-  <tbody>
-    {% for h in history %}
-      {% set prev = h.actual_previous or 0 %}
-      {% set y = (h.meter_reading or 0) - prev %}
-      <tr>
-        <<tr>
-  <td>{{ h.date_issued.strftime('%Y-%m-%d') if h.date_issued else '' }}</td>
-  <td>{{ h.toner_type }}</td>
-
-        <td>{{ h.toner_model }}</td>
-        <td>{{ h.toner_life }}</td>
-        <td>{{ h.issued_qty }}</td>
-        <td>{{ prev }}</td>
-        <td>{{ h.meter_reading or 'N/A' }}</td>
-        <td>{{ y }}</td>
-        <td>
-          {% if h.toner_life and y / h.toner_life < 0.6 %}
-            LOW
+<tbody>
+  {% for h in history %}
+    {% set prev = h.actual_previous or 0 %}
+    {% set y = (h.meter_reading or 0) - prev %}
+    <tr>
+      <td>
+        {% if h.date_issued %}
+          {% if h.date_issued is string %}
+            {{ h.date_issued[:10] }}
           {% else %}
-            OK
+            {{ h.date_issued.strftime('%Y-%m-%d') }}
           {% endif %}
-        </td>
-        <td>{{ h.toner_source }}</td>
-        <td>{{ h.comments or '-' }}</td>
-        <td>{{ h.delivery_boy or '' }}</td>
-        <td>{{ h.receiver_name or '' }}</td>
-        <td>{{ h.foc or '' }}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
+        {% else %}
+          {{ '' }}
+        {% endif %}
+      </td>
+      <td>{{ h.toner_type }}</td>
+      <td>{{ h.toner_model }}</td>
+      <td>{{ h.toner_life }}</td>
+      <td>{{ h.issued_qty }}</td>
+      <td>{{ h.previous_reading }}</td>
+      <td>{{ h.meter_reading or 'N/A' }}</td>
+      <td>{{ h.yield_calc if h.yield_calc is not none else y }}</td>
+      <td>{{ 'LOW' if (h.toner_life and y / h.toner_life < 0.99) else 'OK' }}</td>
+      <td>{{ h.toner_source }}</td>
+      <td>{{ h.comments or '-' }}</td>
+      <td>{{ h.delivery_boy or '' }}</td>
+      <td>{{ h.receiver_name or '' }}</td>
+      <td>{{ h.foc or '' }}</td>
+    </tr>
+  {% endfor %}
+</tbody>
+
 </table>
 {% endif %}
 

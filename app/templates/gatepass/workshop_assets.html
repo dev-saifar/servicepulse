@@ -2,107 +2,245 @@
 {% block title %}Workshop Assets{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h3 class="mb-4">🧰 Workshop Assets</h3>
+<style>
+  /* --- Polished, compact look --- */
+  .page-title {
+    display:flex; align-items:center; gap:.6rem; margin: .25rem 0 1rem;
+  }
+  .page-title .emoji { font-size:1.35rem }
+  .toolbar {
+    display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;
+  }
+  .toolbar .pill {
+    font-size:.85rem; padding:.25rem .5rem; border-radius:999px; font-weight:600;
+  }
+  .pill-muted { background:#f1f3f5; color:#343a40; border:1px solid #e9ecef; }
+  .pill-green { background:#e6f4ea; color:#116329; border:1px solid #c7e6cf; }
+  .pill-red   { background:#fde8e8; color:#b42318; border:1px solid #f5c2c0; }
+  .pill-blue  { background:#e7f1ff; color:#0b5ed7; border:1px solid #cfe2ff; }
+  .pill-purple{ background:#efe7ff; color:#5b19b7; border:1px solid #e1d6ff; }
 
-    <!-- ✅ Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card border-primary shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Total Assets</h6>
-                    <h3>{{ assets|length }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-success shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">This Week</h6>
-                    <h3>{{ assets | selectattr('collected_date', '>=', now - timedelta(days=7)) | list | length }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-danger shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">Over 30 Days</h6>
-                    <h3>{{ assets | selectattr('collected_date', '<=', now - timedelta(days=30)) | list | length }}</h3>
-                </div>
-            </div>
-        </div>
+  .controls-bar {
+    display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin:.5rem 0 1rem;
+  }
+  .btn-filter { padding:.25rem .55rem; font-size:.8rem; border-radius:.5rem; }
+  .dt-buttons .btn { border-radius:.45rem !important; padding:.35rem .6rem !important; }
+  .table thead th { position:sticky; top:0; z-index:2; }
+  .table-sm td, .table-sm th { padding:.45rem .5rem; }
+  .table-hover tbody tr:hover { background:#fafbff; }
+  tr[data-age]:is([data-age=""], [data-age="-1"]) { --row-age:0; }
+  tr.table-aging { background: #fff5f5; } /* softer than default danger */
+  .badge-status { font-weight:600; font-size:.78rem; padding:.35rem .5rem; }
+</style>
+
+<div class="container mt-3">
+
+  <div class="page-title">
+    <span class="emoji">🧰</span>
+    <h3 class="mb-0">Workshop Assets</h3>
+    <div class="ms-auto" style="min-width:280px; max-width:360px;">
+      <input id="globalSearch" class="form-control form-control-sm" placeholder="Search serial, customer, model, tech, status…">
     </div>
+  </div>
 
-    <!-- ✅ Table -->
-    <div class="table-responsive">
-        <table id="workshopTable" class="table table-bordered table-hover table-striped align-middle">
-            <thead class="table-dark sticky-top">
-                <tr>
-                    <th>Serial No</th>
-                    <th>Customer</th>
-                    <th>Location</th>
-                    <th>Region</th>
-                    <th>Technician</th>
-                    <th>Asset Desc</th>
-                    <th>Collected On</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+  <!-- Summary toolbar (filled by JS) -->
+  <div id="statusSummary" class="toolbar mb-2">
+    <span class="pill pill-muted">Loading summary…</span>
+  </div>
 
-                </tr>
-            </thead>
-            <tbody>
-    {% for asset in assets %}
-    {% set age = (now - asset.collected_date).days if asset.collected_date else 0 %}
-    <tr class="{% if age > 30 %}table-danger{% endif %}">
-        <td>{{ asset.serial_number }}</td>
-        <td>{{ asset.customer_name }}</td>
-        <td>{{ asset.service_location }}</td>
-        <td>{{ asset.region }}</td>
-        <td>{{ asset.technician_name }}</td>
-        <td>{{ asset.asset_Description }}</td>
-        <td>{{ asset.collected_date.strftime('%d-%b-%Y %I:%M %p') if asset.collected_date else '' }}</td>
-        <td>{{ asset.asset_status }}</td>
-        <td class="text-nowrap">
-            <a href="{{ url_for('gate_pass.edit_workshop_asset', asset_id=asset.id) }}" class="btn btn-sm btn-warning">
-                <i class="fas fa-edit"></i> Edit
+  <!-- Controls: quick filters + exports -->
+  <div class="controls-bar">
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-secondary btn-filter filter-btn" data-filter="">All</button>
+      <button class="btn btn-outline-success btn-filter filter-btn" data-filter="this-week">This Week</button>
+      <button class="btn btn-outline-danger btn-filter filter-btn" data-filter="over-30">Over 30 Days</button>
+      <button class="btn btn-outline-dark btn-filter filter-btn" data-filter="decommissioned">Decommissioned</button>
+      <button class="btn btn-outline-primary btn-filter filter-btn" data-filter="active">Active</button>
+    </div>
+    <!-- DataTables will inject export buttons here -->
+    <div id="exportSlot"></div>
+  </div>
+
+  <div class="table-responsive border rounded">
+    <table id="workshopTable" class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>Serial No</th>
+          <th>Customer</th>
+          <th>Location</th>
+          <th>Region</th>
+          <th>Technician</th>
+          <th>Asset Desc</th>
+          <th>Collected On</th>
+          <th>Age (d)</th>
+          <th>Status</th>
+          <th style="min-width:140px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for asset in assets %}
+        {% set age = (now - asset.collected_date).days if asset.collected_date else None %}
+        {% set is_over30 = (age is not none and age > 30) %}
+        <tr class="{% if is_over30 %}table-aging{% endif %}"
+            data-age="{{ age if age is not none else '' }}"
+            data-status="{{ (asset.asset_status or '')|lower }}"
+            data-collected="{{ asset.collected_date.isoformat() if asset.collected_date else '' }}">
+          <td class="fw-semibold">{{ asset.serial_number }}</td>
+          <td>{{ asset.customer_name }}</td>
+          <td>{{ asset.service_location }}</td>
+          <td>{{ asset.region }}</td>
+          <td>{{ asset.technician_name }}</td>
+          <td>{{ asset.asset_Description }}</td>
+          <td data-order="{{ asset.collected_date.isoformat() if asset.collected_date else '' }}">
+            {{ asset.collected_date.strftime('%d-%b-%Y %I:%M %p') if asset.collected_date else '' }}
+          </td>
+          <td data-order="{{ age if age is not none else -1 }}">{{ age if age is not none else '' }}</td>
+          <td>
+            {% set st = (asset.asset_status or '').lower() %}
+            <span class="badge badge-status
+              {% if st == 'decommissioned' %} bg-danger
+              {% elif st in ['in workshop','in progress','in_repair','repair','under diagnosis','diagnosis'] %} bg-warning text-dark
+              {% elif st in ['ready','completed','fixed'] %} bg-success
+              {% elif st in ['pending'] %} bg-secondary
+              {% else %} bg-dark{% endif %}">
+              {{ asset.asset_status or 'N/A' }}
+            </span>
+          </td>
+          <td class="text-nowrap">
+            <a href="{{ url_for('gate_pass.edit_workshop_asset', asset_id=asset.id) }}"
+               class="btn btn-sm btn-warning">
+              <i class="fas fa-edit"></i> Edit
             </a>
             {% if asset.asset_status != 'decommissioned' %}
-            <a href="{{ url_for('gate_pass.view_decommission_form', serial_number=asset.serial_number) }}"
-               class="btn btn-sm btn-outline-danger" title="Decommission">
+              <a href="{{ url_for('gate_pass.view_decommission_form', serial_number=asset.serial_number) }}"
+                 class="btn btn-sm btn-outline-danger" title="Decommission">
                 <i class="fas fa-trash-alt"></i> Decommission
-            </a>
+              </a>
             {% else %}
-            <span class="badge bg-danger">Decommissioned</span>
+              <span class="badge bg-danger">Decommissioned</span>
             {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 
-
-<!-- ✅ DataTables & Export -->
+<!-- DataTables & Export -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.flash.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
 
 <script>
-    $(document).ready(function () {
-        $('#workshopTable').DataTable({
-            dom: 'Bfrtip',
-            buttons: ['copy', 'excel', 'pdf', 'print'],
-            pageLength: 25,
-            responsive: true,
-            ordering: true
-        });
+  $(function () {
+    const tableId = '#workshopTable';
+
+    if ($.fn.DataTable.isDataTable(tableId)) {
+      $(tableId).DataTable().clear().destroy();
+    }
+
+    const dt = $(tableId).DataTable({
+      pageLength: 25,
+      order: [[6, 'desc']],           // Collected On desc
+      responsive: true,
+      deferRender: true,
+      dom: 'Bfrtip',
+      buttons: [
+        { extend: 'copy', text: 'Copy' },
+        { extend: 'excelHtml5', title: 'Workshop_Assets_' + new Date().toISOString().slice(0,10) },
+        { extend: 'print', title: 'Workshop Assets' },
+        { extend: 'colvis', text: 'Columns' }
+      ],
+      columnDefs: [
+        { targets: 7, type: 'num' }   // Age column numeric
+      ]
     });
+
+    // move dt buttons to our slot for nicer layout
+    $(dt.buttons().container()).appendTo('#exportSlot');
+
+    // Global search
+    $('#globalSearch').on('keyup', function () {
+      dt.search(this.value).draw();
+    });
+
+    // Quick filters
+    const weekAgoISO = new Date(Date.now() - 7*24*3600*1000).toISOString();
+    const over30ISO  = new Date(Date.now() - 30*24*3600*1000).toISOString();
+
+    $('.filter-btn').on('click', function () {
+      const f = $(this).data('filter');
+      dt.search(''); dt.columns().search('');
+
+      dt.rows().every(function () {
+        const node = this.node();
+        const collected = node.getAttribute('data-collected') || '';
+        const status = (node.getAttribute('data-status') || '').toLowerCase();
+        let show = true;
+        if (!f) show = true;
+        else if (f === 'this-week')   show = collected && collected >= weekAgoISO;
+        else if (f === 'over-30')     show = collected && collected <= over30ISO;
+        else if (f === 'decommissioned') show = status === 'decommissioned';
+        else if (f === 'active')      show = status !== 'decommissioned';
+        this.visible(show);
+      });
+      dt.draw(false);
+    });
+
+    // ---------- Status summary (live) ----------
+    function normalizeStatus(txt) {
+      const s = (txt || '').toLowerCase().trim().replace(/^●\s*/, '');
+      if (['in workshop','in progress','in_repair','repair','under diagnosis','diagnosis'].includes(s)) return 'In workshop';
+      if (['ready','completed','fixed'].includes(s)) return 'Ready';
+      if (['pending'].includes(s)) return 'Active';
+      if (['decommissioned'].includes(s)) return 'Decommissioned';
+      return txt;
+    }
+    function classify(status) {
+      switch (status) {
+        case 'Active':          return 'pill-green';
+        case 'Decommissioned':  return 'pill-red';
+        case 'In workshop':     return 'pill-blue';
+        case 'Send out':        return 'pill-purple';
+        case 'Ready':           return 'pill-green';
+        default:                return 'pill-muted';
+      }
+    }
+    function countByStatus(rowsApi) {
+      const counts = {};
+      rowsApi.every(function () {
+        const cell = $('td:eq(8)', this.node()); // status col
+        const label = normalizeStatus(cell.text());
+        if (!label) return;
+        counts[label] = (counts[label] || 0) + 1;
+      });
+      return counts;
+    }
+    function renderSummary() {
+      const all = countByStatus(dt.rows());
+      const vis = countByStatus(dt.rows({ search: 'applied' }));
+      const keys = Array.from(new Set([...Object.keys(all), ...Object.keys(vis)])).sort();
+
+      const wrap = $('#statusSummary').empty();
+      if (!keys.length) {
+        wrap.append('<span class="pill pill-muted">No records</span>');
+        return;
+      }
+      keys.forEach(k => {
+        wrap.append(
+          `<span class="pill ${classify(k)}">${k}: <b>${vis[k] || 0}</b> / ${all[k] || 0}</span>`
+        );
+      });
+    }
+    renderSummary();
+    dt.on('draw', renderSummary);
+  });
 </script>
 {% endblock %}

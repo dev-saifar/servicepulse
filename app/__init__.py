@@ -13,6 +13,20 @@ from app.extensions import db, mail
 from app.celery import make_celery
 from app.modules.db_logger import Log
 from app.models import create_tables_if_not_exist, User
+# add near top with other imports
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+# ensure SQLite FKs are enforced
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    try:
+        if dbapi_connection.__class__.__module__.startswith("sqlite3"):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    except Exception:
+        pass
 
 # Globals
 celery = None
@@ -211,7 +225,9 @@ def create_app():
     # Create tables if missing
     with app.app_context():
         from app.models import spare_req, Assets, spares, Technician  # noqa: F401
+        from app.modules.inventory import models as _inv_models  # noqa: F401
         create_tables_if_not_exist()
+
 
     # -------------------
     # Register Blueprints
@@ -273,6 +289,13 @@ def create_app():
     app.register_blueprint(license_bp)
     from app.modules.license_status import license_status_bp
     app.register_blueprint(license_status_bp)
+    # after other blueprints
+    from app.modules.inventory import inventory_bp
+    app.register_blueprint(inventory_bp, url_prefix="/inventory")
+
+    # CLI command
+    from app.modules.inventory.cli import register_inventory_cli
+    register_inventory_cli(app)
 
     # -------------------------
     # License enforcement guard

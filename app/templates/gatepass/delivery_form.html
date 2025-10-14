@@ -1,132 +1,209 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
-<h3 class="mb-4 text-primary fw-bold"><i class="fas fa-truck"></i> Delivery Gate Pass</h3>
-<form action="{{ url_for('gate_pass.create_delivery') }}" method="POST" onsubmit="return validateBeforeSubmit()">
-<!-- Customer & Contract Section -->
-<div class="card mb-4">
-<div class="card-header bg-info text-white">Customer &amp; Contract Info</div>
-<div class="card-body row g-3">
-&lt;<div class="col-md-4">
-<label class="form-label" for="customer_name">Customer Name</label>
-<input autocomplete="off" class="form-control" id="customer_name" list="customer_list" name="customer_name" required=""/>
-<datalist id="customer_list"></datalist>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="contract_code">Contract Code</label>
-<select class="form-control" id="contract_code" name="contract_code" required="">
-<option value="">Select contract</option>
-</select>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="department">Department</label>
-<input class="form-control" name="department" type="text">
-</input></div>
-</div>
-</div>
-<!-- Machine Details Section -->
-<div class="card mb-4">
-<div class="card-header bg-secondary text-white">Machine Details</div>
-<div class="card-body row g-3">
-<div class="col-md-4">
-<label class="form-label" for="serial_number">Serial Number</label>
-<input class="form-control" name="serial_number" required="" type="text"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="asset_type">Asset Type</label>
-<select class="form-control" name="asset_type" required="">
-<option value="Kampala">Kampala</option>
-<option value="Upcountry">Upcountry</option>
-<option value="Used">Used</option>
-</select>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="asset_code">Asset Code</label>
-<input class="form-control" id="asset_code" name="asset_code" placeholder="Auto-generated" readonly="" type="text"/>
-</div>
-</div>
-</div>
-<!-- Technician & Service Info -->
-<div class="card mb-4">
-<div class="card-header bg-warning text-dark">Technician &amp; Service Info</div>
-<div class="card-body row g-3">
-<div class="col-md-4">
-<label class="form-label" for="technician_name">Technician</label>
-<input autocomplete="off" class="form-control" id="technician_name" list="tech_list" name="technician_name" required=""/>
-<datalist id="tech_list"></datalist>
-</div>
-<div class="col-md-4 d-none">
-<label class="form-label" for="technician_email">Technician Email</label>
-<input class="form-control" id="technician_email" name="technician_email" type="text"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="service_location">Service Location</label>
-<input class="form-control" name="service_location" type="text"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="region">Region</label>
-<input class="form-control" name="region" type="text"/>
-</div>
-<div class="col-md-4 d-none">
-<label class="form-label" for="pm_freq">PM Frequency</label>
-<input class="form-control" name="pm_freq" type="text" value="60"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="delivery_datetime">Delivery Date &amp; Time</label>
-<input class="form-control" name="delivery_datetime" required="" type="datetime-local"/>
-</div>
-</div>
-</div>
-<!-- Machine Description -->
-<div class="card mb-4">
-<div class="card-header bg-light">Asset Description</div>
-<div class="card-body row g-3">
-<div class="col-md-8">
-<label class="form-label" for="asset_description">Machine Model</label>
-<textarea autocomplete="off" class="form-control" name="asset_description" rows="2"></textarea>
-<ul class="list-group position-absolute mt-1 w-100 z-3" id="asset_desc_suggestions"></ul>
+  <h3 class="mb-3 text-primary fw-bold"><i class="fas fa-truck"></i> Delivery Gate Pass</h3>
 
-</div>
-<div class="col-md-4">
-<label class="form-label" for="part_number">Part Number</label>
-<input class="form-control" id="partnumber" name="part_number" readonly="" type="text">
-</input></div>
-</div>
-</div>
-<!-- Meter Reading & Contact -->
-<div class="card mb-4">
-<div class="card-header bg-primary text-white">Readings &amp; Contact</div>
-<div class="card-body row g-3">
-<div class="col-md-4">
-<label class="form-label" for="mono_reading">Mono Meter Reading</label>
-<input class="form-control" name="mono_reading" type="number"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="color_reading">Color Meter Reading</label>
-<input class="form-control" name="color_reading" type="number"/>
-</div>
-<div class="col-md-4">
-<label class="form-label" for="contact_number">Contact Number</label>
-<input class="form-control" name="contact_number" type="text"/>
-</div>
-</div>
-</div>
-<!-- Remarks -->
-<div class="mb-4">
-<label class="form-label" for="remarks">Remarks (Optional)</label>
-<textarea class="form-control" name="remarks" rows="3"></textarea>
-</div>
-<!-- Action Buttons -->
-<div class="d-flex justify-content-end gap-2">
-<button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i> Submit &amp; Create Gate Pass</button>
-<button class="btn btn-success" formaction="#" type="submit"><i class="fas fa-print"></i> Submit &amp; Print Request</button>
-</div>
-  <form ... onsubmit="return validateBeforeSubmit()">
+  {# ---- FLASH MESSAGES ---- #}
+  <div id="flash-anchor"></div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div id="flash-container" class="mb-3">
+        {% for category, message in messages %}
+          {% set cls = 'alert-secondary' %}
+          {% if category in ['success','info','warning','danger'] %}
+            {% set cls = 'alert-' + category %}
+          {% endif %}
+          <div class="alert {{ cls }} alert-dismissible fade show shadow-sm" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
-</form>
+  <form action="{{ url_for('gate_pass.create_delivery') }}" method="POST" onsubmit="return validateBeforeSubmit(event)">
+    <!-- Customer & Contract Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-info text-white">Customer &amp; Contract Info</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="customer_name">Customer Name</label>
+          <input autocomplete="off" class="form-control" id="customer_name" list="customer_list" name="customer_name" required />
+          <datalist id="customer_list"></datalist>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="contract_code">Contract Code</label>
+          <select class="form-control" id="contract_code" name="contract_code" required>
+            <option value="">Select contract</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="department">Department</label>
+          <input class="form-control" name="department" type="text" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Machine Details Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">Machine Details</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="serial_number">Serial Number</label>
+          <input class="form-control" name="serial_number" required type="text" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="asset_type">Asset Type</label>
+          <select class="form-control" name="asset_type" id="asset_type" required>
+            <option value="" selected disabled>-- Select Asset Type --</option>
+            <option value="Kampala">Kampala</option>
+            <option value="Upcountry">Upcountry</option>
+            <option value="Used">Used</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="asset_code">Asset Code</label>
+          <input class="form-control" id="asset_code" name="asset_code" placeholder="Auto-generated" readonly type="text" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Technician & Service Info -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning text-dark">Technician &amp; Service Info</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="technician_name">Technician</label>
+          <input autocomplete="off" class="form-control" id="technician_name" list="tech_list" name="technician_name" required />
+          <datalist id="tech_list"></datalist>
+        </div>
+        <div class="col-md-4 d-none">
+          <label class="form-label" for="technician_email">Technician Email</label>
+          <input class="form-control" id="technician_email" name="technician_email" type="text" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="service_location">Service Location</label>
+          <input class="form-control" name="service_location" type="text" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="region">Region</label>
+          <input class="form-control" name="region" type="text" />
+        </div>
+        <div class="col-md-4 d-none">
+          <label class="form-label" for="pm_freq">PM Frequency</label>
+          <input class="form-control" name="pm_freq" type="text" value="60" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="delivery_datetime">Delivery Date &amp; Time</label>
+          <input class="form-control" name="delivery_datetime" required type="datetime-local" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Machine Description -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">Asset Description</div>
+      <div class="card-body row g-3">
+        <div class="col-md-8 position-relative">
+          <label class="form-label">Machine Model</label>
+
+          <!-- Search box for suggestions only -->
+          <input id="modelSearch" class="form-control mb-2" placeholder="Search model to select…" autocomplete="off" />
+
+          <!-- The actual field saved to DB: readonly, only set via suggestion click -->
+          <textarea class="form-control" name="asset_description" id="asset_description" rows="2" readonly required></textarea>
+
+          <ul class="list-group position-absolute mt-1 w-100 z-3" id="asset_desc_suggestions" style="max-height:220px; overflow:auto;"></ul>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="part_number">Part Number</label>
+          <input class="form-control" id="partnumber" name="part_number" readonly type="text" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Meter Reading & Contact -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">Readings &amp; Contact</div>
+      <div class="card-body row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="mono_reading">Mono Meter Reading</label>
+          <input class="form-control" name="mono_reading" type="number" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="color_reading">Color Meter Reading</label>
+          <input class="form-control" name="color_reading" type="number" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="contact_number">Contact Number</label>
+          <input class="form-control" name="contact_number" type="text" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Accessories (ITEM# + name + qty) -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">Accessories</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-2" style="min-width:540px">
+            <thead class="table-secondary">
+              <tr>
+                <th style="width:12%">Item</th>
+                <th style="width:58%">Accessory</th>
+                <th style="width:18%">Qty</th>
+                <th style="width:12%"></th>
+              </tr>
+            </thead>
+            <tbody id="accRows">
+              <tr>
+                <td class="text-muted fw-semibold acc-label">ITEM 1</td>
+                <td><input type="text" class="form-control form-control-sm acc-name" placeholder="e.g. Power cable"></td>
+                <td><input type="number" class="form-control form-control-sm acc-qty" min="1" step="1" value="1"></td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-outline-danger acc-del">&times;</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button type="button" class="btn btn-outline-primary btn-sm" id="accAdd">+ Add Row</button>
+        <!-- Hidden field the backend will read; JSON string -->
+        <input type="hidden" name="accessories" id="accessories_json" />
+      </div>
+    </div>
+
+    <!-- Remarks -->
+    <div class="mb-4">
+      <label class="form-label" for="remarks">Remarks (Optional)</label>
+      <textarea class="form-control" name="remarks" rows="3"></textarea>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-primary" type="submit" id="submitCreate"><i class="fas fa-paper-plane"></i> Submit &amp; Create Gate Pass</button>
+      <button class="btn btn-success" formaction="#" type="submit" id="submitPrint"><i class="fas fa-print"></i> Submit &amp; Print Request</button>
+    </div>
+  </form>
 </div>
+
 <script>
-  // --- CUSTOMER AUTOCOMPLETE from contract.cust_name ---
+  // If flashes exist, scroll to them and auto-dismiss
+  (function () {
+    const flash = document.getElementById('flash-container');
+    if (flash) {
+      document.getElementById('flash-anchor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        flash.querySelectorAll('.alert').forEach(a => {
+          a.classList.remove('show');
+        });
+      }, 5000);
+    }
+  })();
+
+  // --- CUSTOMER AUTOCOMPLETE ---
   document.getElementById('customer_name').addEventListener('input', function () {
     const val = this.value;
     if (val.length < 2) return;
@@ -151,10 +228,10 @@
       .then(res => res.json())
       .then(data => {
         const contractSelect = document.getElementById('contract_code');
-        contractSelect.innerHTML = data.map(c => `<option value="${c}">${c}</option>`).join('');
+        contractSelect.innerHTML = `<option value="">Select contract</option>` +
+          data.map(c => `<option value="${c}">${c}</option>`).join('');
       });
   });
-
 
   // --- TECHNICIAN AUTOFILL ---
   const techInput = document.getElementById('technician_name');
@@ -183,97 +260,210 @@
   });
 
   // --- ASSET CODE AUTO-FILL ---
-  document.querySelector('select[name="asset_type"]').addEventListener('change', function () {
-  const type = this.value.toLowerCase(); // Kampala → kampala
-  fetch(`/assets_add/generate_asset_code?location=${encodeURIComponent(type)}`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("asset_code").value = data.asset_code || '';
-    });
-});
+  document.getElementById('asset_type').addEventListener('change', function () {
+    const type = this.value.toLowerCase();
+    if (!type) return;
+    fetch(`/assets_add/generate_asset_code?location=${encodeURIComponent(type)}`)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("asset_code").value = data.asset_code || '';
+      });
+  });
 
+  // --- MODEL suggestions (selection-only) + part number autofill ---
+  const modelSearch    = document.getElementById("modelSearch");
+  const assetDescInput = document.getElementById("asset_description"); // readonly
+  const assetDescList  = document.getElementById("asset_desc_suggestions");
 
-const assetDescInput = document.querySelector("textarea[name='asset_description']");
-const assetDescList = document.getElementById("asset_desc_suggestions");
+  // Track if a suggestion was actually chosen
+  let modelChosenFromList = false;
 
-assetDescInput.addEventListener("input", function () {
+  // Prevent Enter in search box from submitting the form
+  modelSearch.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') e.preventDefault();
+  });
+
+  modelSearch.addEventListener("input", function () {
+    // typing invalidates the selection
+    modelChosenFromList = false;
+    assetDescInput.value = "";
+    setSubmitEnabled(false);
+
     const query = this.value.trim();
     if (query.length < 2) {
-        assetDescList.innerHTML = "";
-        assetDescList.style.display = "none";
-        return;
+      assetDescList.innerHTML = "";
+      assetDescList.style.display = "none";
+      return;
     }
 
     fetch(`/assets_add/search_asset_description?query=${encodeURIComponent(query)}`)
-        .then(res => res.json())
-        .then(descriptions => {
-            assetDescList.innerHTML = "";
-            if (descriptions.length === 0) {
-                assetDescList.style.display = "none";
-                return;
-            }
-
-            descriptions.forEach(desc => {
-                const item = document.createElement("li");
-                item.classList.add("list-group-item", "list-group-item-action");
-                item.style.cursor = "pointer";
-                item.textContent = desc;
-                item.onclick = () => {
-                    assetDescInput.value = desc;
-                    assetDescList.innerHTML = "";
-                    assetDescList.style.display = "none";
-
-                    fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            document.getElementsByName("part_number")[0].value = data.part_no || "";
-                        });
-                };
-                assetDescList.appendChild(item);
-            });
-
-            assetDescList.style.display = "block";
-        });
-});
-
-document.addEventListener("click", function (e) {
-    if (!assetDescInput.contains(e.target) && !assetDescList.contains(e.target)) {
+      .then(res => res.json())
+      .then(descriptions => {
         assetDescList.innerHTML = "";
-        assetDescList.style.display = "none";
+        if (descriptions.length === 0) {
+          assetDescList.style.display = "none";
+          return;
+        }
+
+        descriptions.forEach(desc => {
+          const item = document.createElement("li");
+          item.classList.add("list-group-item", "list-group-item-action");
+          item.style.cursor = "pointer";
+          item.textContent = desc;
+          item.onclick = () => {
+            // set readonly field from suggestion only
+            assetDescInput.value = desc;
+            modelSearch.value = desc; // mirror search box
+            modelChosenFromList = true;          // valid selection
+            setSubmitEnabled(true);              // enable submit
+            assetDescList.innerHTML = "";
+            assetDescList.style.display = "none";
+
+            // fetch part number for selected model
+            fetch(`/assets_add/get_partnumber?model=${encodeURIComponent(desc)}`)
+              .then(res => res.json())
+              .then(data => {
+                document.getElementsByName("part_number")[0].value = data.part_no || "";
+              });
+          };
+          assetDescList.appendChild(item);
+        });
+
+        assetDescList.style.display = "block";
+      });
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!modelSearch.contains(e.target) && !assetDescList.contains(e.target)) {
+      assetDescList.innerHTML = "";
+      assetDescList.style.display = "none";
     }
-});
+  });
 
+  // ---------- Accessories (ITEM# + name + qty) ----------
+  (function () {
+    const tbody  = document.getElementById('accRows');
+    const addBtn = document.getElementById('accAdd');
+    const hidden = document.getElementById('accessories_json');
 
-let serialDuplicate = false;
+    function renumber() {
+      [...tbody.querySelectorAll('.acc-label')].forEach((cell, i) => {
+        cell.textContent = `ITEM ${i + 1}`;
+      });
+    }
 
-async function checkSerialExists() {
-  const serial = document.querySelector('input[name="serial_number"]').value.trim();
-  if (!serial) return false;
+    function rowTpl() {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="text-muted fw-semibold acc-label">ITEM X</td>
+        <td><input type="text" class="form-control form-control-sm acc-name" placeholder="e.g. Network cable"></td>
+        <td><input type="number" class="form-control form-control-sm acc-qty" min="1" step="1" value="1"></td>
+        <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger acc-del">&times;</button></td>`;
+      return tr;
+    }
 
-  try {
-    const response = await fetch(`/gatepass/check_serial_exists?serial_number=${encodeURIComponent(serial)}`);
-    const data = await response.json();
-    return data.exists;
-  } catch (err) {
-    console.error("Error during serial check:", err);
-    return false;
+    function collectAccessories() {
+      // Build object with ITEM1/ITEM2 keys
+      const out = {};
+      const rows = [...tbody.querySelectorAll('tr')];
+      rows.forEach((tr, idx) => {
+        const name = tr.querySelector('.acc-name')?.value.trim();
+        const qty  = parseInt(tr.querySelector('.acc-qty')?.value || '0', 10);
+        if (name && qty > 0) {
+          out[`ITEM${idx + 1}`] = { name, qty };
+        }
+      });
+      hidden.value = JSON.stringify(out);
+      return out;
+    }
+
+    addBtn.addEventListener('click', () => {
+      tbody.appendChild(rowTpl());
+      renumber();
+      collectAccessories();
+    });
+
+    tbody.addEventListener('click', (e) => {
+      if (e.target.closest('.acc-del')) {
+        const tr = e.target.closest('tr');
+        if (tbody.rows.length > 1) tr.remove();
+        renumber();
+        collectAccessories();
+      }
+    });
+
+    tbody.addEventListener('input', collectAccessories);
+
+    // initial state: ITEM 1, qty defaults to 1
+    renumber();
+    collectAccessories(); // seed hidden
+  })();
+
+  // ---------- Submit control ----------
+  const submitBtn1 = document.getElementById('submitCreate');
+  const submitBtn2 = document.getElementById('submitPrint');
+  function setSubmitEnabled(enabled){
+    [submitBtn1, submitBtn2].forEach(b => { if (b) b.disabled = !enabled; });
   }
-}
+  // start disabled until a model is chosen
+  setSubmitEnabled(false);
 
-async function validateBeforeSubmit() {
-  const exists = await checkSerialExists();
-  if (exists) {
-    alert("🚫 Serial Number exists. First make collection note to add the machine in workshop stock.");
-    document.querySelector('input[name="serial_number"]').classList.add("is-invalid");
-    return false;
+  async function checkSerialExists() {
+    const serial = document.querySelector('input[name="serial_number"]').value.trim();
+    if (!serial) return false;
+    try {
+      const response = await fetch(`/gatepass/check_serial_exists?serial_number=${encodeURIComponent(serial)}`);
+      const data = await response.json();
+      return data.exists;
+    } catch (err) {
+      console.error("Error during serial check:", err);
+      return false;
+    }
   }
-  return true;
-}
+
+  async function validateBeforeSubmit(e) {
+    // accessories JSON is valid JSON
+    try { JSON.parse(document.getElementById('accessories_json').value || '{}'); }
+    catch(_) {
+      alert('Please review accessories entries.');
+      if (e) e.preventDefault();
+      return false;
+    }
+
+    // require a model picked from suggestions
+    if (!modelChosenFromList || !document.getElementById('asset_description').value.trim()) {
+      alert('Please select a Machine Model from the suggestions.');
+      document.getElementById('modelSearch').focus();
+      if (e) e.preventDefault();  // hard stop
+      return false;
+    }
+
+    // require asset type chosen (not blank)
+    const assetType = document.getElementById('asset_type').value;
+    if (!assetType) {
+      alert('Please select an Asset Type.');
+      document.getElementById('asset_type').focus();
+      if (e) e.preventDefault();
+      return false;
+    }
+
+    // prevent duplicate serials
+    const exists = await checkSerialExists();
+    if (exists) {
+      alert("🚫 Serial Number exists. First make collection note to add the machine in workshop stock.");
+      document.querySelector('input[name="serial_number"]').classList.add("is-invalid");
+      if (e) e.preventDefault();
+      return false;
+    }
+
+    return true;
+  }
+
+  // Ensure preventDefault works in all cases
+  const formEl = document.querySelector('form[action*="create_delivery"]');
+  formEl.addEventListener('submit', async (e) => {
+    const ok = await validateBeforeSubmit(e);
+    if (!ok) return; // stay on page
+  });
 </script>
-
-
-
-
-
-
 {% endblock %}

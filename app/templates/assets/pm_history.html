@@ -1,37 +1,189 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container">
-    <h3 class="my-3">📖 PM History</h3>
-    <table class="table table-bordered table-striped">
-        <thead class="table-dark">
-            <thead class="table-dark">
-    <tr>
-        <th>Serial Number</th>
-        <th>Customer</th>
-        <th>Location</th>
-        <th>Region</th>
-        <th>Scheduled</th>
-        <th>Performed</th>
-        <th>Technician</th>
-        <th>Remarks</th>
-    </tr>
-</thead>
-<tbody>
-    {% for r in records %}
-    <tr>
-        <td>{{ r.serial_number }}</td>
-        <td>{{ r.customer_name }}</td>
-        <td>{{ r.service_location }}</td>
-        <td>{{ r.region }}</td>
-        <td>{{ r.scheduled_date.strftime("%Y-%m-%d") }}</td>
-        <td>{{ r.performed_date.strftime("%Y-%m-%d") }}</td>
-        <td>{{ r.technician_name }}</td>
-        <td>{{ r.remarks }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
+<style>
+  .page-head { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+  .page-head h3 { margin: .5rem 0; }
+  .summary { display:flex; gap:.5rem .75rem; flex-wrap:wrap; }
+  .summary .pill {
+    font-size:.85rem; padding:.25rem .55rem; border-radius:999px;
+    border:1px solid #e9ecef; background:#f8f9fa; font-weight:600; color:#495057;
+  }
+  .table thead th { position:sticky; top:0; z-index:2; }
+  .table-sm th, .table-sm td { padding:.45rem .55rem; }
+  .badge-status { font-weight:600; font-size:.78rem; padding:.35rem .55rem; }
+</style>
 
+<div class="container mt-3">
 
+  <!-- Header & search -->
+  <div class="page-head mb-2">
+    <h3 class="mb-0">📖 PM History</h3>
+    <div class="ms-auto" style="min-width:260px; max-width:360px;">
+      <input id="pmSearch" class="form-control form-control-sm" placeholder="Search serial, customer, tech, remarks…">
+    </div>
+  </div>
+
+  <!-- Quick range filters -->
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <button class="btn btn-outline-secondary btn-sm range-btn" data-range="">All</button>
+    <button class="btn btn-outline-primary btn-sm range-btn" data-range="30">Last 30 days</button>
+    <button class="btn btn-outline-primary btn-sm range-btn" data-range="90">Last 90 days</button>
+    <button class="btn btn-outline-primary btn-sm range-btn" data-range="365">Last 12 months</button>
+  </div>
+
+  <!-- Summary (live, auto-updated) -->
+  <div id="pmSummary" class="summary mb-2">
+    <span class="pill">Loading…</span>
+  </div>
+
+  <div class="table-responsive border rounded">
+    <table id="pmTable" class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>Serial Number</th>
+          <th>Customer</th>
+          <th>Location</th>
+          <th>Region</th>
+          <th>Scheduled</th>
+          <th>Performed</th>
+          <th>Status</th>
+          <th>Technician</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in records %}
+        {% set sched = r.scheduled_date %}
+        {% set perf  = r.performed_date %}
+        {% set status = 'Scheduled' if not perf else ('On-Time' if (sched and perf <= sched) else 'Late') %}
+        <tr
+          data-scheduled="{{ sched.isoformat() if sched else '' }}"
+          data-performed="{{ perf.isoformat() if perf else '' }}"
+          data-status="{{ status|lower }}"
+        >
+          <td class="fw-semibold">{{ r.serial_number }}</td>
+          <td>{{ r.customer_name }}</td>
+          <td>{{ r.service_location }}</td>
+          <td>{{ r.region }}</td>
+
+          <!-- Safe date display + sortable using ISO in data-order -->
+          <td data-order="{{ sched.isoformat() if sched else '' }}">
+            {% if sched %}{{ sched.strftime('%Y-%m-%d') }}{% endif %}
+          </td>
+          <td data-order="{{ perf.isoformat() if perf else '' }}">
+            {% if perf %}{{ perf.strftime('%Y-%m-%d') }}{% endif %}
+          </td>
+
+          <td>
+            <span class="badge badge-status
+              {% if status == 'On-Time' %}bg-success
+              {% elif status == 'Late' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ status }}
+            </span>
+          </td>
+
+          <td>{{ r.technician_name }}</td>
+          <td style="max-width:420px;">{{ r.remarks }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
+
+<!-- DataTables + buttons -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+  $(function () {
+    const tableId = '#pmTable';
+    if ($.fn.DataTable.isDataTable(tableId)) {
+      $(tableId).DataTable().clear().destroy();
+    }
+
+    const dt = $(tableId).DataTable({
+      pageLength: 25,
+      order: [[5, 'desc']], // default: Performed desc
+      responsive: true,
+      dom: 'Bfrtip',
+      buttons: [
+        { extend: 'copy', text: 'Copy' },
+        {
+          extend: 'excelHtml5',
+          title: 'PM_History_' + new Date().toISOString().slice(0,10)
+        },
+        { extend: 'print', title: 'PM History' }
+      ],
+      columnDefs: [
+        { targets: [4,5], type: 'date' } // Scheduled, Performed
+      ]
+    });
+
+    // Global search
+    $('#pmSearch').on('keyup', function () {
+      dt.search(this.value).draw();
+    });
+
+    // Quick range filters (based on Performed date if present, else Scheduled)
+    $('.range-btn').on('click', function () {
+      const days = $(this).data('range'); // '', 30, 90, 365
+      dt.search(''); dt.columns().search('');
+
+      if (!days) {
+        dt.rows().every(function(){ this.visible(true); });
+        dt.draw(false);
+        return;
+      }
+      const cutoffISO = new Date(Date.now() - Number(days)*24*3600*1000).toISOString();
+
+      dt.rows().every(function(){
+        const node = this.node();
+        const perf = node.getAttribute('data-performed');
+        const sched= node.getAttribute('data-scheduled');
+        const basis = perf || sched || '';
+        this.visible(basis >= cutoffISO);
+      });
+      dt.draw(false);
+    });
+
+    // Live summary (Total / On-Time / Late / Scheduled) with visible counts
+    function tally(rowsApi) {
+      const res = { total: 0, ontime: 0, late: 0, scheduled: 0 };
+      rowsApi.every(function(){
+        res.total++;
+        const st = (this.node().getAttribute('data-status') || '').toLowerCase();
+        if (st === 'on-time' || st === 'on-time') res.ontime++;
+        else if (st === 'late') res.late++;
+        else res.scheduled++;
+      });
+      return res;
+    }
+    function renderSummary(){
+      const all = tally(dt.rows());
+      const vis = tally(dt.rows({search:'applied'}));
+      $('#pmSummary').html(`
+        <span class="pill">Total: <b>${vis.total}</b> / ${all.total}</span>
+        <span class="pill" style="background:#e6f4ea;color:#116329;border-color:#c7e6cf;">
+          On-Time: <b>${vis.ontime}</b> / ${all.ontime}
+        </span>
+        <span class="pill" style="background:#fde8e8;color:#b42318;border-color:#f5c2c0;">
+          Late: <b>${vis.late}</b> / ${all.late}
+        </span>
+        <span class="pill" style="background:#f1f3f5;color:#495057;border-color:#e9ecef;">
+          Scheduled: <b>${vis.scheduled}</b> / ${all.scheduled}
+        </span>
+      `);
+    }
+    renderSummary();
+    dt.on('draw', renderSummary);
+  });
+</script>
 {% endblock %}

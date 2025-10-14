@@ -40,6 +40,7 @@ def create_delivery():
             asset_code = generate_asset_code(data.get('asset_type'))
             qr_path = generate_qr_code(f"{data.get('customer_name')} | {data.get('serial_number')} | {asset_code}")
             gp_number = generate_gp_number()
+            accessories = data.get('accessories')
 
             gp = GatePassRequest(
                 gp_number=gp_number,
@@ -56,6 +57,7 @@ def create_delivery():
                 region=data.get('region'),
                 delivery_datetime=data.get('delivery_datetime'),
                 asset_description=data.get('asset_description'),
+                accessories=accessories,
                 part_number=data.get('part_number'),
                 mono_reading=data.get('mono_reading'),
                 color_reading=data.get('color_reading'),
@@ -380,14 +382,21 @@ def check_serial_exists():
 @login_required
 @permission_required('can_view_gatepass')
 def task_list():
-    status_filter = request.args.get('status_filter')   # ← remove leading space
+    status_filter = request.args.get('status_filter')
+    q = GatePassRequest.query
     if status_filter:
-        tasks = GatePassRequest.query.filter_by(status=status_filter).all()
-    else:
-        tasks = GatePassRequest.query.all()
+        q = q.filter_by(status=status_filter)
+
+    tasks = q.order_by(
+        GatePassRequest.created_at.desc(),
+        GatePassRequest.delivery_datetime.desc(),
+        GatePassRequest.id.desc()
+    ).all()
+
     return render_template('gatepass/task_list.html',
                            tasks=tasks,
                            status_filter=status_filter)
+
 
 
 @gate_pass_bp.route('/export')

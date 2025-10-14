@@ -22,7 +22,6 @@
       <div class="col-md-4">
         <label>Date Issued</label>
         <input type="datetime-local" class="form-control" name="date_issued" value="{{ req.date_issued.strftime('%Y-%m-%dT%H:%M') if req.date_issued }}">
-
       </div>
       <div class="col-md-4">
         <label>Request Group</label>
@@ -90,38 +89,44 @@
     <div class="row g-3">
       <div class="col-md-3">
         <label>Delivery Boy</label>
-        <select class="form-control" name="delivery_boy">
-  <option value="">-- Select Delivery Boy --</option>
-  {% for person in delivery_team %}
-    <option value="{{ person.name }}" {% if req.delivery_boy == person.name %}selected{% endif %}>
-      {{ person.name }}
-    </option>
-  {% endfor %}
-</select>
-
-
+        <select class="form-control" name="delivery_boy" id="delivery_boy">
+          <option value="">-- Select Delivery Boy --</option>
+          {% for person in delivery_team %}
+            <option value="{{ person.name }}" {% if req.delivery_boy == person.name %}selected{% endif %}>
+              {{ person.name }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="col-md-3">
         <label>Receiver Name</label>
         <input class="form-control" name="receiver_name" value="{{ req.receiver_name or '' }}">
       </div>
+
       <div class="col-md-3">
         <label>Delivery Status</label>
+        {# Show only forward step options #}
+        {% set cur = (req.delivery_status or 'Pending') %}
         <select class="form-control" name="delivery_status" id="delivery_status">
-          {% for status in ['Pending', 'In Transit', 'Delivered'] %}
-          <option value="{{ status }}" {% if req.delivery_status == status %}selected{% endif %}>{{ status }}</option>
-          {% endfor %}
+          {% if cur == 'Pending' %}
+            <option value="Pending" selected>Pending</option>
+            <option value="In Progress">In Progress</option>
+          {% elif cur in ['In Progress', 'In Transit'] %}
+            <option value="{{ 'In Progress' if cur == 'In Progress' else 'In Transit' }}" selected>
+              {{ 'In Progress' if cur == 'In Progress' else 'In Transit' }}
+            </option>
+            <option value="Delivered">Delivered</option>
+          {% else %}
+            <option value="Delivered" selected>Delivered</option>
+          {% endif %}
         </select>
       </div>
 
       <div class="col-md-3">
         <label>Delivery Date</label>
         <input type="datetime-local" class="form-control" name="delivery_date" id="delivery_date" value="{{ req.delivery_date.strftime('%Y-%m-%dT%H:%M') if req.delivery_date }}">
-<input type="hidden" name="dispatch_time" id="dispatch_time"
-       value="{{ req.dispatch_time.strftime('%Y-%m-%dT%H:%M') if req.dispatch_time }}">
-
-
-
+        <input type="hidden" name="dispatch_time" id="dispatch_time"
+               value="{{ req.dispatch_time.strftime('%Y-%m-%dT%H:%M') if req.dispatch_time }}">
       </div>
     </div>
 
@@ -141,13 +146,14 @@
         <textarea class="form-control" name="comments">{{ req.comments or '' }}</textarea>
       </div>
     </div>
-<!-- Optional section near bottom -->
-<div class="alert alert-info mt-4">
-  <strong>Status History:</strong><br>
-  Pending: {{ req.date_issued }}<br>
-  In Transit: {{ req.dispatch_time }}<br>
-  Delivered: {{ req.delivery_date }}
-</div>
+
+    <!-- Optional section near bottom -->
+    <div class="alert alert-info mt-4">
+      <strong>Status History:</strong><br>
+      Pending: {{ req.date_issued }}<br>
+      In Transit: {{ req.dispatch_time }}<br>
+      Delivered: {{ req.delivery_date }}
+    </div>
 
     <!-- Buttons -->
     <div class="d-flex justify-content-end mt-4">
@@ -168,15 +174,44 @@ function getLocalDateTimeString() {
     String(now.getMinutes()).padStart(2, '0');
 }
 
-document.getElementById("delivery_status").addEventListener("change", function () {
+const statusSel   = document.getElementById("delivery_status");
+const deliveryBoy = document.getElementById("delivery_boy");
+const deliveryEl  = document.getElementById("delivery_date");
+const dispatchEl  = document.getElementById("dispatch_time");
+
+// remember previous status selection to revert on invalid change
+statusSel.dataset.prev = statusSel.value;
+
+statusSel.addEventListener("change", function () {
   const status = this.value;
-  const deliveryDateInput = document.getElementById("delivery_date");
-  if (status === "Delivered" && !deliveryDateInput.value) {
-    deliveryDateInput.value = getLocalDateTimeString();
+
+  // NEW RULE: cannot move to In Progress without assigning Delivery Boy
+  if (status === "In Progress" && (!deliveryBoy.value || deliveryBoy.value.trim() === "")) {
+    toastr.warning("Please select a Delivery Boy before marking In Progress.");
+    // revert to previous selection
+    this.value = this.dataset.prev || "Pending";
+    return;
   }
+
+  // auto-fill timestamps
+  if (status === "In Progress" && !dispatchEl.value) {
+    dispatchEl.value = getLocalDateTimeString();
+  }
+  if (status === "Delivered") {
+    if (!dispatchEl.value) dispatchEl.value = getLocalDateTimeString();
+    if (!deliveryEl.value) deliveryEl.value = getLocalDateTimeString();
+  }
+
+  // update previous after a valid change
+  this.dataset.prev = this.value;
 });
 
-// Submit Form via Fetch
+// also watch delivery boy field: if user picks it after warning, allow status change next time
+deliveryBoy.addEventListener("change", () => {
+  // no-op; validation happens on status change & submit
+});
+
+// Submit Form via Fetch (with same validation)
 const form = document.getElementById("editForm");
 form.addEventListener("submit", function (e) {
   e.preventDefault();
@@ -184,19 +219,19 @@ form.addEventListener("submit", function (e) {
   const data = {};
   formData.forEach((value, key) => { data[key] = value });
 
-  // ✅ Add full current datetime when status is Delivered
-  if (data.delivery_status === "Delivered" && !data.delivery_date) {
-    data.delivery_date = getLocalDateTimeString();
+  // Block: In Progress requires a Delivery Boy
+  if (data.delivery_status === "In Progress" && (!data.delivery_boy || data.delivery_boy.trim() === "")) {
+    toastr.warning("Please select a Delivery Boy before marking In Progress.");
+    return;
   }
 
-  // ✅ Add full current datetime when status is In Transit
-  if (data.delivery_status === "In Transit" && !data.dispatch_time) {
+  // Ensure timestamps are present based on final status
+  if (data.delivery_status === "In Progress" && !data.dispatch_time) {
     data.dispatch_time = getLocalDateTimeString();
   }
-
-  // ✅ Fallback: If status is Delivered but no dispatch_time (skip In Transit)
-  if (data.delivery_status === "Delivered" && !data.dispatch_time) {
-    data.dispatch_time = getLocalDateTimeString();
+  if (data.delivery_status === "Delivered") {
+    if (!data.dispatch_time) data.dispatch_time = getLocalDateTimeString();
+    if (!data.delivery_date) data.delivery_date = getLocalDateTimeString();
   }
 
   fetch("/toner/update_request", {
@@ -210,13 +245,11 @@ form.addEventListener("submit", function (e) {
         toastr.success("Toner request updated successfully.");
         setTimeout(() => window.location.href = "/toner/dashboard", 1500);
       } else {
-        toastr.error("Update failed: " + res.error);
+        toastr.error("Update failed: " + (res.error || "Unknown error"));
       }
     })
     .catch(err => toastr.error("An error occurred: " + err));
 });
-
-
 </script>
 
 {% endblock %}

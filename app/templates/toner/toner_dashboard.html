@@ -31,7 +31,6 @@
   }
 </style>
 
-
 <div class="container-fluid mt-4 px-3" style="max-width: 100%;">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Toner Request Dashboard</h2>
@@ -56,84 +55,115 @@
     <div><strong>Pending:</strong> {{ pending_count }}</div>
     <div><strong>In Transit:</strong> {{ in_transit_count }}</div>
     <div><strong>FOC Pending:</strong> {{ foc_pending_count }}</div>
-
-
   </div>
 
   <!-- Filters -->
   <form id="filterForm" method="get" class="row g-2 mb-3">
 
-  <!-- Customer Name -->
-  <div class="col-md-2">
-    <input type="text" class="form-control" name="customer" placeholder="Customer Name" value="{{ filters.customer }}">
-  </div>
+    <!-- Global Search -->
+    <div class="col-md-4">
+      <input type="text" class="form-control" name="q"
+             placeholder="Search serial / customer / model / region / receiver / courier"
+             value="{{ filters.q or '' }}">
+    </div>
 
-  <!-- Serial Number -->
-  <div class="col-md-2">
-    <input type="text" class="form-control" name="serial_number" placeholder="Serial Number" value="{{ filters.serial_number }}">
-  </div>
+    <!-- Sort by -->
+    <div class="col-md-3">
+      <select class="form-select" name="sort_by">
+        <option value="date_issued"       {{ 'selected' if filters.sort_by=='date_issued' else '' }}>Date Issued</option>
+        <option value="serial_number"     {{ 'selected' if filters.sort_by=='serial_number' else '' }}>Serial Number</option>
+        <option value="asset_code"        {{ 'selected' if filters.sort_by=='asset_code' else '' }}>Asset Code</option>
+        <option value="asset_description" {{ 'selected' if filters.sort_by=='asset_description' else '' }}>Machine Model</option>
+        <option value="customer_name"     {{ 'selected' if filters.sort_by=='customer_name' else '' }}>Customer</option>
+        <option value="region"            {{ 'selected' if filters.sort_by=='region' else '' }}>Region</option>
+        <option value="service_location"  {{ 'selected' if filters.sort_by=='service_location' else '' }}>Location</option>
+        <option value="delivery_status"   {{ 'selected' if filters.sort_by=='delivery_status' else '' }}>Status</option>
+        <option value="delivery_boy"      {{ 'selected' if filters.sort_by=='delivery_boy' else '' }}>Courier</option>
+        <option value="toner_type"        {{ 'selected' if filters.sort_by=='toner_type' else '' }}>Toner Type</option>
+        <option value="toner_model"       {{ 'selected' if filters.sort_by=='toner_model' else '' }}>Toner Model</option>
+        <option value="meter_reading"     {{ 'selected' if filters.sort_by=='meter_reading' else '' }}>Current Meter</option>
+        <option value="previous_reading"  {{ 'selected' if filters.sort_by=='previous_reading' else '' }}>Previous Meter</option>
+        <option value="issued_qty"        {{ 'selected' if filters.sort_by=='issued_qty' else '' }}>Qty</option>
+      </select>
+    </div>
 
-  <!-- Asset Description -->
-  <div class="col-md-2">
-    <input type="text" class="form-control" name="asset_description" placeholder="Asset Description" value="{{ filters.asset_description }}">
-  </div>
+    <!-- Sort direction -->
+    <div class="col-md-2">
+      <select class="form-select" name="sort_dir">
+        <option value="desc" {{ 'selected' if filters.sort_dir=='desc' else '' }}>Desc</option>
+        <option value="asc"  {{ 'selected' if filters.sort_dir=='asc'  else '' }}>Asc</option>
+      </select>
+    </div>
 
-  <!-- Region -->
-  <div class="col-md-2">
-    <input type="text" class="form-control" name="region" placeholder="Region" value="{{ filters.region }}">
-  </div>
+    <!-- Customer Name -->
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="customer" placeholder="Customer Name" value="{{ filters.customer }}">
+    </div>
 
-  <!-- Status -->
-  <div class="col-md-2">
-    <select name="status" class="form-control">
-      <option value="">All Status</option>
-      <option value="Pending" {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
-      <option value="In Transit" {% if filters.status == 'In Transit' %}selected{% endif %}>In Transit</option>
-      <option value="Delivered" {% if filters.status == 'Delivered' %}selected{% endif %}>Delivered</option>
-    </select>
-  </div>
+    <!-- Serial Number -->
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="serial_number" placeholder="Serial Number" value="{{ filters.serial_number }}">
+    </div>
 
-  <!-- Delivery Boy -->
-  <div class="col-md-2">
-    <input type="text" class="form-control" name="delivery_boy" placeholder="Delivery Boy" value="{{ filters.delivery_boy }}">
-  </div>
+    <!-- Asset Description -->
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="asset_description" placeholder="Asset Description" value="{{ filters.asset_description }}">
+    </div>
 
-  <!-- FOC -->
-  <div class="col-md-2">
-    <select name="foc" class="form-control">
-      <option value="">FOC?</option>
-      <option value="Yes" {% if filters.foc == 'Yes' %}selected{% endif %}>Yes</option>
-      <option value="No" {% if filters.foc == 'No' %}selected{% endif %}>No</option>
-      <option value="Pending" {% if filters.foc == 'Pending' %}selected{% endif %}>Pending</option>
-    </select>
-  </div>
+    <!-- Region -->
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="region" placeholder="Region" value="{{ filters.region }}">
+    </div>
 
-  <!-- From Date -->
-  <div class="col-md-2">
-    <input type="date" class="form-control" name="from_date" value="{{ filters.from_date }}">
-  </div>
+    <!-- Status -->
+    <div class="col-md-2">
+      <select name="status" class="form-control">
+        <option value="">All Status</option>
+        <option value="Pending"    {% if filters.status == 'Pending' %}selected{% endif %}>Pending</option>
+        <option value="In Transit" {% if filters.status == 'In Transit' %}selected{% endif %}>In Transit</option>
+        <option value="Delivered"  {% if filters.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+      </select>
+    </div>
 
-  <!-- To Date -->
-  <div class="col-md-2">
-    <input type="date" class="form-control" name="to_date" value="{{ filters.to_date }}">
-  </div>
+    <!-- Delivery Boy -->
+    <div class="col-md-2">
+      <input type="text" class="form-control" name="delivery_boy" placeholder="Delivery Boy" value="{{ filters.delivery_boy }}">
+    </div>
 
-  <!-- Submit Button -->
-  <div class="col-md-2">
-    <button type="submit" class="btn btn-primary w-100">
-      <i class="fas fa-filter"></i> Filter
-    </button>
-  </div>
+    <!-- FOC -->
+    <div class="col-md-2">
+      <select name="foc" class="form-control">
+        <option value="">FOC?</option>
+        <option value="Yes"     {% if filters.foc == 'Yes' %}selected{% endif %}>Yes</option>
+        <option value="No"      {% if filters.foc == 'No' %}selected{% endif %}>No</option>
+        <option value="Pending" {% if filters.foc == 'Pending' %}selected{% endif %}>Pending</option>
+      </select>
+    </div>
 
-  <!-- Reset Button -->
-  <div class="col-md-2">
-    <a href="{{ url_for('toner.toner_dashboard') }}" class="btn btn-secondary w-100">
-      <i class="fas fa-sync-alt"></i> Reset
-    </a>
-  </div>
+    <!-- From Date -->
+    <div class="col-md-2">
+      <input type="date" class="form-control" name="from_date" value="{{ filters.from_date }}">
+    </div>
 
-</form>
+    <!-- To Date -->
+    <div class="col-md-2">
+      <input type="date" class="form-control" name="to_date" value="{{ filters.to_date }}">
+    </div>
 
+    <!-- Submit Button -->
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="fas fa-filter"></i> Filter
+      </button>
+    </div>
+
+    <!-- Reset Button -->
+    <div class="col-md-2">
+      <a href="{{ url_for('toner.toner_dashboard') }}" class="btn btn-secondary w-100">
+        <i class="fas fa-sync-alt"></i> Reset
+      </a>
+    </div>
+  </form>
 
   <!-- Top Scrollbar -->
   <div id="scroll-sync-top" class="scrollbar-sync mb-2"></div>
@@ -185,8 +215,7 @@
           <th>By</th>
           <th>Type</th>
           <th>FOC</th>
-<th>TAT (hrs)</th>
-
+          <th>TAT (hrs)</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -229,8 +258,6 @@
               -
             {% endif %}
           </td>
-
-
           <td>
             <a href="{{ url_for('toner.print_request', request_group=r.request_group) }}" class="btn btn-sm btn-info" title="View"><i class="fas fa-eye"></i></a>
             <a href="{{ url_for('toner.edit_request', id=r.id) }}" class="btn btn-sm btn-primary" title="Edit"><i class="fas fa-edit"></i></a>
@@ -271,16 +298,23 @@
 </div>
 
 <script>
-  document.querySelectorAll('#filterForm input, #filterForm select').forEach(input => {
-    input.addEventListener('change', () => {
-      document.getElementById('filterForm').submit();
+  // Debounced auto-submit for all filters
+  (function () {
+    const form = document.getElementById('filterForm');
+    let t;
+    document.querySelectorAll('#filterForm input, #filterForm select').forEach(el => {
+      const fire = () => { clearTimeout(t); t = setTimeout(() => form.submit(), 350); };
+      el.addEventListener('input', fire);
+      el.addEventListener('change', fire);
     });
-  });
+  })();
 
+  // DataTables for tools only (server does filter/sort)
   $(document).ready(function () {
     $('#tonerTable').DataTable({
       paging: false,
-      ordering: true,
+      searching: false,
+      ordering: false,     // server sorts
       dom: 'Bfrtip',
       buttons: ['copy', 'csv', 'excel', 'print']
     });

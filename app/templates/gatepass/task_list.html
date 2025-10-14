@@ -42,38 +42,36 @@
       <a class="nav-link {% if status_filter == 'completed' %}active{% endif %}" href="{{ url_for('gate_pass.task_list', status_filter='completed') }}">Completed</a>
     </li>
     <li class="nav-item">
- <a class="nav-link" href="{{ url_for('gate_pass.pending_deliveries') }}">
-  Review Pending Bulk-Delivery
-</a>
-
-</li>
+      <a class="nav-link" href="{{ url_for('gate_pass.pending_deliveries') }}">
+        Review Pending Bulk-Delivery
+      </a>
+    </li>
   </ul>
 
   <!-- Header and Action Buttons -->
   <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
     <h3 class="text-primary"><i class="fas fa-tasks"></i> Gate Pass Task List</h3>
     <div class="d-flex gap-2">
-  <a href="{{ url_for('gate_pass.create_delivery') }}" class="btn btn-success btn-sm">
-    <i class="fas fa-truck"></i> Delivery Gate Pass
-  </a>
-  <a href="{{ url_for('gate_pass.search_assets_for_collection') }}" class="btn btn-warning btn-sm">
-    <i class="fas fa-search"></i> Collection
-  </a>
-  <a href="{{ url_for('gate_pass.bulk_delivery') }}" class="btn btn-primary btn-sm">
-    <i class="fas fa-layer-group"></i> Bulk Delivery
-  </a>
-  <a href="{{ url_for('gate_pass.bulk_collection') }}" class="btn btn-secondary btn-sm">
-    <i class="fas fa-boxes"></i> Bulk Collection
-  </a>
-  <a href="{{ url_for('gate_pass.export_tasks_excel', status_filter=status_filter) }}" class="btn btn-outline-secondary btn-sm">
-    <i class="fas fa-file-excel"></i> Export Excel
-  </a>
-</div>
-
+      <a href="{{ url_for('gate_pass.create_delivery') }}" class="btn btn-success btn-sm">
+        <i class="fas fa-truck"></i> Delivery Gate Pass
+      </a>
+      <a href="{{ url_for('gate_pass.search_assets_for_collection') }}" class="btn btn-warning btn-sm">
+        <i class="fas fa-search"></i> Collection
+      </a>
+      <a href="{{ url_for('gate_pass.bulk_delivery') }}" class="btn btn-primary btn-sm">
+        <i class="fas fa-layer-group"></i> Bulk Delivery
+      </a>
+      <a href="{{ url_for('gate_pass.bulk_collection') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-boxes"></i> Bulk Collection
+      </a>
+      <a href="{{ url_for('gate_pass.export_tasks_excel', status_filter=status_filter) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-file-excel"></i> Export Excel
+      </a>
+    </div>
   </div>
 
   <!-- Live Search -->
-  <input type="text" id="searchInput" class="form-control mb-3" placeholder="🔍 Search GP No, Customer, Serial...">
+  <input type="text" id="searchInput" class="form-control mb-3" placeholder="🔍 Search GP No, Customer, Serial, Model...">
 
   <!-- Task Table -->
   <div class="table-responsive">
@@ -84,6 +82,7 @@
           <th>Type</th>
           <th>Customer</th>
           <th>Serial</th>
+          <th>Model</th>
           <th>Location</th>
           <th>Technician</th>
           <th>Date</th>
@@ -92,101 +91,105 @@
         </tr>
       </thead>
       <tbody>
-       {% for gp in tasks %}
-  <tr class="{% if gp.status == 'completed' %}table-success{% elif gp.status == 'Pending' %}table-warning{% else %}table-light{% endif %}">
-    <td><strong>{{ gp.gp_number }}</strong></td>
-    <td>{{ gp.type.title() }}</td>
-    <td>{{ gp.customer_name }}</td>
-    <td>{{ gp.serial_number }}</td>
-    <td>{{ gp.service_location }}</td>
-    <td>{{ gp.technician_name }}</td>
-    <td>{{ gp.delivery_datetime[:16] if gp.delivery_datetime else '' }}</td>
-    <td>
-      <span class="badge bg-{{ 'success' if gp.status == 'completed' else 'warning text-dark' }}">
-        ● {{ gp.status.title() }}
-      </span>
-    </td>
-    <td class="text-nowrap">
+        {% for gp in tasks %}
+        <tr class="{% if gp.status == 'completed' %}table-success{% elif gp.status == 'Pending' %}table-warning{% else %}table-light{% endif %}">
+          <td><strong>{{ gp.gp_number }}</strong></td>
+          <td>{{ gp.type.title() }}</td>
+          <td>{{ gp.customer_name }}</td>
+          <td>{{ gp.serial_number }}</td>
+          <td>{{ gp.asset_description or '' }}</td>
+          <td>{{ gp.service_location }}</td>
+          <td>{{ gp.technician_name }}</td>
 
-  {# normalize status once per row #}
-  {% set st = (gp.status or '') | lower %}
-  {% set is_pending = (st == 'pending' or st == '') %}
+          {# Sortable date: prefer created_at, fallback delivery_datetime #}
+          {% set order_date = (gp.created_at or gp.delivery_datetime or '') %}
+          <td data-order="{{ order_date }}">
+            {{ (gp.delivery_datetime or gp.created_at or '')[:16] }}
+          </td>
 
-  {% if gp.type == 'decommission' %}
-    <a href="{{ url_for('gate_pass.print_decommission', gp_id=gp.id) }}"
-       class="btn btn-outline-primary btn-sm" title="Print" target="_blank">
-      <i class="fas fa-print"></i>
-    </a>
+          <td>
+            <span class="badge bg-{{ 'success' if gp.status == 'completed' else 'warning text-dark' }}">
+              ● {{ gp.status.title() }}
+            </span>
+          </td>
+          <td class="text-nowrap">
+            {# normalize status once per row #}
+            {% set st = (gp.status or '') | lower %}
+            {% set is_pending = (st == 'pending' or st == '') %}
 
-    {% if is_pending %}
-      <a href="{{ url_for('gate_pass.complete_decommission', gp_id=gp.id) }}"
-         class="btn btn-outline-success btn-sm" title="Mark Completed">
-        <i class="fas fa-check"></i>
-      </a>
-    {% endif %}
+            {% if gp.type == 'decommission' %}
+              <a href="{{ url_for('gate_pass.print_decommission', gp_id=gp.id) }}"
+                 class="btn btn-outline-primary btn-sm" title="Print" target="_blank">
+                <i class="fas fa-print"></i>
+              </a>
 
-  {% else %}
-    {# count how many rows share this gp_number to detect bulk #}
-    {% set bulk_count = tasks | selectattr('gp_number', 'equalto', gp.gp_number) | list | length %}
+              {% if is_pending %}
+                <a href="{{ url_for('gate_pass.complete_decommission', gp_id=gp.id) }}"
+                   class="btn btn-outline-success btn-sm" title="Mark Completed">
+                  <i class="fas fa-check"></i>
+                </a>
+              {% endif %}
 
-    {% if bulk_count > 1 %}
-      <a href="{{ url_for('gate_pass.print_bulk_collection', gp_number=gp.gp_number) }}"
-         class="btn btn-outline-primary btn-sm" title="Print Bulk" target="_blank">
-        <i class="fas fa-layer-group"></i>
-      </a>
-    {% else %}
-      <a href="{{ url_for('gate_pass.print_gate_pass', gp_id=gp.id) }}"
-         class="btn btn-outline-primary btn-sm" title="Print" target="_blank">
-        <i class="fas fa-print"></i>
-      </a>
-    {% endif %}
+            {% else %}
+              {# count how many rows share this gp_number to detect bulk #}
+              {% set bulk_count = tasks | selectattr('gp_number', 'equalto', gp.gp_number) | list | length %}
 
-    {% if is_pending %}
-      {% if gp.type == 'delivery' and bulk_count > 1 %}
-        <form method="POST"
-              action="{{ url_for('gate_pass.complete_bulk_delivery', gp_number=gp.gp_number) }}"
-              style="display:inline;">
-          <button type="submit" class="btn btn-outline-success btn-sm" title="Complete Bulk Delivery">
-            <i class="fas fa-check-double"></i>
-          </button>
-        </form>
-      {% else %}
-        <a href="{{ url_for('gate_pass.mark_completed', gp_id=gp.id) }}"
-           class="btn btn-outline-success btn-sm" title="Mark Completed">
-          <i class="fas fa-check"></i>
-        </a>
-      {% endif %}
-    {% endif %}
-  {% endif %}
+              {% if bulk_count > 1 %}
+                <a href="{{ url_for('gate_pass.print_bulk_collection', gp_number=gp.gp_number) }}"
+                   class="btn btn-outline-primary btn-sm" title="Print Bulk" target="_blank">
+                  <i class="fas fa-layer-group"></i>
+                </a>
+              {% else %}
+                <a href="{{ url_for('gate_pass.print_gate_pass', gp_id=gp.id) }}"
+                   class="btn btn-outline-primary btn-sm" title="Print" target="_blank">
+                  <i class="fas fa-print"></i>
+                </a>
+              {% endif %}
 
-  {# Admin-only delete (show only when pending, to match backend rule) #}
-  {% if current_user.is_authenticated and current_user.role == 'Admin' and is_pending %}
-    {% if gp.type != 'decommission' and bulk_count > 1 %}
-      <form method="POST"
-            action="{{ url_for('gate_pass.delete_group', gp_number=gp.gp_number) }}"
-            style="display:inline;"
-            onsubmit="return confirm('Delete ALL gate pass records under GP {{ gp.gp_number }}? This cannot be undone.');">
-        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete GP Group">
-          <i class="fas fa-trash-alt"></i>
-        </button>
-      </form>
-    {% else %}
-      <form method="POST"
-            action="{{ url_for('gate_pass.delete_gate_pass', gp_id=gp.id) }}"
-            style="display:inline;"
-            onsubmit="return confirm('Delete this gate pass? This cannot be undone.');">
-        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Gate Pass">
-          <i class="fas fa-trash"></i>
-        </button>
-      </form>
-    {% endif %}
-  {% endif %}
+              {% if is_pending %}
+                {% if gp.type == 'delivery' and bulk_count > 1 %}
+                  <form method="POST"
+                        action="{{ url_for('gate_pass.complete_bulk_delivery', gp_number=gp.gp_number) }}"
+                        style="display:inline;">
+                    <button type="submit" class="btn btn-outline-success btn-sm" title="Complete Bulk Delivery">
+                      <i class="fas fa-check-double"></i>
+                    </button>
+                  </form>
+                {% else %}
+                  <a href="{{ url_for('gate_pass.mark_completed', gp_id=gp.id) }}"
+                     class="btn btn-outline-success btn-sm" title="Mark Completed">
+                    <i class="fas fa-check"></i>
+                  </a>
+                {% endif %}
+              {% endif %}
+            {% endif %}
 
-</td>
-
-  </tr>
-  {% endfor %}
-</tbody>
+            {# Admin-only delete (show only when pending, to match backend rule) #}
+            {% if current_user.is_authenticated and current_user.role == 'Admin' and is_pending %}
+              {% if gp.type != 'decommission' and bulk_count > 1 %}
+                <form method="POST"
+                      action="{{ url_for('gate_pass.delete_group', gp_number=gp.gp_number) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Delete ALL gate pass records under GP {{ gp.gp_number }}? This cannot be undone.');">
+                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete GP Group">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </form>
+              {% else %}
+                <form method="POST"
+                      action="{{ url_for('gate_pass.delete_gate_pass', gp_id=gp.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Delete this gate pass? This cannot be undone.');">
+                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Gate Pass">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 </div>
@@ -197,10 +200,17 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
 <script>
-  $(document).ready(function () {
-    let table = $('#gatePassTable').DataTable({
+  $(function () {
+    const tableId = '#gatePassTable';
+
+    // Avoid "Cannot reinitialise" if template is reloaded
+    if ($.fn.DataTable.isDataTable(tableId)) {
+      $(tableId).DataTable().clear().destroy();
+    }
+
+    const table = $(tableId).DataTable({
       pageLength: 10,
-      order: [],
+      order: [[7, 'desc']],   // Date column -> newest first
       responsive: true
     });
 
@@ -209,4 +219,5 @@
     });
   });
 </script>
+
 {% endblock %}
