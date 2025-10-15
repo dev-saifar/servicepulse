@@ -1,9 +1,11 @@
-instance/
-*.sqlite3
+
+path/to/file.json
+app/uploads/keys/*.json
+
+instance/*.db
+
 *.db
-instance/techtrack.db
-license.lic
-# Ignore Python cache files
+
 __pycache__/
-*.pyc
-*.pyo
+
+migrations/__pycache__/

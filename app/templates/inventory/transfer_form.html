@@ -1,0 +1,29 @@
+{% extends "_layouts/base.html" %}
+{% set title = "Transfer" %}
+{% block content %}
+<h3 class="mb-3">Transfer</h3>
+<form method="post" class="form-section card p-3">
+  <div class="mb-3">
+    <label class="form-label">SKU</label>
+    <input type="text" class="form-control" name="sku" required>
+  </div>
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">From Bin</label>
+      <input type="text" class="form-control" name="from_bin" required>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">To Bin</label>
+      <input type="text" class="form-control" name="to_bin" required>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Qty</label>
+    <input type="number" step="0.001" class="form-control" name="qty" required>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">Transfer</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('inventory.stock_page') }}">Back</a>
+  </div>
+</form>
+{% endblock %}

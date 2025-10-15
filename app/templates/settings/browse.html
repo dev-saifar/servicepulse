@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Browse Server Folders</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; }
+    .bar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+    .list a { display:block; padding:8px 10px; margin:4px 0; border:1px solid #ddd; border-radius:6px; text-decoration:none; color:#111; }
+    .list a:hover { background:#f7f7f7; }
+    .crumbs a { text-decoration:none; color:#06c; }
+    .crumbs { margin-bottom: 8px; font-size: 14px; }
+    .btn { display:inline-block; padding:8px 12px; border:1px solid #bbb; border-radius:6px; text-decoration:none; color:#111; background:#fafafa; }
+    .btn:hover { background:#f0f0f0; }
+    code { background:#f6f6f6; padding:2px 4px; border-radius:4px; }
+  </style>
+</head>
+<body>
+
+  <div class="bar">
+    <a class="btn" href="{{ url_for('settings.settings_page') }}">&larr; Back to Settings</a>
+    {% if path %}
+      <a class="btn" href="{{ url_for('settings.settings_page', set_db_backup_dir=path) }}">Select this folder</a>
+      <span>Current: <code>{{ path }}</code></span>
+    {% else %}
+      <span><em>Select a drive to start</em></span>
+    {% endif %}
+  </div>
+
+  <div class="crumbs">
+    {% if not path %}
+      <strong>This PC</strong>
+    {% else %}
+      <a href="{{ url_for('settings.browse_dir') }}">This PC</a>
+      {% set parts = path.replace('\\','/').strip('/').split('/') %}
+      {% set acc = '' %}
+      {% for seg in parts %}
+        {% if loop.first and (seg|length == 2 and seg[1] == ':') %}
+          {% set acc = seg ~ '/' %}
+          &nbsp;/&nbsp;<a href="{{ url_for('settings.browse_dir', path=acc) }}">{{ seg }}</a>
+        {% else %}
+          {% set acc = (acc ~ seg ~ '/') %}
+          &nbsp;/&nbsp;<a href="{{ url_for('settings.browse_dir', path=acc.rstrip('/')) }}">{{ seg }}</a>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="list">
+    {% if is_root %}
+      {% for e in entries %}
+        <a href="{{ url_for('settings.browse_dir', path=e.path) }}">{{ e.name }}</a>
+      {% endfor %}
+    {% else %}
+      {% if parent != '' %}
+        <a href="{{ url_for('settings.browse_dir', path=parent) }}">⬆️  (parent folder)</a>
+      {% else %}
+        <a href="{{ url_for('settings.browse_dir') }}">⬆️  (drives)</a>
+      {% endif %}
+      {% for e in entries %}
+        <a href="{{ url_for('settings.browse_dir', path=e.path) }}">{{ e.name }}</a>
+      {% endfor %}
+      {% if not entries %}
+        <div>No subfolders.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+
+</body>
+</html>
