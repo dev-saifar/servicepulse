@@ -110,10 +110,10 @@
         <select class="form-control" name="delivery_status" id="delivery_status">
           {% if cur == 'Pending' %}
             <option value="Pending" selected>Pending</option>
-            <option value="In Progress">In Progress</option>
-          {% elif cur in ['In Progress', 'In Transit'] %}
-            <option value="{{ 'In Progress' if cur == 'In Progress' else 'In Transit' }}" selected>
-              {{ 'In Progress' if cur == 'In Progress' else 'In Transit' }}
+            <option value="In transit">In transit</option>
+          {% elif cur in ['In transit', 'In Transit'] %}
+            <option value="{{ 'In transit' if cur == 'In Progress' else 'In Transit' }}" selected>
+              {{ 'In transit' if cur == 'In Progress' else 'In Transit' }}
             </option>
             <option value="Delivered">Delivered</option>
           {% else %}
