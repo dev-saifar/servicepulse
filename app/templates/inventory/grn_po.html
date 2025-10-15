@@ -1,0 +1,93 @@
+{% extends "_layouts/base.html" %}
+{% set title = "Receive from Purchase Order (GRN)" %}
+{% block content %}
+<h3 class="mb-3">Receive from Purchase Order</h3>
+
+<form id="poLookup" class="card p-3 mb-3" onsubmit="return false;">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">PO Number</label>
+      <input id="poNumber" class="form-control" placeholder="e.g. PO-2025-00123" required>
+    </div>
+    <div class="col-md-3">
+      <button id="btnLoad" class="btn btn-primary">Load PO</button>
+    </div>
+    <div class="col-md-5 small text-muted">
+      Tip: After loading, fill <b>Receive Qty</b>, <b>Bin</b>, and landed unit cost if needed, then submit.
+    </div>
+  </div>
+</form>
+
+<form id="grnForm" method="post" class="card p-3" action="{{ url_for('inventory.grn_po') }}" style="display:none;">
+  <input type="hidden" name="po_number" id="po_number">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Part Number</th>
+          <th>Name</th>
+          <th class="text-end">Ordered</th>
+          <th class="text-end">Received</th>
+          <th class="text-end">Remaining</th>
+          <th class="text-end">Recv Qty</th>
+          <th>Bin</th>
+          <th class="text-end">Unit Landed USD</th>
+        </tr>
+      </thead>
+      <tbody id="poLinesBody"></tbody>
+    </table>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">Post GRN</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('inventory.stock_page') }}">Back</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block body_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const btnLoad = document.getElementById('btnLoad');
+  const poInput = document.getElementById('poNumber');
+  const form = document.getElementById('grnForm');
+  const body = document.getElementById('poLinesBody');
+  const poHidden = document.getElementById('po_number');
+
+  btnLoad.addEventListener('click', async () => {
+    const no = (poInput.value || '').trim();
+    if (!no) return;
+    try {
+      const res = await fetch(`/inventory/api/po/${encodeURIComponent(no)}`);
+      if (!res.ok) {
+        alert('PO not found');
+        form.style.display = 'none';
+        return;
+      }
+      const data = await res.json();
+      body.innerHTML = '';
+      poHidden.value = no;
+
+      for (const ln of data.lines || []) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${ln.part_number}</code><input type="hidden" name="part_number[]" value="${ln.part_number}"></td>
+          <td>${ln.name || ''}</td>
+          <td class="text-end">${(ln.ordered_qty ?? 0).toFixed(3)}</td>
+          <td class="text-end">${(ln.received_qty ?? 0).toFixed(3)}</td>
+          <td class="text-end">${(ln.remaining_qty ?? 0).toFixed(3)}</td>
+          <td class="text-end"><input class="form-control form-control-sm text-end" type="number" step="0.001" min="0" max="${ln.remaining_qty ?? 0}" name="recv_qty[]" value="${ln.remaining_qty ?? 0}"></td>
+          <td><input class="form-control form-control-sm" name="bin_code[]" placeholder="SITE:AREA/RACK/BIN"></td>
+          <td class="text-end"><input class="form-control form-control-sm text-end" type="number" step="0.000001" min="0" name="unit_cost_usd[]" value="${ln.suggested_unit_cost_usd ?? 0}"></td>
+        `;
+        body.appendChild(tr);
+      }
+
+      form.style.display = (data.lines && data.lines.length) ? 'block' : 'none';
+    } catch (e) {
+      alert('Error loading PO.');
+      form.style.display = 'none';
+    }
+  });
+});
+</script>
+{% endblock %}

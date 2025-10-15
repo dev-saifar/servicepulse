@@ -1,0 +1,230 @@
+{% extends "_layouts/base.html" %}
+{% set title = "Items" %}
+{% block content %}
+<h3 class="mb-3">Items</h3>
+
+<!-- Quick Add / Edit (single-line on wide screens, stacks on small) -->
+<form id="quickItemForm" method="post" class="card p-3 mb-3">
+  <div class="row gy-2 gx-2 align-items-end">
+    <!-- keep a hidden "orig_sku" so editing can rename the SKU safely -->
+    <input type="hidden" name="orig_sku" value="">
+
+    <div class="col-lg-2 col-md-3">
+      <label class="form-label mb-1">PART NUMBER</label>
+      <input class="form-control" name="sku" required placeholder="e.g. TK-3300">
+    </div>
+    <div class="col-lg-3 col-md-4">
+      <label class="form-label mb-1">Name</label>
+      <input class="form-control" name="name" required placeholder="Descriptive name">
+    </div>
+    <div class="col-lg-2 col-md-3">
+      <label class="form-label mb-1">Segment</label>
+      <select class="form-select" name="segment" required>
+        <option value="TONER">TONER</option>
+        <option value="SPARE">SPARE</option>
+        <option value="CONSUMABLES">CONSUMABLES</option>
+        <option value="HARDWARE">HARDWARE</option>
+        <option value="SOFTWARE">SOFTWARE</option>
+      </select>
+    </div>
+    <div class="col-lg-2 col-md-3">
+      <label class="form-label mb-1">Make</label>
+      <input class="form-control" name="make" placeholder="Kyocera">
+    </div>
+    <div class="col-lg-2 col-md-3">
+      <label class="form-label mb-1">Model</label>
+      <input class="form-control" name="model" placeholder="3010i">
+    </div>
+
+    <div class="col-lg-1 col-md-2">
+      <label class="form-label mb-1">UOM</label>
+      <select class="form-select" name="uom" required>
+        <option value="EA" selected>EA</option>
+        <option value="BOX">BOX</option>
+        <option value="PK">PK</option>
+        <option value="SET">SET</option>
+        <option value="ROLL">ROLL</option>
+        <option value="LTR">LTR</option>
+        <option value="KG">KG</option>
+        <option value="M">M</option>
+      </select>
+    </div>
+    <div class="col-lg-1 col-md-2">
+      <label class="form-label mb-1">Min</label>
+      <input class="form-control" type="number" step="0.001" name="min_qty" value="0">
+    </div>
+    <div class="col-lg-2 col-md-3">
+      <label class="form-label mb-1">Last Landed (USD)</label>
+      <input class="form-control" type="number" step="0.000001" name="last_landed_usd" placeholder="0.000000">
+    </div>
+
+    <div class="col-lg-2 col-md-3 text-end">
+      <div class="d-flex gap-2 justify-content-end">
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+        <button type="button" class="btn btn-outline-secondary" id="resetBtn">Reset</button>
+        <a class="btn btn-outline-dark" href="{{ url_for('inventory.stock_page') }}">Back</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <div class="input-group" style="max-width: 360px;">
+    <span class="input-group-text">Search</span>
+    <input id="itemsSearch" type="search" class="form-control" placeholder="SKU, name, make, model…">
+    <button class="btn btn-outline-secondary" type="button" id="itemsClear">Clear</button>
+  </div>
+  <div class="small text-muted">
+    Tip: Click a <strong>PART NO</strong> or <em>Edit</em> to load the Quick Bar.
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table id="itemsTbl" class="table table-striped table-hover align-middle" style="width:100%">
+    <thead class="table-light">
+      <tr>
+        <th>PART NO</th>
+        <th>Name</th>
+        <th>Segment</th>
+        <th>Make</th>
+        <th>Model</th>
+        <th>UOM</th>
+        <th class="text-end">Min</th>
+        <th class="text-end">Last Landed</th>
+        <th>Last Arrival</th>
+        <th class="text-end">Total Qty</th>
+        <th class="text-end">Global WAC</th>
+        <th class="text-end">Value USD</th>
+        <th style="width:1%"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr data-sku="{{ r.sku }}"
+          data-name="{{ r.name }}"
+          data-segment="{{ r.segment }}"
+          data-make="{{ r.make }}"
+          data-model="{{ r.model }}"
+          data-uom="{{ r.uom }}"
+          data-min="{{ '%.3f'|format(r.min_qty or 0) }}"
+          data-ll="{{ '%.6f'|format(r.last_landed_usd or 0) }}">
+        <td><a href="#" class="sku-link">{{ r.sku }}</a></td>
+        <td>{{ r.name }}</td>
+        <td><span class="badge text-bg-secondary">{{ r.segment }}</span></td>
+        <td>{{ r.make }}</td>
+        <td>{{ r.model }}</td>
+        <td>{{ r.uom }}</td>
+        <td class="text-end">{{ '%.3f'|format(r.min_qty or 0) }}</td>
+        <td class="text-end">{{ '%.6f'|format(r.last_landed_usd or 0) }}</td>
+        <td>{{ r.last_arrival_date or '' }}</td>
+        <td class="text-end">{{ '%.3f'|format(r.total_qty or 0) }}</td>
+        <td class="text-end">{{ '%.6f'|format(r.global_wac_usd or 0) }}</td>
+        <td class="text-end">{{ '%.2f'|format(r.total_value_usd or 0) }}</td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-primary editBtn">Edit</button>
+          <button class="btn btn-sm btn-outline-danger delBtn">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot class="table-light">
+      <tr>
+        <th colspan="11" class="text-end">Total Value</th>
+        <th class="text-end" id="itemsTotalVal">0.00</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% endblock %}
+
+{% block body_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const tableEl = document.getElementById('itemsTbl');
+
+  // DataTable with export buttons + external search field
+  const dt = new DataTable(tableEl, {
+    responsive: true,
+    dom: 'Bfrtip',
+    buttons: ['copy', 'csv', 'excel', 'print'],
+    order: [[0, 'asc']]
+  });
+
+  // External search bar
+  const q = document.getElementById('itemsSearch');
+  const clearBtn = document.getElementById('itemsClear');
+  const applySearch = () => dt.search(q.value || '').draw();
+  q.addEventListener('input', applySearch);
+  clearBtn.addEventListener('click', () => { q.value = ''; applySearch(); });
+
+  // Sum total value on draw
+  const recalc = () => {
+    let total = 0;
+    dt.rows({search:'applied'}).every(function () {
+      const v = parseFloat(this.data()[11].toString().replace(/,/g,''));
+      if (!isNaN(v)) total += v;
+    });
+    const out = document.getElementById('itemsTotalVal');
+    if (out) out.textContent = total.toFixed(2);
+  };
+  dt.on('draw', recalc); recalc();
+
+  // ----- Quick edit wiring (event delegation so it works after redraws) -----
+  const form = document.getElementById('quickItemForm');
+
+  function setSelectValue(selectEl, value) {
+    if (!value) return;
+    for (const o of selectEl.options) o.selected = (o.value === value);
+  }
+
+  // Edit button: fill form with row data
+  tableEl.addEventListener('click', function(e) {
+    if (e.target.classList.contains('editBtn')) {
+      const tr = e.target.closest('tr');
+      form.sku.value = tr.dataset.sku || '';
+      form.name.value = tr.dataset.name || '';
+      setSelectValue(form.segment, tr.dataset.segment);
+      form.make.value = tr.dataset.make || '';
+      form.model.value = tr.dataset.model || '';
+      setSelectValue(form.uom, tr.dataset.uom);
+      form.min_qty.value = tr.dataset.min || '0';
+      form.last_landed_usd.value = tr.dataset.ll || '';
+      form.orig_sku.value = tr.dataset.sku || '';
+      form.querySelector('#saveBtn').textContent = 'Update';
+      form.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+    // Delete button: confirm and call backend
+    if (e.target.classList.contains('delBtn')) {
+      const tr = e.target.closest('tr');
+      const sku = tr.dataset.sku;
+      if (!sku) return;
+      if (!confirm(`Delete item ${sku}? This cannot be undone if not in use.`)) return;
+      fetch(`/inventory/items/${encodeURIComponent(sku)}/delete`, {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          alert(data.message || 'Delete failed');
+          return;
+        }
+        location.reload();
+      })
+      .catch(() => alert('Network error while deleting.'));
+    }
+  });
+
+  // Reset → new item mode
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    form.reset();
+    form.orig_sku.value = '';
+    form.uom.value = 'EA';
+    form.segment.value = 'TONER';
+    form.querySelector('#saveBtn').textContent = 'Save';
+  });
+});
+</script>
+{% endblock %}
