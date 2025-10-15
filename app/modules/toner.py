@@ -308,7 +308,7 @@ def update_request():
             # --- Apply status + timestamps ---
             r.delivery_status = target
 
-            if target == "In Progress":
+            if target == "In Transit":
                 # prefer client value; else set now if missing
                 dt_str = data.get('dispatch_time')
                 if dt_str:

@@ -127,7 +127,7 @@
   {% set prev = (r.previous_reading or 0) | int %}
   {% set curr = (r.meter_reading or 0) | int %}
   {% set yield_val = curr - prev %}
-  {% if life > 0 and (yield_val / life) < 0.75 %}
+  {% if life > 0 and (yield_val / life) < 0.80 %}
     {% set ns.warn = true %}
   {% endif %}
 {% endfor %}
@@ -146,7 +146,7 @@
   <tr>
     <td colspan="2">
       <div class="note-warning" style="margin-top:8px;">
-        ⚠️ VERY LOW YIELD(LESS THAN 75%) SECOND LEVAL APPROVAL REQUIRED
+        ⚠️ VERY LOW YIELD(LESS THAN 80%) SECOND LEVAL APPROVAL REQUIRED
       </div>
     </td>
   </tr>
