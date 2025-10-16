@@ -110,10 +110,10 @@
         <select class="form-control" name="delivery_status" id="delivery_status">
           {% if cur == 'Pending' %}
             <option value="Pending" selected>Pending</option>
-            <option value="In transit">In transit</option>
-          {% elif cur in ['In transit', 'In Transit'] %}
-            <option value="{{ 'In transit' if cur == 'In Progress' else 'In Transit' }}" selected>
-              {{ 'In transit' if cur == 'In Progress' else 'In Transit' }}
+            <option value="In Transit">In Transit</option>
+          {% elif cur in ['In Transit', 'In Transit'] %}
+            <option value="{{ 'In Transit' if cur == 'In Transit' else 'In Transit' }}" selected>
+              {{ 'In Transit' if cur == 'In Transit' else 'In Transit' }}
             </option>
             <option value="Delivered">Delivered</option>
           {% else %}
@@ -185,16 +185,16 @@ statusSel.dataset.prev = statusSel.value;
 statusSel.addEventListener("change", function () {
   const status = this.value;
 
-  // NEW RULE: cannot move to In Progress without assigning Delivery Boy
-  if (status === "In Progress" && (!deliveryBoy.value || deliveryBoy.value.trim() === "")) {
-    toastr.warning("Please select a Delivery Boy before marking In Progress.");
+  // NEW RULE: cannot move to In Transit without assigning Delivery Boy
+  if (status === "In Transit" && (!deliveryBoy.value || deliveryBoy.value.trim() === "")) {
+    toastr.warning("Please select a Delivery Boy before marking In Transit.");
     // revert to previous selection
     this.value = this.dataset.prev || "Pending";
     return;
   }
 
   // auto-fill timestamps
-  if (status === "In Progress" && !dispatchEl.value) {
+  if (status === "In Transit" && !dispatchEl.value) {
     dispatchEl.value = getLocalDateTimeString();
   }
   if (status === "Delivered") {
@@ -219,14 +219,14 @@ form.addEventListener("submit", function (e) {
   const data = {};
   formData.forEach((value, key) => { data[key] = value });
 
-  // Block: In Progress requires a Delivery Boy
-  if (data.delivery_status === "In Progress" && (!data.delivery_boy || data.delivery_boy.trim() === "")) {
-    toastr.warning("Please select a Delivery Boy before marking In Progress.");
+  // Block: In Transit requires a Delivery Boy
+  if (data.delivery_status === "In Transit" && (!data.delivery_boy || data.delivery_boy.trim() === "")) {
+    toastr.warning("Please select a Delivery Boy before marking In Transit.");
     return;
   }
 
   // Ensure timestamps are present based on final status
-  if (data.delivery_status === "In Progress" && !data.dispatch_time) {
+  if (data.delivery_status === "In Transit" && !data.dispatch_time) {
     data.dispatch_time = getLocalDateTimeString();
   }
   if (data.delivery_status === "Delivered") {

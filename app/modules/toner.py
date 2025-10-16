@@ -259,8 +259,8 @@ def update_request():
 
     def norm(s: str) -> str:
         s = (s or "Pending").strip().lower()
-        if s in ("in transit", "in_progress", "in progress"):
-            return "In Progress"
+        if s in ("in transit", "In Transit", "In Transit"):
+            return "In Transit"
         if s == "delivered":
             return "Delivered"
         return "Pending"
@@ -279,17 +279,17 @@ def update_request():
         for r in rows:
             prev = norm(r.delivery_status)
 
-            # --- State machine: Pending -> In Progress -> Delivered ---
+            # --- State machine: Pending -> In Transit -> Delivered ---
             allowed = (
-                (prev == "Pending"     and target in ("Pending", "In Progress")) or
-                (prev == "In Progress" and target in ("In Progress", "Delivered")) or
+                (prev == "Pending"     and target in ("Pending", "In Transit")) or
+                (prev == "In Transit" and target in ("In Transit", "Delivered")) or
                 (prev == "Delivered"   and target == "Delivered")
             )
             if not allowed:
                 return jsonify({
                     "success": False,
                     "error": f"Invalid transition: {prev} → {target}. "
-                             f"Allowed order is Pending → In Progress → Delivered."
+                             f"Allowed order is Pending → In Transit → Delivered."
                 })
 
             # --- Update editable fields (keep your existing assignments here) ---
